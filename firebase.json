@@ -1,0 +1,54 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cityagriadmin",
+          "appId": "1:940939770223:android:58440b5c4b77c13b06909a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cityagriadmin",
+          "configurations": {
+            "android": "1:940939770223:android:58440b5c4b77c13b06909a",
+            "ios": "1:940939770223:ios:9e8af19c661e138606909a",
+            "macos": "1:940939770223:ios:9e8af19c661e138606909a",
+            "web": "1:940939770223:web:02f7ace8ac8f949a06909a",
+            "windows": "1:940939770223:web:c1d832662c6a0c7606909a"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "City Agriculture Office LGU Portal",
+        "supportEmail": "inagracetan@gmail.com"
+      }
+    }
+  }
+}

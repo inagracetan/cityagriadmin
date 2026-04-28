@@ -1,0 +1,178 @@
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources UP-TO-DATE
+> Task :gradle:classes UP-TO-DATE
+> Task :gradle:jar UP-TO-DATE
+
+> Task :app:signingReport
+Variant: debug
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+Variant: release
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+Variant: profile
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :cloud_firestore:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :cloud_functions:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :file_picker:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :firebase_auth:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :firebase_core:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :flutter_plugin_android_lifecycle:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :google_sign_in_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :open_file_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :path_provider_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :printing:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+> Task :shared_preferences_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Ina Grace\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: F5:E6:53:0B:F6:63:59:3F:7B:BC:5C:87:6C:D5:61:C2
+SHA1: A4:3E:E5:16:EE:1D:08:CC:01:BB:F6:9F:5F:AF:67:DB:22:A3:CD:2E
+SHA-256: A0:95:D8:98:65:48:81:90:B6:8E:BB:E0:41:1A:2E:B7:FC:29:7F:90:9F:E3:D5:CC:43:EA:76:08:56:A1:5E:E0
+Valid until: Saturday, March 28, 2054
+----------
+
+[Incubating] Problems report is available at: file:///C:/Users/Ina%20Grace/Desktop/CityAgriAdmin/cityagriadmin/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 5m 45s
+16 actionable tasks: 12 executed, 4 up-to-date

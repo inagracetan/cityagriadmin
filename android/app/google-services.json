@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "940939770223",
+    "project_id": "cityagriadmin",
+    "storage_bucket": "cityagriadmin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:940939770223:android:58440b5c4b77c13b06909a",
+        "android_client_info": {
+          "package_name": "com.example.cityagriadmin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "940939770223-bd5d3hti3o04l8iur84332g7d0s7q78p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cityagriadmin",
+            "certificate_hash": "a43ee516ee1d08cc01bbf69f5faf67db22a3cd2e"
+          }
+        },
+        {
+          "client_id": "940939770223-43ss2oinvne7ggpauamjm2hldjp8h0qr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpYLsJxfskYMX5-1MhR6d9UQ9m7__XboI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "940939770223-43ss2oinvne7ggpauamjm2hldjp8h0qr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "940939770223-8oj0e5q3a3tq8v2h4g59hbj08n22hl4m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.cityagriadmin"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

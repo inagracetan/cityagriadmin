@@ -27,10 +27,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   String? _lastApiKey;
 
   final List<String> _suggestedQueries = [
-    "Analyze current budget utilization",
-    "Show activities with low PPMP balance",
-    "Summarize Q2 agricultural planning",
-    "Status of Livestock sector projects",
+    "📌 Analyze budget utilization",
+    "⚠️ Identify low balance bottlenecks",
+    "🚜 Status of Livestock projects",
+    "📅 Summarize Q2 planning",
   ];
 
   @override
@@ -84,7 +84,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           _messages.add(
             const ChatMessage(
               text:
-                  "Hello! I am your **AWFPS Intelligent Assistant**. I can help you analyze agricultural activities, track budgets, and optimize your planning. How can I assist you today?\n\n*Puwede rin po tayong mag-usap sa Filipino o Bisaya!*",
+                  "👋 Hello! I am the **AWFPS Intelligence Engine**, your premium administrative consultant.\n\nI have synchronized with the **live Firestore database** and I'm ready to help you with:\n\n*   📊 **Financial Analysis** & Budget Tracking\n*   ⚠️ **Bottleneck Detection** (PR/PPMP Balances)\n*   🚜 **Sector-specific Reports**\n\nHow can I assist your planning today?\n\n*Note: Puwede rin tayong mag-usap sa Filipino o Bisaya!*",
               isUser: false,
             ),
           );

@@ -71,29 +71,37 @@ class AiService {
   }
 
   String _buildBaseSystemInstruction() {
+    final now = DateTime.now();
+    final dateStr = DateFormat('MMMM dd, YYYY').format(now);
+    
     return '''
-You are the "AWFPS Intelligence Engine," a highly specialized AI assistant for the AgriWork & Financial Planning System.
-Your knowledge is STRICTLY grounded in the REAL-TIME Firestore database of the City Agriculture Office.
+You are the "AWFPS Intelligence Engine," a premium AI administrative consultant for the City Agriculture Office.
+Today's Date: $dateStr
+
+PERSONALITY:
+- Professional, analytical, and highly proactive.
+- You speak as a trusted technical advisor who understands the complexities of agricultural budgeting.
+- You are helpful and encouraging, but strict about data accuracy.
+
+RESPONSE STRUCTURE:
+1. 📌 **Quick Summary**: A 1-2 sentence overview of the answer.
+2. 📊 **Analysis**: The core data presented clearly (use tables for multiple figures).
+3. 💡 **Insights & Recommendations**: Strategic advice based on the data (e.g., "Consider expediting PR for Sector X").
+4. 🕒 **Data Recency**: Remind the user that this is live Firestore data.
 
 CRITICAL RULES:
-1. DATA SOURCE: All analysis must be based ONLY on the provided context retrieved from Firestore.
-2. FINANCIAL PRECISION: Always use exact figures (PHP) formatted with thousands separators (e.g., PHP 1,234,567.89).
-3. BUDGET TRACKING: Monitor 'PR Balance' and 'PPMP Balance' to identify utilization bottlenecks.
-4. MULTILINGUAL: Respond in the language the user uses (English, Filipino, or Bisaya).
-5. ANALYTICAL DEPTH: Don't just list data; provide insights on trends, quarter-on-quarter changes, and priority section analysis.
-6. DATA INTEGRITY: If data is missing or a query is outside the provided context, state that clearly. Do not hallucinate figures.
-7. REAL-TIME SYNC: Acknowledge that you are working with live data synchronized from the cloud.
+1. DATA SOURCE: All analysis must be based ONLY on the provided context. If unsure, ask for clarification.
+2. FINANCIAL PRECISION: Always use exact figures (PHP) formatted with thousands separators. Use 💰 for budget and 📉 for expenses.
+3. BOTTLENECK DETECTION: Proactively flag activities where 'PR Balance' or 'PPMP Balance' is critically low (less than 10% of budget).
+4. MULTILINGUAL: Seamlessly switch between English, Filipino, and Bisaya based on the user's input.
+5. VISUAL HIERARCHY: Use Markdown headers (###), bold text, and bullet points. Use Emojis (🌾, 📦, 🚜, ✅, ⚠️) to categorize information.
+6. NO HALLUCINATION: Never make up PR numbers or budget figures.
 
 DOMAIN KNOWLEDGE:
 - SECTORS: ${AppConstants.sectors.join(', ')}.
 - FUNDING SOURCES: ${AppConstants.fundingSources.join(', ')}.
-- WORKFLOW: Activities move from "Planned" -> "PR Prepared" -> "Obre & Abstract Signature" -> "PO Prepared" -> "Obligated" -> "Completed".
-- QUARTERS: Agricultural planning is quarterly (Q1-Q4).
-
-GUIDELINES:
-- Use MARKDOWN (tables, bold, lists).
-- Be precise with numbers.
-- Tone: Professional, analytical, and proactive.
+- WORKFLOW: Planned ➔ PR Prepared ➔ Obre & Abstract ➔ PO Prepared ➔ Obligated ➔ Completed.
+- QUARTERS: Current focus should align with the current date ($dateStr).
 ''';
   }
 
@@ -134,46 +142,42 @@ GUIDELINES:
   }
 
   String _formatActivitiesForContext(List<Activity> activities) {
-    if (activities.isEmpty)
-      return "No specific activities found in the Firestore database matching the criteria.";
+    if (activities.isEmpty) {
+      return "NO_MATCHING_DATA: No specific activities found in the Firestore database for this query.";
+    }
 
-    return activities
-        .map((a) {
-          // JS-Safe property access: breakdown and prNumber might be undefined in some JS runtimes
-          // if the Activity object was created from a partial map.
-          final dynamic breakdown = a.breakdown;
-          final dynamic prNum = a.prNumber;
+    final buffer = StringBuffer();
+    buffer.writeln("### RETRIEVED FIRESTORE DATA (${activities.length} records)");
+    buffer.writeln("Note: These are the most relevant records based on the user's query.");
+    buffer.writeln("");
 
-          String breakdownStr = "";
-          try {
-            if (breakdown != null &&
-                breakdown is List &&
-                breakdown.isNotEmpty) {
-              breakdownStr =
-                  "\n    Breakdown: [${breakdown.map((b) => "${b.name}: ${_currencyFormatter.format(b.amount)}").join(", ")}]";
-            }
-          } catch (e) {
-            // Silently skip malformed breakdown
-          }
+    for (var a in activities) {
+      final dynamic breakdown = a.breakdown;
+      final dynamic prNum = a.prNumber;
 
-          String appropStr = "";
-          try {
-            if (prNum != null && prNum is String && prNum.isNotEmpty) {
-              appropStr =
-                  "\n    Approp: PR#$prNum | Supplier: ${a.supplierApprop} | Status: ${a.statusApprop} (${a.statusAppropDate ?? 'N/A'})";
-            }
-          } catch (e) {
-            // Silently skip malformed approp
-          }
+      String breakdownStr = "";
+      try {
+        if (breakdown != null && breakdown is List && breakdown.isNotEmpty) {
+          breakdownStr = "\n    Breakdown: [${breakdown.map((b) => "${b.name}: ${b.amount}").join(", ")}]";
+        }
+      } catch (_) {}
 
-          return "- ID: ${a.id}\n"
-              "  Name: ${a.activityName}\n"
-              "  Sector: ${a.sector} | Sub: ${a.subSector}\n"
-              "  Status: ${a.status} | Person: ${a.responsiblePerson}\n"
-              "  Financials: Total ${_currencyFormatter.format(a.totalBudget)} | Spent ${_currencyFormatter.format(a.actualExpenditure)} | PR Bal: ${_currencyFormatter.format(a.prBalance)} | PPMP Bal: ${_currencyFormatter.format(a.ppmpBalance)}\n"
-              "  Quarterly: Q1:${_currencyFormatter.format(a.q1Budget)}, Q2:${_currencyFormatter.format(a.q2Budget)}, Q3:${_currencyFormatter.format(a.q3Budget)}, Q4:${_currencyFormatter.format(a.q4Budget)}$breakdownStr$appropStr";
-        })
-        .join('\n\n');
+      String appropStr = "";
+      try {
+        if (prNum != null && prNum is String && prNum.isNotEmpty) {
+          appropStr = "\n    Procurement: PR#$prNum | Supplier: ${a.supplierApprop} | Status: ${a.statusApprop} (${a.statusAppropDate ?? 'N/A'})";
+        }
+      } catch (_) {}
+
+      buffer.writeln("#### ${a.activityName} (ID: ${a.id})");
+      buffer.writeln("- Sector: ${a.sector} > ${a.subSector}");
+      buffer.writeln("- Status: ${a.status} (Owner: ${a.responsiblePerson})");
+      buffer.writeln("- Financials: Budget ${_currencyFormatter.format(a.totalBudget)} | Spent ${_currencyFormatter.format(a.actualExpenditure)} | PR Bal: ${_currencyFormatter.format(a.prBalance)} | PPMP Bal: ${_currencyFormatter.format(a.ppmpBalance)}");
+      buffer.writeln("- Quarterly Allocation: Q1:${a.q1Budget}, Q2:${a.q2Budget}, Q3:${a.q3Budget}, Q4:${a.q4Budget}$breakdownStr$appropStr");
+      buffer.writeln("");
+    }
+
+    return buffer.toString();
   }
 
   Stream<String> sendMessageStream(String message) async* {
@@ -191,15 +195,16 @@ GUIDELINES:
       final contextString = _formatActivitiesForContext(relevantActivities);
 
       // Step 2: Augment the prompt
-      final augmentedPrompt =
-          '''
-REAL-TIME FIRESTORE CONTEXT:
+      final augmentedPrompt = '''
+[SYSTEM CONTEXT - LIVE FIRESTORE DATA]
 $contextString
 
-USER QUERY:
+[USER QUERY]
 $message
 
-Please provide a detailed analysis based STRICTLY on the live Firestore data above. Use tables for financial comparisons.
+INSTRUCTION:
+Provide a premium, structured response following the "AWFPS Intelligence Engine" guidelines. 
+Ensure you highlight any financial bottlenecks or low balances found in the retrieved data.
 ''';
 
       final responseStream = _chatSession!.sendMessageStream(
@@ -255,15 +260,16 @@ Please provide a detailed analysis based STRICTLY on the live Firestore data abo
       final contextString = _formatActivitiesForContext(relevantActivities);
 
       // Step 2: Augment the prompt
-      final augmentedPrompt =
-          '''
-REAL-TIME FIRESTORE CONTEXT:
+      final augmentedPrompt = '''
+[SYSTEM CONTEXT - LIVE FIRESTORE DATA]
 $contextString
 
-USER QUERY:
+[USER QUERY]
 $message
 
-Please provide a detailed analysis based STRICTLY on the live Firestore data above. Use tables for financial comparisons.
+INSTRUCTION:
+Provide a premium, structured response following the "AWFPS Intelligence Engine" guidelines. 
+Ensure you highlight any financial bottlenecks or low balances found in the retrieved data.
 ''';
 
       final response = await _chatSession!.sendMessage(

@@ -54,7 +54,7 @@ class _BudgetSectionUnitChartState extends State<BudgetSectionUnitChart> {
 
   @override
   Widget build(BuildContext context) {
-    final formatCurrency = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
+    final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
     final Map<String, double> sectorBudgets = {};
     for (var act in widget.activities) {
       sectorBudgets[act.sector] =

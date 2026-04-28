@@ -73,6 +73,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
       title: l10n.translate('dashboard'),
       actions: [
         IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD4AF37)),
+          tooltip: 'New Activity',
+          onPressed: () => _showAddActivityDialog(context, fbService),
+        ),
+        IconButton(
           icon: const Icon(Icons.upload_file, color: Color(0xFFD4AF37)),
           tooltip: 'Import Excel',
           onPressed: () => _importData(context, fbService),
@@ -84,12 +89,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
               _showExportOptions(context, _activities, authService),
         ),
       ],
-      fab: FloatingActionButton.extended(
-        onPressed: () => _showAddActivityDialog(context, fbService),
-        label: const Text('New Activity'),
-        icon: const Icon(Icons.add),
-        backgroundColor: AppColors.primary,
-      ),
+      fab: null,
     );
   }
 

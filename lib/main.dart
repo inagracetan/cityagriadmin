@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
@@ -15,6 +17,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/main_layout.dart';
 import 'core/app_colors.dart';
+import 'widgets/enhanced_states.dart';
 
 import 'firebase_options.dart';
 
@@ -23,6 +26,9 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize date formatting for Intl
+  await initializeDateFormatting('en_US', null);
 
   try {
     await Firebase.initializeApp(
@@ -117,31 +123,31 @@ class LGUAgriApp extends StatelessWidget {
                 color: Color(0xFF1B5E20),
               ),
             ),
-            dividerTheme: DividerThemeData(
-              color: Slate.shade200,
-              thickness: 1,
-            ),
+            dividerTheme: DividerThemeData(color: Slate.shade200, thickness: 1),
             elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1B5E20),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 18,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-                textStyle: const TextStyle(
-                  inherit: true,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  letterSpacing: 0.1,
-                ),
-              ).copyWith(
-                overlayColor: WidgetStateProperty.all(Colors.white.withValues(alpha: 0.1)),
-              ),
+              style:
+                  ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B5E20),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 18,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                    textStyle: const TextStyle(
+                      inherit: true,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      letterSpacing: 0.1,
+                    ),
+                  ).copyWith(
+                    overlayColor: WidgetStateProperty.all(
+                      Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
             ),
             cardTheme: CardThemeData(
               elevation: 0,
@@ -180,10 +186,7 @@ class LGUAgriApp extends StatelessWidget {
                 color: Slate.shade600,
                 fontWeight: FontWeight.w500,
               ),
-              hintStyle: const TextStyle(
-                inherit: true,
-                color: Slate.shade400,
-              ),
+              hintStyle: const TextStyle(inherit: true, color: Slate.shade400),
             ),
             floatingActionButtonTheme: FloatingActionButtonThemeData(
               backgroundColor: const Color(0xFF1B5E20),
@@ -274,11 +277,15 @@ class LGUAgriApp extends StatelessWidget {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -309,13 +316,7 @@ class LGUAgriApp extends StatelessWidget {
           home: const AuthWrapper(),
           navigatorObservers: [routeObserver],
           builder: (context, child) {
-            return Overlay(
-              initialEntries: [
-                OverlayEntry(
-                  builder: (context) => SelectionArea(child: child!),
-                ),
-              ],
-            );
+            return child!;
           },
         );
       },
@@ -342,6 +343,7 @@ class AuthWrapperState extends State<AuthWrapper> {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
         Widget content;
+        try {
 
         if (authService.isLoading) {
           content = const Scaffold(
@@ -350,7 +352,6 @@ class AuthWrapperState extends State<AuthWrapper> {
           );
         } else {
           final user = authService.currentUser;
-
           if (user == null) {
             content = AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
@@ -367,29 +368,45 @@ class AuthWrapperState extends State<AuthWrapper> {
                 );
               },
               child: showLogin
-                  ? LoginScreen(key: const ValueKey('login'), onRegisterTap: toggleView)
-                  : RegisterScreen(key: const ValueKey('register'), onLoginTap: toggleView),
+                  ? LoginScreen(
+                      key: const ValueKey('login'),
+                      onRegisterTap: toggleView,
+                    )
+                  : RegisterScreen(
+                      key: const ValueKey('register'),
+                      onLoginTap: toggleView,
+                    ),
             );
           } else if (user.role == 'admin' || user.role == 'staff') {
             content = const MainLayout(key: ValueKey('main'));
           } else {
+            // Unrecognized role or data error
             content = Scaffold(
               key: const ValueKey('error'),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Unrecognized role: ${user.role}'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => authService.signOut(),
-                      child: const Text('Back to Login'),
-                    ),
-                  ],
-                ),
+              body: EnhancedErrorState(
+                title: 'Access Restricted',
+                message: user.role.isEmpty 
+                    ? 'Your account does not have a designated role yet. Please contact an administrator.'
+                    : 'The role "${user.role}" is not recognized by the system.',
+                icon: Icons.lock_person_outlined,
+                actionLabel: 'Sign Out & Try Other Method',
+                onAction: () => authService.signOut(),
               ),
             );
           }
+        }
+      } catch (e) {
+          // General error recovery
+          content = Scaffold(
+            key: const ValueKey('runtime_error'),
+            body: EnhancedErrorState(
+              title: 'Application Error',
+              message: 'An unexpected error occurred: $e',
+              icon: Icons.warning_amber_rounded,
+              actionLabel: 'Back to Login',
+              onAction: () => authService.signOut(),
+            ),
+          );
         }
 
         return AnimatedSwitcher(

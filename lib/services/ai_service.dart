@@ -1,21 +1,21 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/activity.dart';
 import '../core/constants.dart';
+import 'package:intl/intl.dart';
 
 class AiService {
   final String _apiKey;
   GenerativeModel? _model;
   ChatSession? _chatSession;
+  List<Activity> _cachedActivities = [];
+  Map<String, dynamic> _stats = {};
+  final _currencyFormatter = NumberFormat.simpleCurrency(name: 'PHP ');
 
-  AiService(this._apiKey);
-
-  void startNewSession(List<Activity> activities) {
-    final systemInstruction = _buildSystemInstruction(activities);
-    
+  AiService(this._apiKey) {
     _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       apiKey: _apiKey,
-      systemInstruction: Content.system(systemInstruction),
+      systemInstruction: Content.system(_buildBaseSystemInstruction()),
       generationConfig: GenerationConfig(
         temperature: 0.7,
         topK: 40,
@@ -23,97 +23,363 @@ class AiService {
         maxOutputTokens: 1024,
       ),
     );
-
-    _chatSession = _model!.startChat(history: [
-      Content.model([
-        TextPart(
-            'I have loaded the data for ${activities.length} activities. I am ready to assist you with detailed analysis, budget tracking, and schedule management for the City Agriculture Office.')
-      ]),
-    ]);
   }
 
-  String _buildSystemInstruction(List<Activity> activities) {
-    // Convert activities to a structured JSON-like list for better AI comprehension
-    final activitiesJson = activities.map((a) => {
-      'id': a.id,
-      'name': a.activityName,
-      'sector': a.sector,
-      'subSector': a.subSector,
-      'status': a.status,
-      'responsible': a.responsiblePerson,
-      'budget': {
-        'total': a.totalBudget,
-        'q1': a.q1Budget,
-        'q2': a.q2Budget,
-        'q3': a.q3Budget,
-        'q4': a.q4Budget,
-      },
-      'financials': {
-        'prAmount': a.prAmount,
-        'prBalance': a.prBalance,
-        'prNumber': a.prNumber,
-        'ppmpAmount': a.ppmpAmount,
-        'poAmount': a.effectivePOAmount,
-        'actualExpenditure': a.actualExpenditure,
-      },
-      'timing': {
-        'targetDate': a.targetDate,
-        'quarter': a.quarter,
-      }
-    }).toList();
+  void startNewSession(List<Activity> activities) {
+    _cachedActivities = activities;
+    _calculateStats(activities);
 
+    _chatSession = _model!.startChat(
+      history: [
+        Content.model([
+          TextPart(
+            'I have access to the agricultural activity database with ${activities.length} records. '
+            'Total Budget: ${_currencyFormatter.format(_stats['totalBudget'] ?? 0)}. '
+            'I am ready to assist you with analysis and planning.',
+          ),
+        ]),
+      ],
+    );
+  }
+
+  /// Updates the cached activities used for RAG without resetting the chat session.
+  void updateActivities(List<Activity> activities) {
+    _cachedActivities = activities;
+    _calculateStats(activities);
+  }
+
+  void _calculateStats(List<Activity> activities) {
+    double totalBudget = 0;
+    double totalSpent = 0;
+    Map<String, int> sectorCounts = {};
+    Map<String, int> statusCounts = {};
+
+    for (var a in activities) {
+      totalBudget += a.totalBudget;
+      totalSpent += a.actualExpenditure;
+      sectorCounts[a.sector] = (sectorCounts[a.sector] ?? 0) + 1;
+      statusCounts[a.status] = (statusCounts[a.status] ?? 0) + 1;
+    }
+
+    _stats = {
+      'totalBudget': totalBudget,
+      'totalSpent': totalSpent,
+      'sectorCounts': sectorCounts,
+      'statusCounts': statusCounts,
+      'activityCount': activities.length,
+    };
+  }
+
+  String _buildBaseSystemInstruction() {
     return '''
 You are the "AWFPS Intelligence Engine," a highly specialized AI assistant for the AgriWork & Financial Planning System.
-Your knowledge is grounded in the City Agriculture Office's operational data.
+Your knowledge is STRICTLY grounded in the REAL-TIME Firestore database of the City Agriculture Office.
 
-CORE MISSION:
-Provide accurate, data-driven insights to help administrators optimize agricultural programs, track fund utilization, and ensure timely activity execution.
+CRITICAL RULES:
+1. DATA SOURCE: All analysis must be based ONLY on the provided context retrieved from Firestore.
+2. FINANCIAL PRECISION: Always use exact figures (PHP) formatted with thousands separators (e.g., PHP 1,234,567.89).
+3. BUDGET TRACKING: Monitor 'PR Balance' and 'PPMP Balance' to identify utilization bottlenecks.
+4. MULTILINGUAL: Respond in the language the user uses (English, Filipino, or Bisaya).
+5. ANALYTICAL DEPTH: Don't just list data; provide insights on trends, quarter-on-quarter changes, and priority section analysis.
+6. DATA INTEGRITY: If data is missing or a query is outside the provided context, state that clearly. Do not hallucinate figures.
+7. REAL-TIME SYNC: Acknowledge that you are working with live data synchronized from the cloud.
 
 DOMAIN KNOWLEDGE:
 - SECTORS: ${AppConstants.sectors.join(', ')}.
-- FUNDING SOURCES: ${AppConstants.fundingSources.join(', ')}. Includes specialized funds like 20% Development Fund (20% DF), Gender and Development (GAD), and CPOC.
+- FUNDING SOURCES: ${AppConstants.fundingSources.join(', ')}.
 - WORKFLOW: Activities move from "Planned" -> "PR Prepared" -> "Obre & Abstract Signature" -> "PO Prepared" -> "Obligated" -> "Completed".
 - QUARTERS: Agricultural planning is quarterly (Q1-Q4).
 
-LANGUAGE SUPPORT:
-- You are fully multilingual. You must respond in the language used by the user.
-- You have expert-level proficiency in **English**, **Filipino (Tagalog)**, and **Bisaya (Cebuano)**.
-- If a user asks in Bisaya (e.g., "Pila ang nabilin nga budget sa Crop Section?"), you must answer in Bisaya.
-- If a user asks in Filipino (e.g., "Ano ang status ng mga activities sa ASSU?"), you must answer in Filipino.
-
-CURRENT DATASET:
-$activitiesJson
-
-ANALYTICAL CAPABILITIES:
-1. BUDGET ANALYSIS: You can calculate total allocations, spent amounts, and remaining balances across sectors or funding sources.
-2. PO & PR TRACKING: You can provide details on Purchase Orders and Purchase Requests using 'poAmount' and 'prNumber'.
-3. STATUS TRACKING: Identify bottlenecks (e.g., "Which activities are stuck in 'PR Prepared' for too long?").
-3. PERSONNEL OVERVIEW: Summarize workloads for responsible persons like ${AppConstants.staffList.join(', ')}.
-4. QUARTERLY PLANNING: Suggest focus areas based on target dates.
-
-RESPONSE GUIDELINES:
-- Use MARKDOWN for clarity (tables, bold text, bullet points).
-- If asked for a summary, always include a "Key Takeaway" or "Action Item" (translated to the user's language).
-- Be precise with numbers. If a balance is zero, mention it.
-- If data is missing for a specific query, suggest which fields the user should update in the app.
+GUIDELINES:
+- Use MARKDOWN (tables, bold, lists).
+- Be precise with numbers.
 - Tone: Professional, analytical, and proactive.
-
-EXAMPLE INTERACTION (BISAYA):
-User: "Unsay status sa mga activities sa Crop Section?"
-Assistant: "Ang **Crop Section** naay 12 ka aktibidad. Sa pagkakaron, 65% na ang nagamit nga budget. **Action Item:** Naay 3 ka aktibidad nga 'Planned' pa gihapon bisan og Q2 na ang target date."
 ''';
   }
 
-  Future<String> sendMessage(String message) async {
+  List<Activity> _retrieveRelevantActivities(
+    String query,
+    List<Activity> allActivities,
+  ) {
+    if (query.length < 3) return allActivities.take(10).toList();
+
+    final terms = query
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.length > 2)
+        .toList();
+    if (terms.isEmpty) return allActivities.take(10).toList();
+
+    final scored = allActivities
+        .map((a) {
+          int score = 0;
+          final text =
+              '${a.activityName} ${a.sector} ${a.subSector} ${a.status} ${a.responsiblePerson} ${a.prNumber}'
+                  .toLowerCase();
+
+          for (final term in terms) {
+            if (text.contains(term)) {
+              score += 10;
+              if (a.activityName.toLowerCase().contains(term)) score += 20;
+              if (a.sector.toLowerCase().contains(term)) score += 15;
+            }
+          }
+          return MapEntry(a, score);
+        })
+        .where((e) => e.value > 0)
+        .toList();
+
+    scored.sort((a, b) => b.value.compareTo(a.value));
+    return scored.map((e) => e.key).take(20).toList();
+  }
+
+  String _formatActivitiesForContext(List<Activity> activities) {
+    if (activities.isEmpty)
+      return "No specific activities found in the Firestore database matching the criteria.";
+
+    return activities
+        .map((a) {
+          // JS-Safe property access: breakdown and prNumber might be undefined in some JS runtimes
+          // if the Activity object was created from a partial map.
+          final dynamic breakdown = a.breakdown;
+          final dynamic prNum = a.prNumber;
+
+          String breakdownStr = "";
+          try {
+            if (breakdown != null &&
+                breakdown is List &&
+                breakdown.isNotEmpty) {
+              breakdownStr =
+                  "\n    Breakdown: [${breakdown.map((b) => "${b.name}: ${_currencyFormatter.format(b.amount)}").join(", ")}]";
+            }
+          } catch (e) {
+            // Silently skip malformed breakdown
+          }
+
+          String appropStr = "";
+          try {
+            if (prNum != null && prNum is String && prNum.isNotEmpty) {
+              appropStr =
+                  "\n    Approp: PR#$prNum | Supplier: ${a.supplierApprop} | Status: ${a.statusApprop} (${a.statusAppropDate ?? 'N/A'})";
+            }
+          } catch (e) {
+            // Silently skip malformed approp
+          }
+
+          return "- ID: ${a.id}\n"
+              "  Name: ${a.activityName}\n"
+              "  Sector: ${a.sector} | Sub: ${a.subSector}\n"
+              "  Status: ${a.status} | Person: ${a.responsiblePerson}\n"
+              "  Financials: Total ${_currencyFormatter.format(a.totalBudget)} | Spent ${_currencyFormatter.format(a.actualExpenditure)} | PR Bal: ${_currencyFormatter.format(a.prBalance)} | PPMP Bal: ${_currencyFormatter.format(a.ppmpBalance)}\n"
+              "  Quarterly: Q1:${_currencyFormatter.format(a.q1Budget)}, Q2:${_currencyFormatter.format(a.q2Budget)}, Q3:${_currencyFormatter.format(a.q3Budget)}, Q4:${_currencyFormatter.format(a.q4Budget)}$breakdownStr$appropStr";
+        })
+        .join('\n\n');
+  }
+
+  Stream<String> sendMessageStream(String message) async* {
     if (_chatSession == null) {
-      return "Session not initialized. Please try again.";
+      yield "Session not initialized. Please try refreshing the chat.";
+      return;
     }
 
     try {
-      final response = await _chatSession!.sendMessage(Content.text(message));
-      return response.text ?? "I'm sorry, I couldn't generate a response.";
+      // Step 1: Retrieval
+      final relevantActivities = _retrieveRelevantActivities(
+        message,
+        _cachedActivities,
+      );
+      final contextString = _formatActivitiesForContext(relevantActivities);
+
+      // Step 2: Augment the prompt
+      final augmentedPrompt =
+          '''
+REAL-TIME FIRESTORE CONTEXT:
+$contextString
+
+USER QUERY:
+$message
+
+Please provide a detailed analysis based STRICTLY on the live Firestore data above. Use tables for financial comparisons.
+''';
+
+      final responseStream = _chatSession!.sendMessageStream(
+        Content.text(augmentedPrompt),
+      );
+
+      String fullResponse = "";
+      await for (final chunk in responseStream) {
+        if (chunk.text != null) {
+          fullResponse += chunk.text!;
+          yield fullResponse;
+        }
+      }
+    } on GenerativeAIException catch (e) {
+      final errorMsg = e.toString().toLowerCase();
+
+      if (errorMsg.contains('api key not found') ||
+          errorMsg.contains('invalid api key')) {
+        yield "⚠️ **API Key Error:** The Gemini API key provided appears to be invalid or expired. Please check your settings.";
+        return;
+      }
+
+      if (errorMsg.contains('quota') || errorMsg.contains('429')) {
+        yield "⚠️ **Rate Limit Exceeded:** You've reached the free tier limit for Gemini. Please wait a minute and try again.";
+        return;
+      }
+
+      if (_cachedActivities.isNotEmpty) {
+        yield _localFallbackSearch(message, _cachedActivities);
+        return;
+      }
+      yield "The AI engine is currently busy (Error: ${e.message}). Please try again in a moment.";
     } catch (e) {
-      return "Error: ${e.toString()}";
+      if (_cachedActivities.isNotEmpty) {
+        yield _localFallbackSearch(message, _cachedActivities);
+        return;
+      }
+      yield "Communication Error: ${e.toString()}";
     }
+  }
+
+  Future<String> sendMessage(String message, {int retryCount = 0}) async {
+    if (_chatSession == null) {
+      return "Session not initialized. Please try refreshing the chat.";
+    }
+
+    try {
+      // Step 1: Retrieval
+      final relevantActivities = _retrieveRelevantActivities(
+        message,
+        _cachedActivities,
+      );
+      final contextString = _formatActivitiesForContext(relevantActivities);
+
+      // Step 2: Augment the prompt
+      final augmentedPrompt =
+          '''
+REAL-TIME FIRESTORE CONTEXT:
+$contextString
+
+USER QUERY:
+$message
+
+Please provide a detailed analysis based STRICTLY on the live Firestore data above. Use tables for financial comparisons.
+''';
+
+      final response = await _chatSession!.sendMessage(
+        Content.text(augmentedPrompt),
+      );
+      return response.text ?? "I'm sorry, I couldn't generate a response.";
+    } on GenerativeAIException catch (e) {
+      final errorMsg = e.toString().toLowerCase();
+      if (errorMsg.contains('503') && retryCount < 2) {
+        await Future.delayed(Duration(seconds: 2 * (retryCount + 1)));
+        return sendMessage(message, retryCount: retryCount + 1);
+      }
+
+      if (errorMsg.contains('api key not found') ||
+          errorMsg.contains('invalid api key')) {
+        return "⚠️ **API Key Error:** The Gemini API key provided appears to be invalid or expired. Please check your settings.";
+      }
+
+      if (errorMsg.contains('quota') || errorMsg.contains('429')) {
+        return "⚠️ **Rate Limit Exceeded:** You've reached the free tier limit for Gemini. Please wait a minute and try again.";
+      }
+
+      if (errorMsg.contains('invalid') ||
+          errorMsg.contains('not found') ||
+          errorMsg.contains('key')) {
+        return "⚠️ **API Configuration Error:** The AI engine couldn't be authorized. Please check your Gemini API key in settings.";
+      }
+
+      if (_cachedActivities.isNotEmpty) {
+        return _localFallbackSearch(message, _cachedActivities);
+      }
+      return "The AI engine is currently busy (Error: ${e.message}). Please try again in a moment.";
+    } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('safety')) {
+        return "I cannot answer this query due to safety filters. Please rephrase your question.";
+      }
+
+      if (errorStr.contains('socket') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('failed to host lookup')) {
+        if (_cachedActivities.isNotEmpty) {
+          return _localFallbackSearch(message, _cachedActivities);
+        }
+        return "⚠️ **Network Error:** Please check your internet connection and try again.";
+      }
+
+      if (_cachedActivities.isNotEmpty) {
+        return _localFallbackSearch(message, _cachedActivities);
+      }
+      return "Communication Error: ${e.toString()}";
+    }
+  }
+
+  String _localFallbackSearch(String query, List<Activity> activities) {
+    final searchInput = query.toLowerCase();
+    final terms = searchInput
+        .split(RegExp(r'\s+'))
+        .where((t) => t.length > 2)
+        .toList();
+
+    // Attempt specific search
+    List<Activity> results = [];
+    if (terms.isNotEmpty) {
+      results = activities.where((a) {
+        final text =
+            '${a.activityName} ${a.sector} ${a.subSector} ${a.status} ${a.responsiblePerson}'
+                .toLowerCase();
+        return terms.any((term) => text.contains(term));
+      }).toList();
+    }
+
+    final buffer = StringBuffer();
+
+    if (results.isEmpty) {
+      // Last resort: show general overview instead of failure message
+      buffer.writeln(
+        "I couldn't find specific activities for \"$query\" in my local cache. However, here is a general overview of the database:\n",
+      );
+      buffer.writeln("- **Total Activities:** ${activities.length}");
+      buffer.writeln(
+        "- **Sectors Covered:** ${activities.map((a) => a.sector).toSet().length}",
+      );
+
+      double totalBudget = activities.fold(0, (sum, a) => sum + a.totalBudget);
+      buffer.writeln(
+        "- **Global Budget:** ${_currencyFormatter.format(totalBudget)}",
+      );
+
+      buffer.writeln(
+        "\nTry searching for specific terms like a sector name (e.g., 'Livestock') or a status.",
+      );
+      return buffer.toString();
+    }
+
+    buffer.writeln(
+      "I found ${results.length} related activities in my local cache:\n",
+    );
+
+    results.sort((a, b) => b.totalBudget.compareTo(a.totalBudget));
+
+    for (var i = 0; i < (results.length > 8 ? 8 : results.length); i++) {
+      final a = results[i];
+      buffer.writeln("- **${a.activityName}**");
+      buffer.writeln("  - Sector: ${a.sector} | Status: ${a.status}");
+      buffer.writeln(
+        "  - Budget: ${_currencyFormatter.format(a.totalBudget)}",
+      );
+    }
+
+    if (results.length > 8) {
+      buffer.writeln(
+        "\n*...and ${results.length - 8} more. Please use the dashboard filters for more details.*",
+      );
+    }
+
+    return buffer.toString();
   }
 }

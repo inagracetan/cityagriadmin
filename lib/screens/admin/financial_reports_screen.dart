@@ -2711,8 +2711,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                                   reservedSize: 60,
                                   getTitlesWidget: (value, meta) {
                                     return Text(
-                                      NumberFormat.compactCurrency(
-                                        symbol: '₱',
+                                      NumberFormat.compactSimpleCurrency(
+                                        name: 'PHP ',
                                       ).format(value),
                                       style: GoogleFonts.inter(
                                         fontSize: 10,

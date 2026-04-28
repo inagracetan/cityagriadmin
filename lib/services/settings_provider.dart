@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants.dart';
 import '../core/localization.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -19,7 +20,7 @@ class SettingsProvider extends ChangeNotifier {
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     language = prefs.getString('language') ?? 'English';
     isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    geminiApiKey = prefs.getString('geminiApiKey') ?? 'AIzaSyBxToOaM4wGjy91HXmSnhDRlp2AmNpCm-A';
+    geminiApiKey = prefs.getString('geminiApiKey') ?? AppConstants.geminiApiKey;
     notifyListeners();
   }
 

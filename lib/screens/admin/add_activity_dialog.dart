@@ -574,11 +574,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                                     'PR Number',
                                     textCell(prNumberCtl),
                                   ),
-                                  xlRow(
-                                    'PR2',
-                                    'PR',
-                                    currencyCell(prAmountCtl),
-                                  ),
+                                    xlRow('PR2', 'PR Amount', currencyCell(prAmountCtl)),
                                   xlRow(
                                     'PR3',
                                     'PR Balance',
@@ -1239,7 +1235,19 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         decoration: cellDec(hint ?? '0.00').copyWith(
           filled: true,
           fillColor: readOnly ? Colors.grey[100] : Colors.white,
-          prefixIcon: isPO ? const Icon(Icons.shopping_cart_outlined, size: 14, color: Color(0xFF1565C0)) : null,
+          prefixText: 'PHP ',
+          prefixStyle: const TextStyle(
+            color: modernGreen,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          prefixIcon: isPO
+              ? const Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 14,
+                  color: Color(0xFF1565C0),
+                )
+              : null,
         ),
         onTapOutside: (_) {
           if (ctl.text.isNotEmpty) {
@@ -1453,7 +1461,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                                   flex: 2,
                                   child: currencyCell(
                                     e.amountCtl,
-                                    hint: 'Amount (PHP)',
+                                    hint: '0.00',
                                     readOnly: e.breakdownItems.isNotEmpty,
                                   ),
                                 ),

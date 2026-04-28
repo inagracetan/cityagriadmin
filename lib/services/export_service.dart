@@ -96,7 +96,7 @@ class ExportService {
         List<dynamic> bRow = List.filled(35, '');
         bRow[3] = '    ${item.name}';
         bRow[34] =
-            '${item.fullDisplayNameWithFallback(act.fundingSource, act.objectOfExpenditure)}: ${item.amount}';
+            '${item.fullDisplayNameWithFallback(act.fundingSource, act.objectOfExpenditure)}: ${fmt(item.amount)}';
         csvData.add(bRow);
       }
     }
@@ -240,7 +240,7 @@ class ExportService {
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow),
       );
       sectorCell.value = TextCellValue(
-        '$sector ${NumberFormat('#,###').format(sectorAppropriation)}',
+        '$sector ${NumberFormat.simpleCurrency(name: 'PHP ').format(sectorAppropriation)}',
       );
       sectorCell.cellStyle = sectionHeaderStyle;
       
@@ -726,7 +726,7 @@ class ExportService {
   }
 
   static String fmt(double val) =>
-      NumberFormat.currency(symbol: '', decimalDigits: 2).format(val);
+      NumberFormat.simpleCurrency(name: '').format(val);
   static String fmtInt(int val) => NumberFormat('#,##0').format(val);
   static String formatToMMDDYYYY(String? d) {
     if (d == null || d.isEmpty) return '';
@@ -753,7 +753,7 @@ class ExportService {
         children: [
           pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
           pw.Text(
-            NumberFormat.currency(symbol: 'P ').format(val),
+            NumberFormat.simpleCurrency(name: 'PHP ').format(val),
             style: pw.TextStyle(
               fontSize: 12,
               fontWeight: pw.FontWeight.bold,

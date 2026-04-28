@@ -211,7 +211,7 @@ class ActivityFormProvider extends ChangeNotifier {
       resetForm();
     }
     isOpen = true;
-    isMinimized = true;
+    isMinimized = false;
     notifyListeners();
   }
 

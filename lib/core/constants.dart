@@ -203,4 +203,7 @@ class AppConstants {
         .join()
         .toUpperCase();
   }
+
+  // AI Configuration
+  static const String geminiApiKey = 'AIzaSyBxToOaM4wGjy91HXmSnhDRlp2AmNpCm-A';
 }

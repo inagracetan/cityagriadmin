@@ -60,7 +60,7 @@ class FundSourceEntry {
   final List<BreakdownEntry> breakdownItems = [];
 
   FundSourceEntry({String? amount})
-    : amountCtl = TextEditingController(text: amount ?? '₱ 0.00');
+    : amountCtl = TextEditingController(text: amount ?? '0.00');
 
   void dispose() {
     customFundingSourceCtl.dispose();
@@ -916,6 +916,12 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     decoration: cellDec(hint ?? '0.00').copyWith(
       filled: true,
       fillColor: readOnly ? Colors.grey[100] : Colors.white,
+      prefixText: 'PHP ',
+      prefixStyle: const TextStyle(
+        color: modernGreen,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
       prefixIcon: isPO
           ? const Icon(
               Icons.shopping_cart_outlined,
@@ -2301,7 +2307,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                 'PR Number',
                                 textCell(prNumberCtl),
                               ),
-                              xlRow('PR2', 'PR', currencyCell(prAmountCtl)),
+                              xlRow('PR2', 'PR Amount', currencyCell(prAmountCtl)),
                               xlRow(
                                 'PR3',
                                 'PR Balance',

@@ -13,7 +13,7 @@ import '../../services/export_service.dart';
 import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../services/activity_form_provider.dart';
-import '../../services/seed_data_loader.dart';
+import '../../services/import_service.dart';
 
 // Models
 import '../../models/activity.dart';
@@ -84,6 +84,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       title: l10n.translate('dashboard'),
       actions: [
         IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD4AF37)),
+          tooltip: l10n.translate('new_activity'),
+          onPressed: () => _showAddActivityDialog(context, fbService),
+        ),
+        IconButton(
           icon: const Icon(Icons.upload_file, color: Color(0xFFD4AF37)),
           tooltip: l10n.translate('import_excel'),
           onPressed: () => _importData(context, fbService),
@@ -95,18 +100,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _showExportOptions(context, _activities, authService, fbService),
         ),
       ],
-      fab: FloatingActionButton.extended(
-        onPressed: () => _showAddActivityDialog(context, fbService),
-        label: Text(
-          l10n.translate('new_activity'),
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-        ),
-        icon: const Icon(Icons.add_rounded),
-        backgroundColor: const Color(0xFF1B5E20),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
+      fab: null,
     );
   }
 
@@ -272,9 +266,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // to keep the ActivityFiltersBar stable.
 
     return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-      ),
+      decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
         child: Column(
@@ -287,7 +279,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(100),
@@ -335,268 +330,275 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
             ),
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        l10n.translate('executive_summary'),
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.onSurface,
-                          letterSpacing: -0.5,
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.only(left: 22),
-                  child: Text(
-                    l10n.translate('executive_summary_subtitle'),
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w500,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          l10n.translate('executive_summary'),
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 22),
+                    child: Text(
+                      l10n.translate('executive_summary_subtitle'),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SummaryCardsRow(
-            activities: activities,
-            formatCurrency: formatCurrency,
-            onFundSelected: (fund) =>
-                setState(() => _selectedFundingSource = fund),
-          ),
-          const SizedBox(height: 40),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        l10n.translate('financial_insights'),
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.onSurface,
-                          letterSpacing: -0.5,
+            const SizedBox(height: 16),
+            SummaryCardsRow(
+              activities: activities,
+              formatCurrency: formatCurrency,
+              onFundSelected: (fund) =>
+                  setState(() => _selectedFundingSource = fund),
+            ),
+            const SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          l10n.translate('financial_insights'),
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0.0),
-            child: LayoutBuilder(
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < ResponsiveUtils.tabletBreakpoint) {
+                    return Column(
+                      children: [
+                        BudgetSectionUnitChart(activities: activities),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: BudgetSectionUnitChart(activities: activities),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 48),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      l10n.translate('activity_management'),
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurface,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ActivityFiltersBar(
+              activities: allActivities,
+              searchQuery: _searchQuery,
+              selectedSector: _selectedSector,
+              selectedSubSector: _selectedSubSector,
+              selectedStatus: _selectedStatus,
+              selectedStaff: _selectedStaff,
+              selectedFundingSource: _selectedFundingSource,
+              selectedMonth: _selectedMonth,
+              selectedYear: _selectedYear,
+              onSearchChanged: (val) => setState(() => _searchQuery = val),
+              onSectorChanged: (val) => setState(() {
+                _selectedSector = val ?? '';
+                _onFiltersChanged();
+              }),
+              onSubSectorChanged: (val) =>
+                  setState(() => _selectedSubSector = val ?? ''),
+              onStatusChanged: (val) => setState(() {
+                _selectedStatus = val;
+                _onFiltersChanged();
+              }),
+              onStaffChanged: (val) => setState(() {
+                _selectedStaff = val ?? '';
+                _onFiltersChanged();
+              }),
+              onFundingSourceChanged: (val) =>
+                  setState(() => _selectedFundingSource = val ?? ''),
+              onMonthChanged: (val) =>
+                  setState(() => _selectedMonth = val ?? ''),
+              onYearChanged: (val) => setState(() => _selectedYear = val ?? ''),
+              onClearFilters: () => setState(() {
+                _searchQuery = '';
+                _selectedSector = '';
+                _selectedSubSector = '';
+                _selectedStatus = null;
+                _selectedStaff = '';
+                _selectedFundingSource = '';
+                _selectedMonth = '';
+                _selectedYear = DateTime.now().year.toString();
+                _onFiltersChanged();
+              }),
+              onWfpMonthlyViewPressed: () => showDialog(
+                context: context,
+                builder: (_) =>
+                    MonthlyAggregationViewer(activities: activities),
+              ),
+            ),
+            const SizedBox(height: 16),
+            LayoutBuilder(
               builder: (context, constraints) {
-                if (constraints.maxWidth < ResponsiveUtils.tabletBreakpoint) {
-                  return Column(
-                    children: [BudgetSectionUnitChart(activities: activities)],
-                  );
+                if (activities.isEmpty) {
+                  if (isAnyFilterActive) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 60.0),
+                      child: AgriUI.emptyState(
+                        icon: Icons.search_off,
+                        title: l10n.translate('no_results'),
+                        message: l10n.translate('no_results_msg'),
+                        onAction: () => setState(() {
+                          _searchQuery = '';
+                          _selectedSector = '';
+                          _selectedSubSector = '';
+                          _selectedStatus = null;
+                          _selectedStaff = '';
+                          _selectedFundingSource = '';
+                          _selectedMonth = '';
+                        }),
+                        actionLabel: l10n.translate('clear_all_filters'),
+                      ),
+                    );
+                  } else if (_activities.isEmpty) {
+                    // Truly empty database
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 60.0),
+                      child: AgriUI.emptyState(
+                        icon: Icons.agriculture,
+                        title: l10n.translate('no_activities'),
+                        message: l10n.translate('no_activities_msg'),
+                        onAction: () =>
+                            _showAddActivityDialog(context, fbService),
+                        actionLabel: l10n.translate('add_first_activity'),
+                      ),
+                    );
+                  }
                 }
-                return Row(
-                  children: [
-                    Expanded(
-                      child: BudgetSectionUnitChart(activities: activities),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 48),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    l10n.translate('activity_management'),
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onSurface,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          ActivityFiltersBar(
-            activities: allActivities,
-            searchQuery: _searchQuery,
-            selectedSector: _selectedSector,
-            selectedSubSector: _selectedSubSector,
-            selectedStatus: _selectedStatus,
-            selectedStaff: _selectedStaff,
-            selectedFundingSource: _selectedFundingSource,
-            selectedMonth: _selectedMonth,
-            selectedYear: _selectedYear,
-            onSearchChanged: (val) => setState(() => _searchQuery = val),
-            onSectorChanged: (val) => setState(() {
-              _selectedSector = val ?? '';
-              _onFiltersChanged();
-            }),
-            onSubSectorChanged: (val) =>
-                setState(() => _selectedSubSector = val ?? ''),
-            onStatusChanged: (val) => setState(() {
-              _selectedStatus = val;
-              _onFiltersChanged();
-            }),
-            onStaffChanged: (val) => setState(() {
-              _selectedStaff = val ?? '';
-              _onFiltersChanged();
-            }),
-            onFundingSourceChanged: (val) =>
-                setState(() => _selectedFundingSource = val ?? ''),
-            onMonthChanged: (val) => setState(() => _selectedMonth = val ?? ''),
-            onYearChanged: (val) => setState(() => _selectedYear = val ?? ''),
-            onClearFilters: () => setState(() {
-              _searchQuery = '';
-              _selectedSector = '';
-              _selectedSubSector = '';
-              _selectedStatus = null;
-              _selectedStaff = '';
-              _selectedFundingSource = '';
-              _selectedMonth = '';
-              _selectedYear = DateTime.now().year.toString();
-              _onFiltersChanged();
-            }),
-            onWfpMonthlyViewPressed: () => showDialog(
-              context: context,
-              builder: (_) => MonthlyAggregationViewer(activities: activities),
-            ),
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (activities.isEmpty) {
-                if (isAnyFilterActive) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60.0),
-                    child: AgriUI.emptyState(
-                      icon: Icons.search_off,
-                      title: l10n.translate('no_results'),
-                      message: l10n.translate('no_results_msg'),
-                      onAction: () => setState(() {
-                        _searchQuery = '';
-                        _selectedSector = '';
-                        _selectedSubSector = '';
-                        _selectedStatus = null;
-                        _selectedStaff = '';
-                        _selectedFundingSource = '';
-                        _selectedMonth = '';
-                      }),
-                      actionLabel: l10n.translate('clear_all_filters'),
-                    ),
-                  );
-                } else if (_activities.isEmpty) {
-                  // Truly empty database
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60.0),
-                    child: AgriUI.emptyState(
-                      icon: Icons.agriculture,
-                      title: l10n.translate('no_activities'),
-                      message: l10n.translate('no_activities_msg'),
-                      onAction: () =>
-                          _showAddActivityDialog(context, fbService),
-                      actionLabel: l10n.translate('add_first_activity'),
-                    ),
-                  );
-                }
-              }
-              
-              final isNarrow = constraints.maxWidth < ResponsiveUtils.tabletBreakpoint;
 
-              if (isNarrow) {
-                return ActivityCardList(
+                final isNarrow =
+                    constraints.maxWidth < ResponsiveUtils.tabletBreakpoint;
+
+                if (isNarrow) {
+                  return ActivityCardList(
+                    activities: activities,
+                    fbService: fbService,
+                    formatCurrency: formatCurrency,
+                    onActionTap: (activity) =>
+                        _showActivityDetails(context, activity, fbService),
+                  );
+                }
+                return ActivityTable(
                   activities: activities,
                   fbService: fbService,
                   formatCurrency: formatCurrency,
+                  sortColumnIndex: _sortColumnIndex,
+                  sortAscending: _sortAscending,
+                  onSort: (idx, asc) => setState(() {
+                    _sortColumnIndex = idx;
+                    _sortAscending = asc;
+                  }),
                   onActionTap: (activity) =>
                       _showActivityDetails(context, activity, fbService),
                 );
-              }
-              return ActivityTable(
-                activities: activities,
-                fbService: fbService,
-                formatCurrency: formatCurrency,
-                sortColumnIndex: _sortColumnIndex,
-                sortAscending: _sortAscending,
-                onSort: (idx, asc) => setState(() {
-                  _sortColumnIndex = idx;
-                  _sortAscending = asc;
-                }),
-                onActionTap: (activity) =>
-                    _showActivityDetails(context, activity, fbService),
-              );
-            },
-          ),
-          const SizedBox(height: 80),
-        ],
+              },
+            ),
+            const SizedBox(height: 80),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ── dialog launchers ─────────────────────────────────────────────────────
 
@@ -804,14 +806,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _importData(BuildContext context, FirebaseService fbService) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      messenger.showSnackBar(SnackBar(content: Text('Importing raw data...')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Opening file picker...')),
+      );
 
-      // await ImportService.importActivitiesFromExcel(fbService);
-      await SeedDataLoader.load(fbService);
+      await ImportService.importActivitiesFromExcel(fbService);
 
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Data initialized successfully!')),
+          const SnackBar(content: Text('Import successful!')),
         );
       }
     } catch (e) {

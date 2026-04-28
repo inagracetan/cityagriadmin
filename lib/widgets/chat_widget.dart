@@ -91,7 +91,19 @@ class _ChatWidgetState extends State<ChatWidget> {
         borderRadius: BorderRadius.circular(_isExpanded ? 24 : 30),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: _isExpanded ? _buildChatContent(theme) : _buildCollapsedIcon(theme),
+          child: Material(
+            color: Colors.transparent,
+            child: _isExpanded 
+                ? OverflowBox(
+                    minWidth: 350,
+                    maxWidth: 350,
+                    minHeight: 500,
+                    maxHeight: 500,
+                    alignment: Alignment.topRight,
+                    child: _buildChatContent(theme),
+                  )
+                : _buildCollapsedIcon(theme),
+          ),
         ),
       ),
     );
@@ -178,25 +190,30 @@ class _ChatWidgetState extends State<ChatWidget> {
             child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "AWFPS Assistant",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "AWFPS Assistant",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                "Online | Intelligence Engine",
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
+                Text(
+                  "Online | Intelligence Engine",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const Spacer(),
           IconButton(
@@ -317,8 +334,8 @@ class ChatMessage extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        constraints: const BoxConstraints(
+          maxWidth: 280,
         ),
         decoration: BoxDecoration(
           color: isUser 

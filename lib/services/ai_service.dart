@@ -4,13 +4,18 @@ import '../core/constants.dart';
 
 class AiService {
   final String _apiKey;
-  late final GenerativeModel _model;
+  GenerativeModel? _model;
   ChatSession? _chatSession;
 
-  AiService(this._apiKey) {
+  AiService(this._apiKey);
+
+  void startNewSession(List<Activity> activities) {
+    final systemInstruction = _buildSystemInstruction(activities);
+    
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       apiKey: _apiKey,
+      systemInstruction: Content.system(systemInstruction),
       generationConfig: GenerationConfig(
         temperature: 0.7,
         topK: 40,
@@ -18,13 +23,12 @@ class AiService {
         maxOutputTokens: 1024,
       ),
     );
-  }
 
-  void startNewSession(List<Activity> activities) {
-    final systemInstruction = _buildSystemInstruction(activities);
-    _chatSession = _model.startChat(history: [
-      Content.system(systemInstruction),
-      Content.model([TextPart('I have loaded the data for ${activities.length} activities. I am ready to assist you with detailed analysis, budget tracking, and schedule management for the City Agriculture Office.')]),
+    _chatSession = _model!.startChat(history: [
+      Content.model([
+        TextPart(
+            'I have loaded the data for ${activities.length} activities. I am ready to assist you with detailed analysis, budget tracking, and schedule management for the City Agriculture Office.')
+      ]),
     ]);
   }
 
@@ -47,7 +51,9 @@ class AiService {
       'financials': {
         'prAmount': a.prAmount,
         'prBalance': a.prBalance,
+        'prNumber': a.prNumber,
         'ppmpAmount': a.ppmpAmount,
+        'poAmount': a.effectivePOAmount,
         'actualExpenditure': a.actualExpenditure,
       },
       'timing': {
@@ -80,7 +86,8 @@ $activitiesJson
 
 ANALYTICAL CAPABILITIES:
 1. BUDGET ANALYSIS: You can calculate total allocations, spent amounts, and remaining balances across sectors or funding sources.
-2. STATUS TRACKING: Identify bottlenecks (e.g., "Which activities are stuck in 'PR Prepared' for too long?").
+2. PO & PR TRACKING: You can provide details on Purchase Orders and Purchase Requests using 'poAmount' and 'prNumber'.
+3. STATUS TRACKING: Identify bottlenecks (e.g., "Which activities are stuck in 'PR Prepared' for too long?").
 3. PERSONNEL OVERVIEW: Summarize workloads for responsible persons like ${AppConstants.staffList.join(', ')}.
 4. QUARTERLY PLANNING: Suggest focus areas based on target dates.
 

@@ -101,6 +101,7 @@ class ResponsiveScaffold extends StatelessWidget {
               ],
             ),
             floatingActionButton: floatingActionButton,
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
           );
         }
 
@@ -119,6 +120,7 @@ class ResponsiveScaffold extends StatelessWidget {
           appBar: appBar,
           body: body,
           floatingActionButton: floatingActionButton,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         );
       },
     );

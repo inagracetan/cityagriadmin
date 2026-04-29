@@ -21,7 +21,6 @@ class ActivityCardList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return ListView.builder(
       shrinkWrap: true,
@@ -30,15 +29,6 @@ class ActivityCardList extends StatelessWidget {
       itemCount: activities.length,
       itemBuilder: (context, index) {
         final activity = activities[index];
-        final isLowBalance =
-            activity.approvedBudget > 0 && activity.unexpendedBalance < 1000;
-
-        final now = DateTime.now();
-        final currentMonthStr = DateFormat('MMMM').format(now);
-        final isDelayed =
-            activity.status == 'Planned' &&
-            now.day >= 15 &&
-            activity.targetDate.contains(currentMonthStr);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -47,16 +37,12 @@ class ActivityCardList extends StatelessWidget {
             borderRadius: 20,
             padding: EdgeInsets.zero,
             border: Border.all(
-              color: isDelayed
-                  ? Colors.orange.withValues(alpha: 0.5)
-                  : theme.dividerColor.withValues(alpha: 0.05),
-              width: isDelayed ? 1.5 : 1,
+              color: theme.dividerColor.withValues(alpha: 0.05),
+              width: 1,
             ),
             child: ExpansionTile(
               shape: const Border(),
-              backgroundColor: isDelayed
-                  ? Colors.orange.withValues(alpha: 0.02)
-                  : Colors.transparent,
+              backgroundColor: Colors.transparent,
               collapsedBackgroundColor: Colors.transparent,
               tilePadding: const EdgeInsets.all(20),
               title: Column(
@@ -64,12 +50,11 @@ class ActivityCardList extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _statusBadge(activity.status),
                       const Spacer(),
                       if (activity.isDraft)
                         _miniBadge('DRAFT', Colors.blueGrey),
-                      if (isDelayed) _miniBadge('DELAYED', Colors.orange),
-                      if (isLowBalance) _miniBadge('LOW BALANCE', Colors.red),
+                      if (activity.isLowBalance)
+                        _miniBadge('LOW BALANCE', Colors.red),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -152,7 +137,7 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'BALANCE',
                               formatCurrency.format(activity.unexpendedBalance),
-                              color: isLowBalance ? Colors.red : theme.colorScheme.primary,
+                              color: activity.isLowBalance ? Colors.red : theme.colorScheme.primary,
                               fullWidth: true,
                             ),
                           ],
@@ -195,7 +180,7 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'BALANCE',
                               formatCurrency.format(activity.unexpendedBalance),
-                              color: isLowBalance ? Colors.red : theme.colorScheme.primary,
+                              color: activity.isLowBalance ? Colors.red : theme.colorScheme.primary,
                             ),
                           ),
                         ],
@@ -292,26 +277,6 @@ class ActivityCardList extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(String status) {
-    final color = _statusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          inherit: true,
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
 
   Widget _miniBadge(String label, Color color) {
     return Container(
@@ -372,20 +337,4 @@ class ActivityCardList extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Planned':
-        return Colors.blue.shade700;
-      case 'PR Prepared':
-        return Colors.orange.shade700;
-      case 'Obre & Abstract Signature':
-        return Colors.purple.shade700;
-      case 'Obligated':
-        return Colors.teal.shade700;
-      case 'Completed':
-        return Colors.green.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
 }

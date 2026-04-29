@@ -25,30 +25,7 @@ const textMain = Color(0xFF1E293B);
 const labelBg = Color(0xFFF8FAFC);
 const labelText = Color(0xFF475569);
 
-// ── Breakdown entry helper ────────────────────────────────────────────────────
-class BreakdownEntry {
-  final TextEditingController nameCtl;
-  final TextEditingController amountCtl;
-  final TextEditingController supplierCtl;
-  final TextEditingController statusCtl;
-
-  BreakdownEntry({
-    String? name,
-    String? amount,
-    String? supplier,
-    String? status,
-  }) : nameCtl = TextEditingController(text: name),
-       amountCtl = TextEditingController(text: amount),
-       supplierCtl = TextEditingController(text: supplier),
-       statusCtl = TextEditingController(text: status);
-
-  void dispose() {
-    nameCtl.dispose();
-    amountCtl.dispose();
-    supplierCtl.dispose();
-    statusCtl.dispose();
-  }
-}
+// Removed local BreakdownEntry class to use the one from activity_form_provider.dart
 
 class FundSourceEntry {
   String fundingSource = 'Agri MOOE';
@@ -104,13 +81,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
   final prNumberCtl = TextEditingController();
   final supplierAppropCtl = TextEditingController();
   final barcodeAppropCtl = TextEditingController();
-  final statusAppropCtl = TextEditingController();
   final targetParticipantsCtl = TextEditingController();
   final remarksCtl = TextEditingController();
   final customSectorCtl = TextEditingController();
   final customSubSectorCtl = TextEditingController();
   final customResponsiblePersonCtl = TextEditingController();
-  final customStatusCtl = TextEditingController();
   final customStatusDateCtl = TextEditingController();
   final otherMoeSuppliersCtl = TextEditingController();
   final statusAppropDateCtl = TextEditingController();
@@ -119,7 +94,6 @@ class EditActivityDialogState extends State<EditActivityDialog> {
   final actualConductCtl = TextEditingController();
   final accommRemarksCtl = TextEditingController();
 
-  late String selectedStatus;
   late String selectedMonth;
   String? selectedToMonth;
   late String selectedYear;
@@ -170,10 +144,6 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     final prAmountVal = CurrencyInputFormatter.parse(prAmountCtl.text);
     final prBalanceVal = CurrencyInputFormatter.parse(prBalanceCtl.text);
 
-    final String currentStatus = selectedStatus == 'Other'
-        ? customStatusCtl.text.trim()
-        : selectedStatus;
-
     final String currentResponsible = responsiblePerson == 'Other'
         ? customResponsiblePersonCtl.text.trim()
         : responsiblePerson;
@@ -194,12 +164,10 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         prNumberCtl.text.trim() != a.prNumber ||
         supplierAppropCtl.text.trim() != a.supplierApprop ||
         barcodeAppropCtl.text.trim() != a.barcodeApprop ||
-        statusAppropCtl.text.trim() != a.statusApprop ||
         targetParticipantsCtl.text.trim() != a.targetParticipants ||
         remarksCtl.text.trim() != a.remarks ||
         currentSector != a.sector ||
         subSector != a.subSector ||
-        currentStatus != a.status ||
         currentResponsible != a.responsiblePerson;
   }
 
@@ -258,8 +226,9 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         for (var b in entry.breakdownItems) {
           entryTotal += CurrencyInputFormatter.parse(b.amountCtl.text);
         }
-        final formattedEntryTotal =
-            CurrencyInputFormatter.formatDouble(entryTotal);
+        final formattedEntryTotal = CurrencyInputFormatter.formatDouble(
+          entryTotal,
+        );
         if (entry.amountCtl.text != formattedEntryTotal) {
           entry.amountCtl.text = formattedEntryTotal;
         }
@@ -327,17 +296,10 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     prNumberCtl.text = a.prNumber;
     supplierAppropCtl.text = a.supplierApprop;
     barcodeAppropCtl.text = a.barcodeApprop;
-    statusAppropCtl.text = a.statusApprop;
-    statusAppropDateCtl.text = a.statusAppropDate ?? '';
     targetParticipantsCtl.text = a.targetParticipants;
     remarksCtl.text = a.remarks;
     actualConductCtl.text = a.actualConduct;
     accommRemarksCtl.text = a.accommRemarks;
-    selectedStatus = AppConstants.activityStatuses.contains(a.status)
-        ? a.status
-        : 'Other';
-    if (selectedStatus == 'Other') customStatusCtl.text = a.status;
-    customStatusDateCtl.text = a.statusDate ?? '';
     // Load responsible person and handle "Other" logic
     final isStaff = AppConstants.staffList.contains(a.responsiblePerson);
     responsiblePerson = isStaff ? a.responsiblePerson : 'Other';
@@ -443,11 +405,14 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         if (targetFe != null) {
           final entry = BreakdownEntry(
             name: item.name,
-            amount: item.amount > 0
-                ? CurrencyInputFormatter.formatDouble(item.amount)
-                : '',
+            amount: item.amount,
+            unit: item.unit,
+            quantity: item.quantity ?? 0.0,
+            price: item.price ?? 0.0,
+            quarter: item.quarter ?? 1,
             supplier: item.supplier ?? '',
             status: item.status ?? '',
+            statusDate: item.statusDate ?? '',
           );
           entry.amountCtl.addListener(updateTotalBudget);
           targetFe.breakdownItems.add(entry);
@@ -510,14 +475,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     prNumberCtl.dispose();
     supplierAppropCtl.dispose();
     barcodeAppropCtl.dispose();
-    statusAppropCtl.dispose();
     targetParticipantsCtl.dispose();
     remarksCtl.dispose();
     customSectorCtl.dispose();
     customSubSectorCtl.dispose();
     customResponsiblePersonCtl.dispose();
-    customStatusCtl.dispose();
-    customStatusDateCtl.dispose();
     otherMoeSuppliersCtl.dispose();
     statusAppropDateCtl.dispose();
     actualConductCtl.dispose();
@@ -567,7 +529,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.edit_document, color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.edit_document,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -674,7 +640,10 @@ class EditActivityDialogState extends State<EditActivityDialog> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: modernGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -788,6 +757,57 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     ),
     errorStyle: const TextStyle(height: 0),
   );
+
+  InputDecoration compactDec([String? hint]) => InputDecoration(
+    hintText: hint,
+    hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.black26),
+    isDense: true,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: modernGreen, width: 1.5),
+    ),
+    errorStyle: const TextStyle(height: 0),
+  );
+
+  Widget dateCell(TextEditingController ctl, {bool isCompact = false}) =>
+      TextFormField(
+        controller: ctl,
+        readOnly: true,
+        style: GoogleFonts.inter(
+          fontSize: isCompact ? 11 : 12,
+          color: textMain,
+          fontWeight: isCompact ? FontWeight.w500 : FontWeight.normal,
+        ),
+        decoration: (isCompact ? compactDec('Date...') : cellDec('Select Date'))
+            .copyWith(
+              suffixIcon: Icon(Icons.calendar_today, size: isCompact ? 12 : 14),
+            ),
+        onTap: () async {
+          final currentText = ctl.text;
+          final initialDate =
+              AppDateFormatter.parse(currentText) ?? DateTime.now();
+          final date = await showDatePicker(
+            context: context,
+            initialDate: initialDate,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+          );
+          if (date != null) {
+            ctl.text = AppDateFormatter.format(date);
+          }
+        },
+      );
 
   InputDecorationTheme cellTheme() => InputDecorationTheme(
     hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.black26),
@@ -946,34 +966,13 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     },
   );
 
-  Widget dateCell(TextEditingController ctl) => TextFormField(
-    controller: ctl,
-    readOnly: true,
-    style: const TextStyle(fontSize: 12, color: textMain),
-    decoration: cellDec(
-      'Select Date',
-    ).copyWith(suffixIcon: const Icon(Icons.calendar_today, size: 14)),
-    onTap: () async {
-      final currentText = ctl.text;
-      final initialDate = AppDateFormatter.parse(currentText) ?? DateTime.now();
-      final date = await showDatePicker(
-        context: context,
-        initialDate: initialDate,
-        firstDate: DateTime(2000),
-        lastDate: DateTime(2100),
-      );
-      if (date != null) {
-        ctl.text = AppDateFormatter.format(date);
-      }
-    },
-  );
-
   Widget supplierCell(
     TextEditingController ctl, {
     bool allowsMultiple = false,
   }) {
     return DropdownMenu<String>(
-      initialSelection: ctl.text.isEmpty || !availableSuppliers.contains(ctl.text)
+      initialSelection:
+          ctl.text.isEmpty || !availableSuppliers.contains(ctl.text)
           ? ''
           : ctl.text,
       controller: ctl,
@@ -982,7 +981,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
       menuHeight: 250,
       expandedInsets: EdgeInsets.zero,
       hintText: 'Select or type supplier...',
-      textStyle: const TextStyle(fontSize: 13, color: textMain, fontWeight: FontWeight.w500),
+      textStyle: const TextStyle(
+        fontSize: 13,
+        color: textMain,
+        fontWeight: FontWeight.w500,
+      ),
       inputDecorationTheme: cellTheme(),
       menuStyle: MenuStyle(
         backgroundColor: WidgetStateProperty.all(Colors.white),
@@ -1014,55 +1017,6 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     );
   }
 
-  Widget prStatusCell(TextEditingController ctl) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(flex: 3, child: dateCell(statusAppropDateCtl)),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 7,
-              child: DropdownMenu<String>(
-                initialSelection:
-                    ctl.text.isEmpty ||
-                        !AppConstants.activityStatuses.contains(ctl.text)
-                    ? ''
-                    : ctl.text,
-                expandedInsets: EdgeInsets.zero,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                hintText: 'Select PR status...',
-                inputDecorationTheme: cellTheme(),
-                dropdownMenuEntries: [
-                  const DropdownMenuEntry(
-                    value: '',
-                    label: 'Choose PR status',
-                  ),
-                  ...AppConstants.activityStatuses.map(
-                    (s) => DropdownMenuEntry(value: s, label: s),
-                  ),
-                ],
-                onSelected: (val) {
-                  if (val != null) {
-                    setState(() {
-                      ctl.text = val;
-                    });
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        textCell(ctl, hint: 'Or type custom PR status...'),
-      ],
-    );
-  }
-
   Widget dropdownCell<T>({
     required T? value,
     required List<T> options,
@@ -1076,7 +1030,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
       menuHeight: 250,
       expandedInsets: EdgeInsets.zero,
       label: hint != null ? Text(hint) : null,
-      textStyle: const TextStyle(fontSize: 14, color: textMain, fontWeight: FontWeight.w500),
+      textStyle: const TextStyle(
+        fontSize: 14,
+        color: textMain,
+        fontWeight: FontWeight.w500,
+      ),
       inputDecorationTheme: cellTheme(),
       menuStyle: MenuStyle(
         backgroundColor: WidgetStateProperty.all(Colors.white),
@@ -1128,10 +1086,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
   Widget buildSubSectorCell() {
     return dropdownCell<String?>(
       value: subSector,
-      options: [
-        null,
-        ...AppConstants.subSectors,
-      ],
+      options: [null, ...AppConstants.subSectors],
       onChanged: (val) => setState(() {
         subSector = val;
 
@@ -1149,31 +1104,6 @@ class EditActivityDialogState extends State<EditActivityDialog> {
           }
         }
       }),
-    );
-  }
-
-  Widget buildStatusCell() {
-    final List<String> statusOptions = [
-      ...AppConstants.activityStatuses,
-      'Other',
-    ];
-
-    if (selectedStatus.isNotEmpty &&
-        !statusOptions.contains(selectedStatus)) {
-      statusOptions.insert(0, selectedStatus);
-    }
-
-    return dropdownCell<String>(
-      value: selectedStatus.isEmpty ? null : selectedStatus,
-      options: statusOptions,
-      hint: 'Select Status',
-      onChanged: (val) {
-        if (val != null) {
-          setState(() {
-            selectedStatus = val;
-          });
-        }
-      },
     );
   }
 
@@ -1203,7 +1133,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(
-                          'C${idx + 1}',
+                          '${idx + 1}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: labelText,
@@ -1461,10 +1391,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
               responsiblePerson == 'Other')
           ? responsiblePerson
           : null,
-      options: [
-        ...availableStaff,
-        'Other',
-      ],
+      options: [...availableStaff, 'Other'],
       onChanged: (val) => setState(() {
         if (val != null) responsiblePerson = val;
       }),
@@ -1481,10 +1408,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
 
   Widget buildToMonthCell() => dropdownCell<String?>(
     value: selectedToMonth,
-    options: [
-      null,
-      ...months,
-    ],
+    options: [null, ...months],
     onChanged: (val) => setState(() => selectedToMonth = val),
   );
 
@@ -1505,22 +1429,21 @@ class EditActivityDialogState extends State<EditActivityDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           color: modernGreen.withValues(alpha: 0.05),
           child: Row(
             children: [
-              const Icon(Icons.list_alt, size: 13, color: modernGreen),
-              const SizedBox(width: 5),
-              const Text(
+              const Icon(Icons.list_alt_rounded, size: 16, color: modernDark),
+              const SizedBox(width: 8),
+              Text(
                 'EXPENDITURE BREAKDOWN',
-                style: TextStyle(
-                  fontSize: 10,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: modernGreen,
-                  letterSpacing: 0.5,
+                  color: modernDark,
+                  letterSpacing: 1.0,
                 ),
               ),
-              const Spacer(),
             ],
           ),
         ),
@@ -1532,70 +1455,59 @@ class EditActivityDialogState extends State<EditActivityDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             child: Row(
               children: const [
-                SizedBox(width: 20),
+                SizedBox(width: 20), // item badge
                 SizedBox(width: 6),
                 Expanded(
-                  flex: 5,
-                  child: Text(
-                    'Description',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: labelText,
-                    ),
-                  ),
+                  flex: 3,
+                  child: Text('Description', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Unit', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q1', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q2', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q3', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q4', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Total Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 2,
+                  child: Text('Price', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 2,
+                  child: Text('Amount', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
                 ),
                 SizedBox(width: 4),
                 Expanded(
                   flex: 3,
-                  child: Text(
-                    'PO Amount',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: modernGreen,
-                    ),
-                  ),
+                  child: Text('Supplier', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
                 ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    'Supplier',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: labelText,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: labelText,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 24),
+                SizedBox(width: 24), // delete button space
               ],
-            ),
-          ),
-
-        if (fe.breakdownItems.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-            child: Text(
-              'No breakdown items added.',
-              style: TextStyle(
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[500],
-              ),
             ),
           ),
 
@@ -1611,73 +1523,22 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                 color: Colors.white,
                 border: Border.all(color: border),
                 borderRadius: BorderRadius.circular(6),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: modernGreen.withValues(alpha: 0.08),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(6),
-                        topRight: Radius.circular(6),
-                      ),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    color: modernGreen.withValues(alpha: 0.08),
                     child: Row(
                       children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: modernGreen,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${bIdx + 1}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                        Text('${bIdx + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            'Item Details',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: modernDark,
-                            ),
-                          ),
-                        ),
+                        const Expanded(child: Text('Item Details', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
                         IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
                           onPressed: () => setState(() {
                             be.amountCtl.removeListener(updateTotalBudget);
-                            be.dispose();
-                            fe.breakdownItems.removeAt(bIdx);
+                            fe.breakdownItems.removeAt(bIdx).dispose();
                             updateTotalBudget();
                           }),
                         ),
@@ -1685,74 +1546,48 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(8),
                     child: Column(
                       children: [
-                        mobileBreakdownField(
-                          'Description',
-                          TextFormField(
-                            controller: be.nameCtl,
-                            style: const TextStyle(fontSize: 12),
-                            decoration: compactDec('Description...'),
-                          ),
+                        mobileBreakdownField('Description', TextFormField(controller: be.nameCtl, decoration: compactDec('Item name...'), style: const TextStyle(fontSize: 12))),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Unit', TextFormField(controller: be.unitCtl, decoration: compactDec('Unit'), style: const TextStyle(fontSize: 12)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Total Qty', TextFormField(controller: be.quantityCtl, readOnly: true, decoration: compactDec('0'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        mobileBreakdownField(
-                          'PO Amount',
-                          currencyCell(be.amountCtl, hint: '0.00'),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Q1', TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Q2', TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        mobileBreakdownField(
-                          'Supplier',
-                          TextFormField(
-                            controller: be.supplierCtl,
-                            style: const TextStyle(fontSize: 12),
-                            decoration: compactDec('Supplier...').copyWith(
-                              suffixIcon: availableSuppliers.isEmpty
-                                  ? null
-                                  : PopupMenuButton<String>(
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 40,
-                                        minHeight: 40,
-                                      ),
-                                      icon: const Icon(
-                                        Icons.arrow_drop_down,
-                                        size: 20,
-                                      ),
-                                      onSelected: (v) => setState(
-                                        () => be.supplierCtl.text = v,
-                                      ),
-                                      itemBuilder: (ctx) => availableSuppliers
-                                          .map(
-                                            (s) => PopupMenuItem(
-                                              value: s,
-                                              child: Text(
-                                                s,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                            ),
-                          ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Q3', TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Q4', TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        mobileBreakdownField(
-                          'Status',
-                          breakdownDropdown<String>(
-                            value: be.statusCtl.text.isEmpty
-                                ? ''
-                                : (AppConstants.activityStatuses.contains(be.statusCtl.text)
-                                    ? be.statusCtl.text
-                                    : ''),
-                            options: ['', ...AppConstants.activityStatuses],
-                            onChanged: (v) => setState(() => be.statusCtl.text = v ?? ''),
-                          ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Price', TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12), onChanged: (v) {
+                              final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
+                              if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
+                              updateBreakdownAmount(be);
+                            }))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Amount', TextFormField(controller: be.amountCtl, readOnly: true, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+                          ],
                         ),
+                        const SizedBox(height: 4),
+                        mobileBreakdownField('Supplier', TextFormField(controller: be.supplierCtl, decoration: compactDec('Supplier...'), style: const TextStyle(fontSize: 12))),
                       ],
                     ),
                   ),
@@ -1765,163 +1600,80 @@ class EditActivityDialogState extends State<EditActivityDialog> {
             color: bg,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: modernGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(
-                    '${bIdx + 1}',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      color: modernGreen,
-                    ),
-                  ),
-                ),
+                SizedBox(width: 20, child: Text('${bIdx + 1}', style: const TextStyle(fontSize: 9, color: modernGreen, fontWeight: FontWeight.bold))),
                 const SizedBox(width: 6),
-                Expanded(
-                  flex: 5,
-                  child: TextFormField(
-                    controller: be.nameCtl,
-                    style: const TextStyle(fontSize: 11),
-                    decoration: compactDec('Description...'),
-                  ),
-                ),
+                Expanded(flex: 3, child: TextFormField(controller: be.nameCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Description...'))),
                 const SizedBox(width: 4),
-                // Amount
-                Expanded(
-                  flex: 3,
-                  child: currencyCell(be.amountCtl, hint: '0.00'),
-                ),
+                Expanded(flex: 1, child: TextFormField(controller: be.unitCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('unit'))),
                 const SizedBox(width: 4),
-                // Supplier (Combo Box: Input + Dropdown)
-                Expanded(
-                  flex: 4,
-                  child: TextFormField(
-                    controller: be.supplierCtl,
-                    style: const TextStyle(fontSize: 11),
-                    decoration: compactDec('Supplier...').copyWith(
-                      suffixIcon: availableSuppliers.isEmpty
-                          ? null
-                          : PopupMenuButton<String>(
-                              constraints: const BoxConstraints(
-                                maxHeight: 250,
-                                maxWidth: 300,
-                              ),
-                              icon: const Icon(
-                                Icons.arrow_drop_down,
-                                size: 18,
-                                color: Colors.grey,
-                              ),
-                              padding: EdgeInsets.zero,
-                              onSelected: (val) {
-                                setState(() {
-                                  be.supplierCtl.text = val;
-                                });
-                              },
-                              itemBuilder: (context) => availableSuppliers
-                                  .map(
-                                    (s) => PopupMenuItem(
-                                      value: s,
-                                      height: 32,
-                                      child: Text(
-                                        s,
-                                        style: const TextStyle(fontSize: 11),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                      suffixIconConstraints: const BoxConstraints(
-                        maxWidth: 24,
-                        maxHeight: 24,
-                      ),
-                    ),
-                  ),
-                ),
+                // Q1
+                Expanded(flex: 1, child: TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
                 const SizedBox(width: 4),
-                Expanded(
-                  flex: 3,
-                  child: breakdownDropdown<String>(
-                    value: be.statusCtl.text.isEmpty
-                        ? ''
-                        : (AppConstants.activityStatuses.contains(be.statusCtl.text)
-                            ? be.statusCtl.text
-                            : ''),
-                    options: ['', ...AppConstants.activityStatuses],
-                    onChanged: (val) => setState(() => be.statusCtl.text = val ?? ''),
-                    useCompact: true,
-                  ),
-                ),
-                SizedBox(
-                  width: 24,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, size: 14, color: Colors.red),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => setState(() {
-                      be.amountCtl.removeListener(updateTotalBudget);
-                      be.dispose();
-                      fe.breakdownItems.removeAt(bIdx);
-                      updateTotalBudget();
-                    }),
-                  ),
-                ),
+                // Q2
+                Expanded(flex: 1, child: TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Q3
+                Expanded(flex: 1, child: TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Q4
+                Expanded(flex: 1, child: TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Total Qty
+                Expanded(flex: 1, child: TextFormField(controller: be.quantityCtl, readOnly: true, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0'))),
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, style: const TextStyle(fontSize: 10), decoration: compactDec('0.00'), onChanged: (v) {
+                  final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
+                  if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
+                  updateBreakdownAmount(be);
+                })),
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: TextFormField(controller: be.amountCtl, readOnly: true, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0.00'))),
+                const SizedBox(width: 4),
+                Expanded(flex: 3, child: TextFormField(controller: be.supplierCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Supplier...'))),
+                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 16), onPressed: () => setState(() {
+                  be.amountCtl.removeListener(updateTotalBudget);
+                  fe.breakdownItems.removeAt(bIdx).dispose();
+                  updateTotalBudget();
+                })),
               ],
             ),
           );
         }),
 
-        // Total Row
         if (fe.breakdownItems.isNotEmpty)
           Container(
             color: headerBg.withValues(alpha: 0.3),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             child: Row(
               children: [
-                const SizedBox(width: 20), // item badge space
+                const SizedBox(width: 20),
                 const SizedBox(width: 6),
-                const Expanded(
-                  flex: 5,
-                  child: Text(
-                    'TOTAL PO AMOUNT',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: modernDark,
-                    ),
-                  ),
-                ),
+                const Expanded(flex: 3, child: Text('QUARTERLY TOTALS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: modernDark))),
                 const SizedBox(width: 4),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    CurrencyInputFormatter.formatDouble(
-                      fe.breakdownItems.fold<double>(
-                        0,
-                        (sum, item) =>
-                            sum +
-                            CurrencyInputFormatter.parse(item.amountCtl.text),
-                      ),
-                    ),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: modernGreen,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 7,
-                  child: SizedBox(),
-                ), // spacer for supplier/status
-                const SizedBox(width: 24),
+                const Expanded(flex: 1, child: SizedBox()), // Unit
+                const SizedBox(width: 4),
+                // Q1 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q1QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q2 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q2QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q3 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q3QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q4 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q4QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Total Qty
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.quantityCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: modernGreen))),
+                const SizedBox(width: 4),
+                const Expanded(flex: 2, child: SizedBox()), // Price
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: Text(CurrencyInputFormatter.formatDouble(fe.breakdownItems.fold<double>(0, (total, b) => total + CurrencyInputFormatter.parse(b.amountCtl.text))), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: modernGreen))),
+                const SizedBox(width: 4),
+                const Expanded(flex: 3, child: SizedBox()), // Supplier
+                const SizedBox(width: 40), // Delete button space
               ],
             ),
           ),
@@ -1930,13 +1682,10 @@ class EditActivityDialogState extends State<EditActivityDialog> {
           padding: const EdgeInsets.all(8.0),
           child: InkWell(
             onTap: () => setState(() {
-              final lastEntry = fe.breakdownItems.isNotEmpty ? fe.breakdownItems.last : null;
-              final newEntry = BreakdownEntry(
-                supplier: lastEntry?.supplierCtl.text,
-                status: lastEntry?.statusCtl.text,
-              );
-              newEntry.amountCtl.addListener(updateTotalBudget);
-              fe.breakdownItems.add(newEntry);
+              final last = fe.breakdownItems.isNotEmpty ? fe.breakdownItems.last : null;
+              final nb = BreakdownEntry(name: '', supplier: last?.supplierCtl.text);
+              nb.amountCtl.addListener(updateTotalBudget);
+              fe.breakdownItems.add(nb);
               updateTotalBudget();
             }),
             child: Container(
@@ -1951,14 +1700,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                 children: const [
                   Icon(Icons.add_circle_outline, size: 13, color: modernGreen),
                   SizedBox(width: 4),
-                  Text(
-                    'Add Item',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: modernGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text('Add Item', style: TextStyle(fontSize: 11, color: modernGreen, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -1966,6 +1708,26 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         ),
       ],
     );
+  }
+
+  void updateBreakdownAmount(BreakdownEntry be) {
+    final q1 = double.tryParse(be.q1QtyCtl.text) ?? 0.0;
+    final q2 = double.tryParse(be.q2QtyCtl.text) ?? 0.0;
+    final q3 = double.tryParse(be.q3QtyCtl.text) ?? 0.0;
+    final q4 = double.tryParse(be.q4QtyCtl.text) ?? 0.0;
+    final totalQty = q1 + q2 + q3 + q4;
+    
+    be.quantityCtl.text = totalQty > 0 ? totalQty.toString() : '';
+
+    final p = CurrencyInputFormatter.parse(be.priceCtl.text);
+    final amt = totalQty * p;
+    final f = CurrencyInputFormatter.formatDouble(amt);
+    if (be.amountCtl.text != f) {
+      setState(() {
+        be.amountCtl.text = f;
+        updateTotalBudget();
+      });
+    }
   }
 
   Widget mobileBreakdownField(String label, Widget child) {
@@ -1998,7 +1760,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
     enableFilter: true,
     menuHeight: 250,
     expandedInsets: EdgeInsets.zero,
-    textStyle: const TextStyle(fontSize: 14, color: textMain, fontWeight: FontWeight.w500),
+    textStyle: const TextStyle(
+      fontSize: 14,
+      color: textMain,
+      fontWeight: FontWeight.w500,
+    ),
     inputDecorationTheme: useCompact ? compactTheme() : cellTheme(),
     menuStyle: MenuStyle(
       backgroundColor: WidgetStateProperty.all(Colors.white),
@@ -2008,34 +1774,9 @@ class EditActivityDialogState extends State<EditActivityDialog> {
       ),
     ),
     dropdownMenuEntries: options.map((opt) {
-        return DropdownMenuEntry<T>(
-          value: opt,
-          label: opt?.toString() ?? '—',
-        );
-      }).toList(),
+      return DropdownMenuEntry<T>(value: opt, label: opt?.toString() ?? '—');
+    }).toList(),
     onSelected: onChanged,
-  );
-
-  InputDecoration compactDec([String? hint]) => InputDecoration(
-    hintText: hint,
-    hintStyle: GoogleFonts.inter(fontSize: 10, color: Colors.black26),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: modernGreen, width: 1.2),
-    ),
-    errorStyle: const TextStyle(height: 0),
   );
 
   // ── Footer ──────────────────────────────────────────────────────────────────
@@ -2058,7 +1799,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         children: [
           TextButton.icon(
             onPressed: delete,
-            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: Colors.redAccent,
+              size: 20,
+            ),
             label: Text(
               'Delete Activity',
               style: GoogleFonts.inter(
@@ -2088,7 +1833,10 @@ class EditActivityDialogState extends State<EditActivityDialog> {
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: modernGreen),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: modernGreen,
+              ),
             )
           else
             Row(
@@ -2098,8 +1846,13 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: modernGreen,
                     side: const BorderSide(color: modernGreen, width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(
                     'Save Draft',
@@ -2129,12 +1882,20 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                       backgroundColor: Colors.transparent,
                       foregroundColor: Colors.white,
                       shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       'Update Activity',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14),
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -2214,11 +1975,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               buildSectionHeader('A', 'CLASSIFICATION'),
-                              xlRow(
-                                'A1',
-                                'Section / Unit',
-                                buildSectorCell(),
-                              ),
+                              xlRow('A1', 'Section / Unit', buildSectorCell()),
                               if (sector == 'Other')
                                 xlRow(
                                   'A2',
@@ -2274,11 +2031,11 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                 'Approved Budget',
                                 currencyCell(budgetCtl, readOnly: true),
                               ),
-                                xlRow(
-                                  'B3',
-                                  'PPMP Amount',
-                                  currencyCell(ppmpAmountCtl),
-                                ),
+                              xlRow(
+                                'B3',
+                                'PPMP Amount',
+                                currencyCell(ppmpAmountCtl),
+                              ),
                               xlRow(
                                 'B4',
                                 'PPMP Balance',
@@ -2302,12 +2059,12 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                 'PR',
                                 'PURCHASE REQUEST DETAILS',
                               ),
+                              xlRow('PR1', 'PR Number', textCell(prNumberCtl)),
                               xlRow(
-                                'PR1',
-                                'PR Number',
-                                textCell(prNumberCtl),
+                                'PR2',
+                                'PR Amount',
+                                currencyCell(prAmountCtl),
                               ),
-                              xlRow('PR2', 'PR Amount', currencyCell(prAmountCtl)),
                               xlRow(
                                 'PR3',
                                 'PR Balance',
@@ -2323,11 +2080,6 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                 'PR5',
                                 'Barcode',
                                 barcodeCell(barcodeAppropCtl),
-                              ),
-                              xlRow(
-                                'PR6',
-                                'PR Status',
-                                prStatusCell(statusAppropCtl),
                               ),
                             ],
                           ),
@@ -2346,30 +2098,13 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                   'Custom Person',
                                   textCell(customResponsiblePersonCtl),
                                 ),
-                              buildSectionHeader('E', 'SCHEDULE & STATUS'),
-                              xlRow(
-                                'E1',
-                                'Date / Status',
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 3,
-                                      child: dateCell(customStatusDateCtl),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      flex: 7,
-                                      child: buildStatusCell(),
-                                    ),
-                                  ],
-                                ),
+                              // Reset index for section E
+                              Builder(
+                                builder: (context) {
+                                  rowIndex = 1;
+                                  return const SizedBox.shrink();
+                                },
                               ),
-                              if (selectedStatus.contains('Other'))
-                                xlRow(
-                                  'E2',
-                                  'Custom Status',
-                                  textCell(customStatusCtl),
-                                ),
                               xlRow(
                                 'E$rowIndex',
                                 'Month (From)',
@@ -2395,12 +2130,12 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               buildSectionHeader(
-                                'C',
+                                '',
                                 'FUNDING SOURCE & EXPENDITURES',
                               ),
                               buildFundSourcesSection(),
                               xlRow(
-                                'C',
+                                '',
                                 'Other MOE Suppliers',
                                 supplierCell(
                                   otherMoeSuppliersCtl,
@@ -2510,9 +2245,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
           ? customResponsiblePersonCtl.text.trim()
           : responsiblePerson;
 
-      String finalStatusStr = selectedStatus == 'Other'
-          ? customStatusCtl.text.trim()
-          : selectedStatus;
+      String finalStatusStr = a.status;
 
       String targetDateStr = selectedMonth;
       if (selectedToMonth != null) targetDateStr += '-$selectedToMonth';
@@ -2532,7 +2265,9 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Another activity with this name, sector, and target date already exists.'),
+              content: Text(
+                'Another activity with this name, sector, and target date already exists.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -2560,6 +2295,13 @@ class EditActivityDialogState extends State<EditActivityDialog> {
               BreakdownItem(
                 name: bName,
                 amount: bAmount,
+                unit: b.unitCtl.text.trim(),
+                quantity: double.tryParse(b.quantityCtl.text) ?? 0.0,
+                price: CurrencyInputFormatter.parse(b.priceCtl.text),
+                q1Qty: double.tryParse(b.q1QtyCtl.text) ?? 0.0,
+                q2Qty: double.tryParse(b.q2QtyCtl.text) ?? 0.0,
+                q3Qty: double.tryParse(b.q3QtyCtl.text) ?? 0.0,
+                q4Qty: double.tryParse(b.q4QtyCtl.text) ?? 0.0,
                 fundingSource: fs,
                 objectOfExpenditure: oe,
                 supplier: b.supplierCtl.text.trim().isNotEmpty
@@ -2567,6 +2309,9 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                     : '',
                 status: b.statusCtl.text.trim().isNotEmpty
                     ? b.statusCtl.text.trim()
+                    : '',
+                statusDate: b.statusDateCtl.text.trim().isNotEmpty
+                    ? b.statusDateCtl.text.trim()
                     : '',
               ),
             );
@@ -2592,9 +2337,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
           .toList();
 
       // Determine quarterly allocation based on selected month range
-      final divisor = selectedToMonth == null
-          ? 1
-          : calculateQuartersInRange();
+      final divisor = selectedToMonth == null ? 1 : calculateQuartersInRange();
       final share = budgetValue / divisor;
 
       final ms = [
@@ -2641,7 +2384,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
 
       final totalPOAmount = breakdownList.fold<double>(
         0,
-        (sum, item) => sum + item.amount,
+        (total, item) => total + item.amount,
       );
 
       final updated = a.copyWith(
@@ -2653,8 +2396,8 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         location: locationCtl.text.trim(),
         targetNo: int.tryParse(targetNoCtl.text) ?? 1,
         targetParticipants: targetParticipantsCtl.text.trim(),
-        status: finalStatusStr,
-        statusDate: customStatusDateCtl.text.trim(),
+        status: a.status,
+        statusDate: a.statusDate ?? '',
         targetDate: targetDateStr,
         responsiblePerson: finalResponsible,
         q1Budget: q1,
@@ -2668,8 +2411,8 @@ class EditActivityDialogState extends State<EditActivityDialog> {
         prNumber: prNumberCtl.text.trim(),
         supplierApprop: supplierAppropCtl.text.trim(),
         barcodeApprop: barcodeAppropCtl.text.trim(),
-        statusApprop: statusAppropCtl.text.trim(),
-        statusAppropDate: statusAppropDateCtl.text.trim(),
+        statusApprop: '',
+        statusAppropDate: '',
         actualConduct: actualConductCtl.text.trim(),
         accommRemarks: accommRemarksCtl.text.trim(),
         remarks: remarksCtl.text.trim(),
@@ -2693,7 +2436,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
       // Create PR log if changes occurred
       final newPrNumber = prNumberCtl.text.trim();
       final newPrAmount = CurrencyInputFormatter.parse(prAmountCtl.text);
-      final newPrStatus = statusAppropCtl.text.trim();
+      final newPrStatus = 'Pending';
 
       if (newPrNumber != a.prNumber ||
           newPrAmount != a.prAmount ||

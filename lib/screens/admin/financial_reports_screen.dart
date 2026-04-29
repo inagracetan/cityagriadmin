@@ -18,6 +18,7 @@ import 'package:open_file/open_file.dart';
 import '../../services/export_service.dart';
 import 'activity_details_dialog.dart';
 import 'edit_activity_dialog.dart';
+import 'budget_plan_report.dart';
 import '../../core/responsive_utils.dart';
 
 class FinancialReportsScreen extends StatefulWidget {
@@ -388,15 +389,15 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   text: l10n.translate('by_staff'),
                 ),
                 Tab(
-                  icon: const Icon(Icons.category_rounded, size: 20),
-                  text: l10n.translate('by_status'),
-                ),
-                Tab(
                   icon: const Icon(
                     Icons.account_balance_wallet_rounded,
                     size: 20,
                   ),
                   text: l10n.translate('by_expenditure'),
+                ),
+                const Tab(
+                  icon: Icon(Icons.table_view_rounded, size: 20),
+                  text: 'Budget Plan',
                 ),
               ],
             ),
@@ -442,8 +443,11 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       _buildSummaryTab(activities),
                       _buildSectorTab(activities),
                       _buildStaffTab(activities, staffIdMap),
-                      _buildStatusTab(activities),
                       _buildExpenditureTab(activities),
+                      BudgetPlanReport(
+                        activities: activities,
+                        isDark: Theme.of(context).brightness == Brightness.dark,
+                      ),
                     ],
                   );
                 },
@@ -472,31 +476,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     final overallPRTotal = activities.fold(0.0, (s, a) => s + a.prAmount);
     final overallPO = activities.fold(0.0, (s, a) => s + 0.0);
     final overallCategories = _getCategoryTotals(activities);
-
-    final completed = activities
-        .where((a) => a.status == AppConstants.statusCompleted)
-        .length;
-    final planned = activities
-        .where((a) => a.status == AppConstants.statusPlanned)
-        .length;
-    final prPrepared = activities
-        .where((a) => a.status == AppConstants.statusPRPrepared)
-        .length;
-    final bacApproved = activities
-        .where((a) => a.status == AppConstants.statusBACApprovedOBRE)
-        .length;
-    final obreAbstract = activities
-        .where((a) => a.status == AppConstants.statusObreAbstract)
-        .length;
-    final poPrepared = activities
-        .where((a) => a.status == AppConstants.statusPOPrepared)
-        .length;
-    final obligated = activities
-        .where((a) => a.status == AppConstants.statusObligated)
-        .length;
-    final iar = activities
-        .where((a) => a.status == AppConstants.statusIAR)
-        .length;
 
     final stalePRs = activities
         .where(
@@ -558,54 +537,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           ),
           const SizedBox(height: 16),
 
-          _SectionHeader(title: l10n.translate('status_breakdown')),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _statusChip(
-                _translateStatus(AppConstants.statusPlanned, l10n),
-                planned,
-                Colors.blue,
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusPRPrepared, l10n),
-                prPrepared,
-                Colors.orange,
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusBACApprovedOBRE, l10n),
-                bacApproved,
-                const Color(0xFFC0CA33),
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusObreAbstract, l10n),
-                obreAbstract,
-                const Color(0xFF6A1B9A),
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusPOPrepared, l10n),
-                poPrepared,
-                Colors.teal,
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusObligated, l10n),
-                obligated,
-                AppColors.warning,
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusIAR, l10n),
-                iar,
-                Colors.cyan,
-              ),
-              _statusChip(
-                _translateStatus(AppConstants.statusCompleted, l10n),
-                completed,
-                AppColors.success,
-              ),
-            ],
-          ),
           const SizedBox(height: 16),
 
           // Alert summary
@@ -671,24 +602,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     );
   }
 
-  // ── TAB 4: BY STATUS ───────────────────────────────────────────────────────
-  Widget _buildStatusTab(List<Activity> activities) {
-    final l10n = context.watch<SettingsProvider>().l10n;
-    final Map<String, List<Activity>> statusMap = {};
-    for (var a in activities) {
-      statusMap.putIfAbsent(a.status, () => []).add(a);
-    }
-    final statuses = statusMap.keys.toList();
-    // Default alphabetical for status for now
-    statuses.sort();
-    return _buildGroupingTab(
-      statuses,
-      statusMap,
-      l10n,
-      AppColors.tertiary,
-      isStatus: true,
-    );
-  }
 
   Widget _buildGroupingTab(
     List<String> keys,
@@ -730,7 +643,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         final totalS = acts.fold(0.0, (s, a) => s + a.actualExpenditure);
         final rate = totalB > 0 ? totalS / totalB : 0.0;
 
-        String displayName = isStatus ? _translateStatus(key, l10n) : key;
+        String displayName = key;
         if (staffIdMap != null && staffIdMap[key] != null) {
           displayName = '$displayName (${staffIdMap[key]})';
         }
@@ -2230,25 +2143,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(a.status).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _translateStatus(a.status, l10n),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: _getStatusColor(a.status),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -2457,63 +2351,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         }
       }
     }
-  }
-
-  String _translateStatus(String status, AppLocalization l10n) {
-    if (status.contains(',')) {
-      return status
-          .split(',')
-          .map((s) => _translateSingleStatus(s.trim(), l10n))
-          .join(', ');
-    }
-    return _translateSingleStatus(status, l10n);
-  }
-
-  String _translateSingleStatus(String status, AppLocalization l10n) {
-    if (status == AppConstants.statusPlanned) {
-      return l10n.translate('status_planned');
-    }
-    if (status == AppConstants.statusPRPrepared) {
-      return l10n.translate('status_pr_prepared');
-    }
-    if (status == AppConstants.statusBACApprovedOBRE) {
-      return l10n.translate('status_bac_approved_obre');
-    }
-    if (status == AppConstants.statusObreAbstract) {
-      return l10n.translate('status_obre_abstract');
-    }
-    if (status == AppConstants.statusPOPrepared) {
-      return l10n.translate('status_po_prepared');
-    }
-    if (status == AppConstants.statusObligated) {
-      return l10n.translate('status_obligated');
-    }
-    if (status == AppConstants.statusIAR) return l10n.translate('status_iar');
-    if (status == AppConstants.statusCompleted) {
-      return l10n.translate('status_completed');
-    }
-    if (status == AppConstants.statusNoBudget) {
-      return l10n.translate('status_no_budget');
-    }
-    if (status == AppConstants.statusNoBudgetYet) {
-      return l10n.translate('status_no_budget_yet');
-    }
-    if (status == AppConstants.statusBACShopping) {
-      return l10n.translate('status_bac_shopping');
-    }
-    if (status == AppConstants.statusBacOffice) {
-      return l10n.translate('status_bac_office');
-    }
-    if (status == AppConstants.statusBacForPRNumber) {
-      return l10n.translate('status_bac_for_pr_number');
-    }
-    if (status == AppConstants.statusBACBidding) {
-      return l10n.translate('status_bac_bidding');
-    }
-    if (status == AppConstants.statusRecanvas) {
-      return l10n.translate('status_recanvas');
-    }
-    return status;
   }
 
   Widget _buildAnalyticsChart(List<Activity> activities) {
@@ -2940,22 +2777,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Planned':
-        return const Color(0xFF94A3B8);
-      case 'PR Prepared':
-        return const Color(0xFFEAB308);
-      case 'Obre & Abstract Signature':
-        return const Color(0xFF1B5E20);
-      case 'Obligated':
-        return const Color(0xFF15803D);
-      case 'Completed':
-        return const Color(0xFF065F46);
-      default:
-        return Colors.blueGrey;
-    }
-  }
 }
 
 enum ReportSortType { name, budget, utilization }

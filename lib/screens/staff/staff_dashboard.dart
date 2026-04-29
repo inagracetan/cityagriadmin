@@ -41,7 +41,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
   bool _showAll = false;
   String _searchQuery = '';
   String _selectedSector = '';
-  String _selectedStatus = '';
   String _selectedStaff = '';
   String _selectedMonth = '';
   String _selectedYear = DateTime.now().year.toString();
@@ -50,7 +49,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
 
   // Track filter values to know when to recreate the stream
   String? _lastSector;
-  String? _lastStatus;
   bool? _lastShowAll;
 
   @override
@@ -110,22 +108,18 @@ class _StaffDashboardState extends State<StaffDashboard> {
 
     // Only recreate activity stream if filter parameters changed
     final currentSector = _selectedSector.isEmpty ? null : _selectedSector;
-    final currentStatus = _selectedStatus.isEmpty ? null : _selectedStatus;
 
     if (_activitiesStream == null ||
         _lastSector != currentSector ||
-        _lastStatus != currentStatus ||
         _lastShowAll != _showAll) {
       // We no longer pass currentStaff to the stream.
       // We fetch all relevant activities and filter by staff name in the UI
       // to handle cases with extra spaces or different casing.
       _activitiesStream = fbService.streamActivities(
         sector: currentSector,
-        status: currentStatus,
         responsiblePerson: null,
       );
       _lastSector = currentSector;
-      _lastStatus = currentStatus;
       _lastShowAll = _showAll;
     }
 
@@ -323,18 +317,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 onSelected: (val) => setState(() => _selectedSector = val ?? ''),
               );
 
-              final statusDropdown = DropdownMenu<String>(
-                initialSelection: _selectedStatus.isEmpty ? null : _selectedStatus,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                expandedInsets: EdgeInsets.zero,
-                label: const Text('Status'),
-                dropdownMenuEntries: AppConstants.activityStatuses
-                    .map((s) => DropdownMenuEntry(value: s, label: s))
-                    .toList(),
-                onSelected: (val) => setState(() => _selectedStatus = val ?? ''),
-              );
 
               final clearBtn = IconButton(
                 icon: const Icon(
@@ -343,7 +325,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 ),
                 onPressed: () => setState(() {
                   _selectedSector = '';
-                  _selectedStatus = '';
                 }),
               );
 
@@ -352,8 +333,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     sectorDropdown,
-                    const SizedBox(height: 12),
-                    statusDropdown,
                     if (!_showAll) ...[
                       const SizedBox(height: 4),
                       Align(alignment: Alignment.centerRight, child: clearBtn),
@@ -365,8 +344,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
               return Row(
                 children: [
                   Expanded(child: sectorDropdown),
-                  const SizedBox(width: 12),
-                  Expanded(child: statusDropdown),
                   if (!_showAll) ...[const SizedBox(width: 4), clearBtn],
                 ],
               );

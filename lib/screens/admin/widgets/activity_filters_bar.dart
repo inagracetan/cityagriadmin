@@ -12,7 +12,6 @@ class ActivityFiltersBar extends StatefulWidget {
   final List<Activity> activities;
   final String searchQuery;
   final String selectedSector;
-  final String? selectedStatus;
   final String selectedStaff;
   final String selectedFundingSource;
   final String selectedSubSector;
@@ -21,7 +20,6 @@ class ActivityFiltersBar extends StatefulWidget {
   final Function(String) onSearchChanged;
   final Function(String?) onSectorChanged;
   final Function(String?) onSubSectorChanged;
-  final Function(String?) onStatusChanged;
   final Function(String?) onStaffChanged;
   final Function(String?) onFundingSourceChanged;
   final Function(String?) onMonthChanged;
@@ -34,7 +32,6 @@ class ActivityFiltersBar extends StatefulWidget {
     required this.activities,
     required this.searchQuery,
     required this.selectedSector,
-    this.selectedStatus,
     required this.selectedStaff,
     required this.selectedFundingSource,
     required this.selectedSubSector,
@@ -43,7 +40,6 @@ class ActivityFiltersBar extends StatefulWidget {
     required this.onSearchChanged,
     required this.onSectorChanged,
     required this.onSubSectorChanged,
-    required this.onStatusChanged,
     required this.onStaffChanged,
     required this.onFundingSourceChanged,
     required this.onMonthChanged,
@@ -235,13 +231,6 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
                     icon: Icons.grid_view_outlined,
                   ),
                   _filterDropdown(
-                    label: 'Status',
-                    initialValue: widget.selectedStatus,
-                    items: AppConstants.activityStatuses,
-                    onChanged: (val) => widget.onStatusChanged(val),
-                    icon: Icons.flag_outlined,
-                  ),
-                  _filterDropdown(
                     label: 'Funding Source',
                     initialValue: widget.selectedFundingSource,
                     items: AppConstants.fundingSources,
@@ -355,9 +344,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
       dropdownMenuEntries: [
         DropdownMenuEntry(
           value: '',
-          label: label == 'Status'
-              ? 'All Status'
-              : label == 'Staff'
+          label: label == 'Staff'
               ? 'All Staff'
               : 'All ${label}s',
         ),

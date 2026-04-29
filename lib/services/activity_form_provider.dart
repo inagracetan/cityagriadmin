@@ -5,27 +5,61 @@ import '../core/currency_formatter.dart';
 
 class BreakdownEntry {
   final TextEditingController nameCtl;
+  final TextEditingController unitCtl;
+  final TextEditingController quantityCtl;
+  final TextEditingController priceCtl;
   final TextEditingController amountCtl;
+  final TextEditingController q1QtyCtl;
+  final TextEditingController q2QtyCtl;
+  final TextEditingController q3QtyCtl;
+  final TextEditingController q4QtyCtl;
   final TextEditingController supplierCtl;
   final TextEditingController statusCtl;
+  final TextEditingController statusDateCtl;
+  int quarter = 1;
 
   BreakdownEntry({
     String name = '',
     double amount = 0.0,
+    String? unit,
+    double quantity = 0.0,
+    double price = 0.0,
+    this.quarter = 1,
+    double q1Qty = 0.0,
+    double q2Qty = 0.0,
+    double q3Qty = 0.0,
+    double q4Qty = 0.0,
     String? supplier,
     String? status,
+    String? statusDate,
   }) : nameCtl = TextEditingController(text: name),
+       unitCtl = TextEditingController(text: unit ?? ''),
+       quantityCtl = TextEditingController(text: quantity > 0 ? quantity.toString() : ''),
+       priceCtl = TextEditingController(text: price > 0 ? CurrencyInputFormatter.formatDouble(price) : ''),
        amountCtl = TextEditingController(
          text: amount > 0 ? CurrencyInputFormatter.formatDouble(amount) : '',
        ),
+       q1QtyCtl = TextEditingController(text: q1Qty > 0 ? q1Qty.toString() : ''),
+       q2QtyCtl = TextEditingController(text: q2Qty > 0 ? q2Qty.toString() : ''),
+       q3QtyCtl = TextEditingController(text: q3Qty > 0 ? q3Qty.toString() : ''),
+       q4QtyCtl = TextEditingController(text: q4Qty > 0 ? q4Qty.toString() : ''),
        supplierCtl = TextEditingController(text: supplier ?? ''),
-       statusCtl = TextEditingController(text: status ?? '');
+       statusCtl = TextEditingController(text: status ?? ''),
+       statusDateCtl = TextEditingController(text: statusDate ?? '');
 
   void dispose() {
     nameCtl.dispose();
+    unitCtl.dispose();
+    quantityCtl.dispose();
+    priceCtl.dispose();
     amountCtl.dispose();
+    q1QtyCtl.dispose();
+    q2QtyCtl.dispose();
+    q3QtyCtl.dispose();
+    q4QtyCtl.dispose();
     supplierCtl.dispose();
     statusCtl.dispose();
+    statusDateCtl.dispose();
   }
 }
 
@@ -358,8 +392,17 @@ class ActivityFormProvider extends ChangeNotifier {
             final be = BreakdownEntry(
               name: item.name,
               amount: item.amount,
+              unit: item.unit,
+              quantity: item.quantity ?? 0.0,
+              price: item.price ?? 0.0,
+              quarter: item.quarter ?? 1,
+              q1Qty: item.q1Qty ?? 0.0,
+              q2Qty: item.q2Qty ?? 0.0,
+              q3Qty: item.q3Qty ?? 0.0,
+              q4Qty: item.q4Qty ?? 0.0,
               supplier: item.supplier,
               status: item.status,
+              statusDate: item.statusDate,
             );
             be.amountCtl.addListener(updateTotalBudget);
             entry.breakdownItems.add(be);
@@ -398,8 +441,17 @@ class ActivityFormProvider extends ChangeNotifier {
           final be = BreakdownEntry(
             name: item.name,
             amount: item.amount,
+            unit: item.unit,
+            quantity: item.quantity ?? 0.0,
+            price: item.price ?? 0.0,
+            quarter: item.quarter ?? 1,
+            q1Qty: item.q1Qty ?? 0.0,
+            q2Qty: item.q2Qty ?? 0.0,
+            q3Qty: item.q3Qty ?? 0.0,
+            q4Qty: item.q4Qty ?? 0.0,
             supplier: item.supplier,
             status: item.status,
+            statusDate: item.statusDate,
           );
           be.amountCtl.addListener(updateTotalBudget);
           entry.breakdownItems.add(be);

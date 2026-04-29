@@ -55,8 +55,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
     final activity = widget.activity;
 
-    final isLowBalance =
-        activity.approvedBudget > 0 && activity.unexpendedBalance < 1000;
+    final isLowBalance = activity.isLowBalance;
 
     final isMobile = ResponsiveUtils.isMobile(context);
 
@@ -543,19 +542,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         ],
                       ),
                       child: _buildInfoGrid([
-                        _buildInfoItem(
-                          context,
-                          'Current Status',
-                          activity.status,
-                          badgeColor: _statusColor(activity.status),
-                        ),
-                        if (activity.statusDate != null &&
-                            activity.statusDate!.isNotEmpty)
-                          _buildInfoItem(
-                            context,
-                            'Status Date',
-                            AppDateFormatter.format(AppDateFormatter.parse(activity.statusDate!) ?? DateTime.now()),
-                          ),
+
                         _buildInfoItem(
                           context,
                           'Target Date',
@@ -592,11 +579,6 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                             ? activity.accommRemarks
                             : 'N/A',
                         isFullWidth: true,
-                      ),
-                      _buildInfoItem(
-                        context,
-                        'Status Inputted By',
-                        activity.statusInputtedBy ?? 'N/A',
                       ),
                     ]),
                     const Divider(height: 48),
@@ -759,21 +741,34 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           child: Row(
             children: [
               Expanded(
+                flex: 4,
                 child: Text(
                   'Description',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: theme.primaryColor,
-                  ),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: theme.primaryColor),
                 ),
               ),
-              Text(
-                'PO Amount',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: theme.primaryColor,
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Unit/Qty',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: theme.primaryColor),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Qtr',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: theme.primaryColor),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'PO Amount',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: theme.primaryColor),
                 ),
               ),
             ],
@@ -1027,54 +1022,92 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     BreakdownItem e,
   ) {
     final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
+    final isMobile = ResponsiveUtils.isMobile(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  e.fullDisplayNameWithFallback(
-                    activity.fundingSource,
-                    activity.objectOfExpenditure,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if ((e.supplier != null && e.supplier!.isNotEmpty) ||
-                    (e.status != null && e.status!.isNotEmpty))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      [
-                        if (e.supplier != null && e.supplier!.isNotEmpty)
-                          'Supplier: ${e.supplier}',
-                        if (e.status != null && e.status!.isNotEmpty)
-                          'Status: ${e.status}',
-                      ].join('  •  '),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.blueGrey,
-                        fontStyle: FontStyle.italic,
+          Row(
+            children: [
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      e.name,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    if (e.supplier != null && e.supplier!.isNotEmpty)
+                      Text(
+                        'Supplier: ${e.supplier}',
+                        style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontStyle: FontStyle.italic),
                       ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  '${e.unit ?? "pcs"} / ${e.quantity ?? 0}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Q${e.quarter ?? 1}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatCurrency.format(e.amount),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.black87),
+                    ),
+                    if (e.price != null && e.price! > 0)
+                      Text(
+                        '@ ${formatCurrency.format(e.price)}',
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (e.status != null && e.status!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'STATUS: ${e.status}',
+                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                   ),
-              ],
+                  if (e.statusDate != null && e.statusDate!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '(${e.statusDate})',
+                      style: const TextStyle(fontSize: 9, color: Colors.grey),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          Text(
-            formatCurrency.format(e.amount),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
         ],
       ),
     );
@@ -1181,24 +1214,6 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     return activity.objectOfExpenditure ?? 'N/A';
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Planned':
-        return Colors.blue.shade700;
-      case 'PR Prepared':
-        return Colors.orange.shade700;
-      case 'Obre & Abstract Signature':
-        return Colors.purple.shade700;
-      case 'PO Prepared':
-        return Colors.indigo.shade700;
-      case 'Obligated':
-        return Colors.teal.shade700;
-      case 'Completed':
-        return Colors.green.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
 
   Widget _buildPRHistory(BuildContext context) {
     return StreamBuilder<List<PRLog>>(
@@ -1277,25 +1292,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: _statusColor(log.status).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  log.status.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    color: _statusColor(log.status),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
+              const SizedBox.shrink(),
               Text(
                 formatDate.format(log.timestamp),
                 style: GoogleFonts.inter(

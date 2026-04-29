@@ -257,13 +257,6 @@ class ActivityTable extends StatelessWidget {
           ),
           _headerCell(
             context,
-            'STATUS',
-            flex: 2,
-            sortIndex: 9,
-            alignment: MainAxisAlignment.center,
-          ),
-          _headerCell(
-            context,
             'STAFF',
             flex: 2,
             sortIndex: 11,
@@ -337,8 +330,7 @@ class ActivityTable extends StatelessWidget {
 
   Widget _buildRow(BuildContext context, Activity activity) {
     final theme = Theme.of(context);
-    final isLowBalance =
-        activity.approvedBudget > 0 && activity.unexpendedBalance < 1000;
+    final isLowBalance = activity.isLowBalance;
 
     final now = DateTime.now();
     final currentMonthStr = DateFormat('MMMM').format(now);
@@ -501,41 +493,26 @@ class ActivityTable extends StatelessWidget {
                 },
               ),
             ),
-            // Date/Status
+            // Date
             Expanded(
               flex: 2,
               child: Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     if (activity.statusDate != null &&
                         activity.statusDate!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          AppDateFormatter.format(AppDateFormatter.parse(activity.statusDate!) ?? DateTime.now()),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: theme.textTheme.bodySmall?.color?.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontWeight: FontWeight.w500,
+                      Text(
+                        AppDateFormatter.format(AppDateFormatter.parse(activity.statusDate!) ?? DateTime.now()),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.textTheme.bodySmall?.color?.withValues(
+                            alpha: 0.6,
                           ),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        if (activity.isDraft)
-                          _statusBadge('DRAFT', isDraft: true),
-                        _statusBadge(activity.status),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -572,38 +549,4 @@ class ActivityTable extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(String status, {bool isDraft = false}) {
-    final color = isDraft ? Colors.blueGrey.shade600 : _statusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Text(
-        status.toUpperCase(),
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          inherit: true,
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Planned':
-        return Colors.blue.shade700;
-      case 'PR Prepared':
-        return Colors.orange.shade700;
-      case 'Obre & Abstract Signature':
-        return Colors.purple.shade700;
-      case 'Obligated':
-        return Colors.teal.shade700;
-      case 'Completed':
-        return Colors.green.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
 }

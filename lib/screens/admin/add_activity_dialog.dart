@@ -25,32 +25,7 @@ const textMain = Color(0xFF1E293B);
 const labelBg = Color(0xFFF8FAFC);
 const labelText = Color(0xFF475569);
 
-// ── Breakdown entry helper ────────────────────────────────────────────────────
-class BreakdownEntry {
-  final TextEditingController nameCtl;
-  final TextEditingController amountCtl;
-  final TextEditingController supplierCtl;
-  final TextEditingController statusCtl;
-
-  BreakdownEntry({
-    required String name,
-    double amount = 0.0,
-    String? supplier,
-    String? status,
-  }) : nameCtl = TextEditingController(text: name),
-       amountCtl = TextEditingController(
-         text: amount > 0 ? CurrencyInputFormatter.formatDouble(amount) : '',
-       ),
-       supplierCtl = TextEditingController(text: supplier ?? ''),
-       statusCtl = TextEditingController(text: status ?? '');
-
-  void dispose() {
-    nameCtl.dispose();
-    amountCtl.dispose();
-    supplierCtl.dispose();
-    statusCtl.dispose();
-  }
-}
+// Removed local BreakdownEntry class to use the one from activity_form_provider.dart
 
 class FundSourceEntry {
   String fundingSource = 'Agri MOOE';
@@ -115,7 +90,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   final prNumberCtl = TextEditingController();
   final supplierAppropCtl = TextEditingController();
   final barcodeAppropCtl = TextEditingController();
-  final statusAppropCtl = TextEditingController();
   final targetParticipantsCtl = TextEditingController();
   final remarksCtl = TextEditingController();
   final customSectorCtl = TextEditingController();
@@ -126,7 +100,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   final otherMoeSuppliersCtl = TextEditingController();
   final statusAppropDateCtl = TextEditingController();
 
-  String selectedStatus = AppConstants.activityStatuses.first;
   String selectedMonth = AppConstants.months[DateTime.now().month - 1];
   String? selectedToMonth;
   String selectedYear = DateTime.now().year.toString();
@@ -169,13 +142,11 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     // Initialize from persistent provider state
     sector = formProvider.sector;
     subSector = formProvider.subSector;
-    selectedStatus = formProvider.selectedStatus;
     selectedMonth = formProvider.selectedMonth;
     selectedToMonth = formProvider.selectedToMonth;
     selectedYear = formProvider.selectedYear;
     responsiblePerson = formProvider.responsiblePerson;
     supplierAppropCtl.text = formProvider.supplierAppropCtl.text;
-    statusAppropCtl.text = formProvider.statusAppropCtl.text;
 
     if (widget.initialResponsiblePersons != null &&
         widget.initialResponsiblePersons!.isNotEmpty) {
@@ -324,13 +295,11 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     prNumberCtl.dispose();
     supplierAppropCtl.dispose();
     barcodeAppropCtl.dispose();
-    statusAppropCtl.dispose();
     targetParticipantsCtl.dispose();
     remarksCtl.dispose();
     customSectorCtl.dispose();
     customSubSectorCtl.dispose();
     customResponsiblePersonCtl.dispose();
-    customStatusCtl.dispose();
     otherMoeSuppliersCtl.dispose();
     customStatusDateCtl.dispose();
     statusAppropDateCtl.dispose();
@@ -353,7 +322,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         (prAmountCtl.text.trim().isNotEmpty && prAmountCtl.text.trim() != '0.00');
 
     final hasDropdownChanges = sector != AppConstants.sectors.first ||
-        selectedStatus != AppConstants.activityStatuses.first ||
         (responsiblePerson.isNotEmpty && responsiblePerson != 'Admin');
 
     final hasFundChanges = fundSourceEntries.length > 1 ||
@@ -590,11 +558,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                                     'Barcode',
                                     barcodeCell(barcodeAppropCtl),
                                   ),
-                                  xlRow(
-                                    'PR6',
-                                    'PR Status',
-                                    prStatusCell(statusAppropCtl),
-                                  ),
                                   Container(height: 1, color: border),
                                 ],
                               ),
@@ -614,32 +577,11 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                                       textCell(customResponsiblePersonCtl),
                                     ),
                                   Container(height: 1, color: border),
-                                  buildSectionHeader('E', 'SCHEDULE & STATUS'),
-                                  xlRow(
-                                    'E1',
-                                    'Date / Status',
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          flex: 3,
-                                          child: dateCell(
-                                            customStatusDateCtl,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          flex: 7,
-                                          child: buildStatusCell(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (selectedStatus.contains('Other'))
-                                    xlRow(
-                                      'E2',
-                                      'Custom Status',
-                                      textCell(customStatusCtl),
-                                    ),
+                                  // Reset index for section E
+                                  Builder(builder: (context) {
+                                    rowIndex = 1;
+                                    return const SizedBox.shrink();
+                                  }),
                                   xlRow(
                                     'E$rowIndex',
                                     'Month (From)',
@@ -669,12 +611,12 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   buildSectionHeader(
-                                    'C',
+                                    '',
                                     'FUNDING SOURCE & EXPENDITURES',
                                   ),
                                   buildFundSourcesSection(),
                                   xlRow(
-                                    'C',
+                                    '',
                                     'Other MOE Suppliers',
                                     supplierCell(
                                       otherMoeSuppliersCtl,
@@ -1153,58 +1095,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     );
   }
 
-  Widget prStatusCell(TextEditingController ctl) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(flex: 3, child: dateCell(statusAppropDateCtl)),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 7,
-              child: DropdownMenu<String>(
-                initialSelection:
-                    ctl.text.isEmpty ||
-                        !AppConstants.activityStatuses.contains(ctl.text)
-                    ? ''
-                    : ctl.text,
-                expandedInsets: EdgeInsets.zero,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                hintText: 'Select PR status...',
-                inputDecorationTheme: cellTheme(),
-                dropdownMenuEntries: [
-                  const DropdownMenuEntry(
-                    value: '',
-                    label: 'Choose PR status',
-                  ),
-                  ...AppConstants.activityStatuses.map(
-                    (s) => DropdownMenuEntry(
-                      value: s,
-                      label: s,
-                    ),
-                  ),
-                ],
-                onSelected: (val) {
-                  if (val != null) {
-                    setState(() {
-                      ctl.text = val;
-                    });
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        textCell(ctl, hint: 'Or type custom PR status...'),
-      ],
-    );
-  }
-
   Widget numberCell(TextEditingController ctl) => TextFormField(
     controller: ctl,
     keyboardType: TextInputType.number,
@@ -1265,13 +1155,17 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         },
       );
 
-  Widget dateCell(TextEditingController ctl) => TextFormField(
+  Widget dateCell(TextEditingController ctl, {bool isCompact = false}) => TextFormField(
     controller: ctl,
     readOnly: true,
-    style: const TextStyle(fontSize: 12, color: textMain),
-    decoration: cellDec(
-      'Select Date',
-    ).copyWith(suffixIcon: const Icon(Icons.calendar_today, size: 14)),
+    style: GoogleFonts.inter(
+      fontSize: isCompact ? 11 : 12,
+      color: textMain,
+      fontWeight: isCompact ? FontWeight.w500 : FontWeight.normal,
+    ),
+    decoration: (isCompact ? compactDec('Date...') : cellDec('Select Date')).copyWith(
+      suffixIcon: Icon(Icons.calendar_today, size: isCompact ? 12 : 14),
+    ),
     onTap: () async {
       final currentText = ctl.text;
       final initialDate = AppDateFormatter.parse(currentText) ?? DateTime.now();
@@ -1376,29 +1270,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     );
   }
 
-  Widget buildStatusCell() {
-    final List<String> statusOptions = [
-      ...AppConstants.activityStatuses,
-      'Other',
-    ];
-
-    if (selectedStatus.isNotEmpty &&
-        !statusOptions.contains(selectedStatus)) {
-      statusOptions.insert(0, selectedStatus);
-    }
-
-    return dropdownCell<String>(
-      value: selectedStatus.isEmpty ? statusOptions.first : selectedStatus,
-      options: statusOptions,
-      hint: 'Select status...',
-      onChanged: (val) {
-        if (val != null) {
-          setState(() => selectedStatus = val);
-        }
-      },
-    );
-  }
-
   void addFundSourceEntry() {
     setState(() {
       final e = FundSourceEntry();
@@ -1436,7 +1307,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(
-                          'C${idx + 1}',
+                          '${idx + 1}',
                           style: const TextStyle(
                             fontSize: 13,
                             color: labelText,
@@ -1728,460 +1599,295 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              color: modernGreen.withValues(alpha: 0.05),
-              child: Row(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          color: modernGreen.withValues(alpha: 0.05),
+          child: Row(
+            children: [
+              const Icon(Icons.list_alt_rounded, size: 16, color: modernDark),
+              const SizedBox(width: 8),
+              Text(
+                'EXPENDITURE BREAKDOWN',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: modernDark,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Column headers - Only for Desktop
+        if (fe.breakdownItems.isNotEmpty && !isMobile)
+          Container(
+            color: const Color(0xFFF0F4EF),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: Row(
+              children: const [
+                SizedBox(width: 20), // item badge
+                SizedBox(width: 6),
+                Expanded(
+                  flex: 3,
+                  child: Text('Description', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Unit', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q1', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q2', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q3', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Q4', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 1,
+                  child: Text('Total Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 2,
+                  child: Text('Price', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 2,
+                  child: Text('Amount', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
+                ),
+                SizedBox(width: 4),
+                Expanded(
+                  flex: 3,
+                  child: Text('Supplier', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
+                ),
+                SizedBox(width: 24), // delete button space
+              ],
+            ),
+          ),
+
+        ...fe.breakdownItems.asMap().entries.map((entry) {
+          final bIdx = entry.key;
+          final be = entry.value;
+          final bg = bIdx.isEven ? Colors.white : const Color(0xFFF8FAF7);
+
+          if (isMobile) {
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: border),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
                 children: [
-                  const Icon(Icons.list_alt_rounded, size: 16, color: modernDark),
-                  const SizedBox(width: 8),
-                  Text(
-                    'EXPENDITURE BREAKDOWN',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: modernDark,
-                      letterSpacing: 1.0,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    color: modernGreen.withValues(alpha: 0.08),
+                    child: Row(
+                      children: [
+                        Text('${bIdx + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('Item Details', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                          onPressed: () => setState(() {
+                            fe.breakdownItems.removeAt(bIdx).dispose();
+                            updateTotalBudget();
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        mobileBreakdownField('Description', TextFormField(controller: be.nameCtl, decoration: compactDec('Item name...'), style: const TextStyle(fontSize: 12))),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Unit', TextFormField(controller: be.unitCtl, decoration: compactDec('Unit'), style: const TextStyle(fontSize: 12)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Total Qty', TextFormField(controller: be.quantityCtl, readOnly: true, decoration: compactDec('0'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Q1', TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Q2', TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Q3', TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Q4', TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: mobileBreakdownField('Price', TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12), onChanged: (v) {
+                              final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
+                              if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
+                              updateBreakdownAmount(be);
+                            }))),
+                            const SizedBox(width: 4),
+                            Expanded(child: mobileBreakdownField('Amount', TextFormField(controller: be.amountCtl, readOnly: true, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        mobileBreakdownField('Supplier', TextFormField(controller: be.supplierCtl, decoration: compactDec('Supplier...'), style: const TextStyle(fontSize: 12))),
+                      ],
                     ),
                   ),
                 ],
               ),
+            );
+          }
+
+          return Container(
+            color: bg,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(width: 20, child: Text('${bIdx + 1}', style: const TextStyle(fontSize: 9, color: modernGreen, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 6),
+                Expanded(flex: 3, child: TextFormField(controller: be.nameCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Description...'))),
+                const SizedBox(width: 4),
+                Expanded(flex: 1, child: TextFormField(controller: be.unitCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('unit'))),
+                const SizedBox(width: 4),
+                // Q1
+                Expanded(flex: 1, child: TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Q2
+                Expanded(flex: 1, child: TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Q3
+                Expanded(flex: 1, child: TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Q4
+                Expanded(flex: 1, child: TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
+                const SizedBox(width: 4),
+                // Total Qty
+                Expanded(flex: 1, child: TextFormField(controller: be.quantityCtl, readOnly: true, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0'))),
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, style: const TextStyle(fontSize: 10), decoration: compactDec('0.00'), onChanged: (v) {
+                  final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
+                  if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
+                  updateBreakdownAmount(be);
+                })),
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: TextFormField(controller: be.amountCtl, readOnly: true, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0.00'))),
+                const SizedBox(width: 4),
+                Expanded(flex: 3, child: TextFormField(controller: be.supplierCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Supplier...'))),
+                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 16), onPressed: () => setState(() {
+                  fe.breakdownItems.removeAt(bIdx).dispose();
+                  updateTotalBudget();
+                })),
+              ],
             ),
+          );
+        }).toList(),
 
-            // Column headers - Only for Desktop
-            if (fe.breakdownItems.isNotEmpty && !isMobile)
-              Container(
-                color: const Color(0xFFF0F4EF),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                child: Row(
-                  children: const [
-                    SizedBox(width: 20), // item badge
-                    SizedBox(width: 6),
-                    Expanded(
-                      flex: 5,
-                      child: Text(
-                        'Description',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: labelText,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'PO Amount',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: modernGreen,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Text(
-                        'Supplier',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: labelText,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Status',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: labelText,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 24), // delete button space
-                  ],
-                ),
-              ),
-
-            if (fe.breakdownItems.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                child: Text(
-                  'No breakdown items added.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ),
-
-            ...fe.breakdownItems.asMap().entries.map((entry) {
-              final bIdx = entry.key;
-              final be = entry.value;
-              final bg = bIdx.isEven ? Colors.white : const Color(0xFFF8FAF7);
-
-              if (isMobile) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: border),
-                    borderRadius: BorderRadius.circular(6),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: modernGreen.withValues(alpha: 0.08),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(6),
-                            topRight: Radius.circular(6),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: modernGreen,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '${bIdx + 1}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Item Details',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: modernDark,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                              padding: const EdgeInsets.all(8),
-                              constraints: const BoxConstraints(
-                                minWidth: 40,
-                                minHeight: 40,
-                              ),
-                              onPressed: () => setState(() {
-                                final removed = fe.breakdownItems.removeAt(bIdx);
-                                removed.amountCtl.removeListener(updateTotalBudget);
-                                removed.dispose();
-                                updateTotalBudget();
-                              }),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          children: [
-                            mobileBreakdownField('Description',
-                                TextFormField(
-                                  controller: be.nameCtl,
-                                  style: const TextStyle(fontSize: 12),
-                                  decoration: compactDec('Description...'),
-                                )),
-                            const SizedBox(height: 8),
-                            mobileBreakdownField('Amount',
-                                currencyCell(
-                                  be.amountCtl,
-                                  hint: '0.00',
-                                ),
-                            ),
-                            const SizedBox(height: 8),
-                            mobileBreakdownField('Supplier',
-                                TextFormField(
-                                  controller: be.supplierCtl,
-                                  style: const TextStyle(fontSize: 12),
-                                  decoration:
-                                      compactDec('Supplier...').copyWith(
-                                    suffixIcon: availableSuppliers.isEmpty
-                                        ? null
-                                        : PopupMenuButton<String>(
-                                            icon: const Icon(
-                                              Icons.arrow_drop_down,
-                                              size: 20,
-                                            ),
-                                            onSelected: (v) => setState(() =>
-                                                be.supplierCtl.text = v),
-                                            itemBuilder: (ctx) =>
-                                                availableSuppliers
-                                                    .map((s) => PopupMenuItem(
-                                                          value: s,
-                                                          child: Text(s,
-                                                              style: const TextStyle(
-                                                                  fontSize:
-                                                                      12)),
-                                                        ))
-                                                    .toList(),
-                                          ),
-                                  ),
-                                )),
-                            const SizedBox(height: 8),
-                            mobileBreakdownField('Status',
-                                breakdownDropdown<String>(
-                                  value: be.statusCtl.text.isEmpty
-                                      ? ''
-                                      : (AppConstants.activityStatuses.contains(be.statusCtl.text)
-                                          ? be.statusCtl.text
-                                          : ''),
-                                  options: ['', ...AppConstants.activityStatuses],
-                                  onChanged: (v) => setState(() => be.statusCtl.text = v ?? ''),
-                                )),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return Container(
-                color: bg,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Item badge
-                    Container(
-                      width: 20,
-                      height: 20,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: modernGreen.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Text(
-                        '${bIdx + 1}',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: modernGreen,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Description
-                    Expanded(
-                      flex: 5,
-                      child: TextFormField(
-                        controller: be.nameCtl,
-                        style: const TextStyle(fontSize: 11),
-                        decoration: compactDec('Description...'),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    // Amount
-                    Expanded(
-                      flex: 3,
-                      child: currencyCell(
-                        be.amountCtl,
-                        hint: '0.00',
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    // Supplier (Combo Box: Input + Dropdown)
-                    Expanded(
-                      flex: 4,
-                      child: TextFormField(
-                        controller: be.supplierCtl,
-                        style: const TextStyle(fontSize: 11),
-                        decoration: compactDec('Supplier...').copyWith(
-                          suffixIcon: availableSuppliers.isEmpty
-                              ? null
-                              : PopupMenuButton<String>(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 250,
-                                    maxWidth: 300,
-                                  ),
-                                  icon: const Icon(
-                                    Icons.arrow_drop_down,
-                                    size: 18,
-                                    color: Colors.grey,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  onSelected: (val) {
-                                    setState(() {
-                                      be.supplierCtl.text = val;
-                                    });
-                                  },
-                                  itemBuilder: (context) => availableSuppliers
-                                      .map(
-                                        (s) => PopupMenuItem(
-                                          value: s,
-                                          height: 32,
-                                          child: Text(
-                                            s,
-                                            style:
-                                                const TextStyle(fontSize: 11),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                          suffixIconConstraints: const BoxConstraints(
-                            maxWidth: 24,
-                            maxHeight: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      flex: 3,
-                        child: breakdownDropdown<String>(
-                        value: be.statusCtl.text.isEmpty
-                            ? ''
-                            : (AppConstants.activityStatuses.contains(be.statusCtl.text)
-                                ? be.statusCtl.text
-                                : ''),
-                        options: ['', ...AppConstants.activityStatuses],
-                        onChanged: (v) => setState(() => be.statusCtl.text = v ?? ''),
-                        useCompact: true,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    // Delete button
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.red, size: 16),
-                        padding: EdgeInsets.zero,
-                        onPressed: () => setState(() {
-                          final removed = fe.breakdownItems.removeAt(bIdx);
-                          removed.amountCtl.removeListener(updateTotalBudget);
-                          removed.dispose();
-                          updateTotalBudget();
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            // Total Row
-              if (fe.breakdownItems.isNotEmpty)
-                Container(
-                  color: headerBg.withValues(alpha: 0.3),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 20), // item badge space
-                      const SizedBox(width: 6),
-                      const Expanded(
-                        flex: 5,
-                        child: Text(
-                          'TOTAL PO AMOUNT',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: modernDark,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          CurrencyInputFormatter.formatDouble(
-                            fe.breakdownItems.fold<double>(
-                              0,
-                              (sum, item) =>
-                                  sum +
-                                  CurrencyInputFormatter.parse(
-                                      item.amountCtl.text),
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: modernGreen,
-                          ),
-                        ),
-                      ),
-                      const Expanded(
-                          flex: 7,
-                          child: SizedBox()), // spacer for supplier/status
-                      const SizedBox(width: 24),
-                    ],
-                  ),
-                ),
+        if (fe.breakdownItems.isNotEmpty)
+          Container(
+            color: headerBg.withValues(alpha: 0.3),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            child: Row(
+              children: [
+                const SizedBox(width: 20),
+                const SizedBox(width: 6),
+                const Expanded(flex: 3, child: Text('QUARTERLY TOTALS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: modernDark))),
+                const SizedBox(width: 4),
+                const Expanded(flex: 1, child: SizedBox()), // Unit
+                const SizedBox(width: 4),
+                // Q1 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q1QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q2 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q2QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q3 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q3QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Q4 Total
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q4QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 4),
+                // Total Qty
+                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.quantityCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: modernGreen))),
+                const SizedBox(width: 4),
+                const Expanded(flex: 2, child: SizedBox()), // Price
+                const SizedBox(width: 4),
+                Expanded(flex: 2, child: Text(CurrencyInputFormatter.formatDouble(fe.breakdownItems.fold<double>(0, (total, b) => total + CurrencyInputFormatter.parse(b.amountCtl.text))), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: modernGreen))),
+                const SizedBox(width: 4),
+                const Expanded(flex: 3, child: SizedBox()), // Supplier
+                const SizedBox(width: 40), // Delete button space
+              ],
+            ),
+          ),
 
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
           child: InkWell(
             onTap: () => setState(() {
-              final lastEntry = fe.breakdownItems.isNotEmpty ? fe.breakdownItems.last : null;
-              final newEntry = BreakdownEntry(
-                name: '',
-                supplier: lastEntry?.supplierCtl.text,
-                status: lastEntry?.statusCtl.text,
-              );
-              newEntry.amountCtl.addListener(updateTotalBudget);
-              fe.breakdownItems.add(newEntry);
+              final last = fe.breakdownItems.isNotEmpty ? fe.breakdownItems.last : null;
+              final nb = BreakdownEntry(name: '', supplier: last?.supplierCtl.text);
+              nb.amountCtl.addListener(updateTotalBudget);
+              fe.breakdownItems.add(nb);
               updateTotalBudget();
             }),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: const [
                 Icon(Icons.add_circle_outline, size: 13, color: modernGreen),
                 SizedBox(width: 4),
-                Text(
-                  'Add Item',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: modernGreen,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text('Add Item', style: TextStyle(fontSize: 11, color: modernGreen, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  void updateBreakdownAmount(BreakdownEntry be) {
+    final q1 = double.tryParse(be.q1QtyCtl.text) ?? 0.0;
+    final q2 = double.tryParse(be.q2QtyCtl.text) ?? 0.0;
+    final q3 = double.tryParse(be.q3QtyCtl.text) ?? 0.0;
+    final q4 = double.tryParse(be.q4QtyCtl.text) ?? 0.0;
+    final totalQty = q1 + q2 + q3 + q4;
+    
+    be.quantityCtl.text = totalQty > 0 ? totalQty.toString() : '';
+
+    final p = CurrencyInputFormatter.parse(be.priceCtl.text);
+    final amt = totalQty * p;
+    final f = CurrencyInputFormatter.formatDouble(amt);
+    if (be.amountCtl.text != f) {
+      setState(() {
+        be.amountCtl.text = f;
+        updateTotalBudget();
+      });
+    }
   }
 
   Widget mobileBreakdownField(String label, Widget child) {
@@ -2443,6 +2149,13 @@ class AddActivityDialogState extends State<AddActivityDialog> {
               (be) => BreakdownItem(
                 name: be.nameCtl.text.trim(),
                 amount: CurrencyInputFormatter.parse(be.amountCtl.text),
+                unit: be.unitCtl.text.trim(),
+                quantity: double.tryParse(be.quantityCtl.text) ?? 0.0,
+                price: CurrencyInputFormatter.parse(be.priceCtl.text),
+                q1Qty: double.tryParse(be.q1QtyCtl.text) ?? 0.0,
+                q2Qty: double.tryParse(be.q2QtyCtl.text) ?? 0.0,
+                q3Qty: double.tryParse(be.q3QtyCtl.text) ?? 0.0,
+                q4Qty: double.tryParse(be.q4QtyCtl.text) ?? 0.0,
                 fundingSource: fSource,
                 objectOfExpenditure: oExp,
                 supplier: be.supplierCtl.text.trim().isNotEmpty
@@ -2451,6 +2164,9 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                 status: be.statusCtl.text.trim().isNotEmpty
                     ? be.statusCtl.text.trim()
                     : '',
+                statusDate: be.statusDateCtl.text.trim().isNotEmpty
+                    ? be.statusDateCtl.text.trim()
+                    : '',
               ),
             );
           })
@@ -2458,7 +2174,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
           .toList();
 
       final totalPOAmount =
-          breakdownList.fold<double>(0, (sum, item) => sum + item.amount);
+          breakdownList.fold<double>(0, (total, item) => total + item.amount);
 
       final newActivity = Activity(
         id: '',
@@ -2506,17 +2222,15 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         prNumber: prNumberCtl.text.trim(),
         supplierApprop: supplierAppropCtl.text.trim(),
         barcodeApprop: barcodeAppropCtl.text.trim(),
-        statusApprop: statusAppropCtl.text.trim(),
-        statusAppropDate: statusAppropDateCtl.text.trim(),
+        statusApprop: '',
+        statusAppropDate: '',
         responsiblePerson:
             (responsiblePerson == 'Other'
                     ? customResponsiblePersonCtl.text
                     : responsiblePerson)
                 .trim(),
-        status: selectedStatus.contains('Other')
-            ? selectedStatus.replaceAll('Other', customStatusCtl.text.trim())
-            : selectedStatus,
-        statusDate: customStatusDateCtl.text.trim(),
+        status: 'Planned',
+        statusDate: '',
         targetDate: selectedToMonth != null
             ? '$selectedMonth - $selectedToMonth $selectedYear'
             : '$selectedMonth $selectedYear',
@@ -2535,15 +2249,12 @@ class AddActivityDialogState extends State<AddActivityDialog> {
 
       // Create initial PR log if PR info exists
       if (newActivity.prNumber.isNotEmpty ||
-          newActivity.prAmount > 0 ||
-          newActivity.statusApprop.isNotEmpty) {
+          newActivity.prAmount > 0) {
         await widget.fbService.addPRLog(
           PRLog(
             id: '',
             activityId: newId,
-            status: newActivity.statusApprop.isNotEmpty
-                ? newActivity.statusApprop
-                : 'Pending',
+            status: 'Pending',
             prNumber: newActivity.prNumber,
             amount: newActivity.prAmount,
             remarks: 'Activity created with initial PR details.',
@@ -2558,7 +2269,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         // Persist dropdown values for the next "Add Activity" action
         formProvider.sector = sector;
         formProvider.subSector = subSector;
-        formProvider.selectedStatus = selectedStatus;
         formProvider.selectedMonth = selectedMonth;
         formProvider.selectedToMonth = selectedToMonth;
         formProvider.selectedYear = selectedYear;
@@ -2570,7 +2280,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         }
         
         formProvider.supplierAppropCtl.text = supplierAppropCtl.text;
-        formProvider.statusAppropCtl.text = statusAppropCtl.text;
 
         formProvider.closeForm();
         ScaffoldMessenger.of(context).showSnackBar(

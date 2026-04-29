@@ -39,7 +39,6 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   String _selectedSector = '';
   String _selectedSubSector = '';
-  String? _selectedStatus;
   String _selectedStaff = '';
   String _selectedFundingSource = '';
   String _selectedMonth = '';
@@ -53,7 +52,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   StreamSubscription<List<Activity>>? _activitiesSub;
   String? _lastSector;
-  String? _lastStatus;
   String? _lastStaff;
 
   final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
@@ -130,20 +128,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     // Only recreate activity stream if filter parameters changed
     final currentSector = _selectedSector.isEmpty ? null : _selectedSector;
-    final currentStatus = _selectedStatus;
     final currentStaff = _selectedStaff.isEmpty ? null : _selectedStaff;
 
     if (_activitiesStream == null ||
         _lastSector != currentSector ||
-        _lastStatus != currentStatus ||
         _lastStaff != currentStaff) {
       _lastSector = currentSector;
-      _lastStatus = currentStatus;
       _lastStaff = currentStaff;
 
       _activitiesStream = fbService.streamActivities(
         sector: currentSector,
-        status: currentStatus,
         responsiblePerson: currentStaff,
       );
       _activitiesSub?.cancel();
@@ -169,7 +163,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isAnyFilterActive =
         _searchQuery.isNotEmpty ||
         _selectedSector.isNotEmpty ||
-        _selectedStatus != null ||
         _selectedStaff.isNotEmpty ||
         _selectedFundingSource.isNotEmpty ||
         _selectedSubSector.isNotEmpty ||
@@ -228,10 +221,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           case 8:
             vA = a.prBalance;
             vB = b.prBalance;
-            break;
-          case 9:
-            vA = a.status.toLowerCase();
-            vB = b.status.toLowerCase();
             break;
           case 11:
             vA = a.responsiblePerson.toLowerCase();
@@ -485,7 +474,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
               searchQuery: _searchQuery,
               selectedSector: _selectedSector,
               selectedSubSector: _selectedSubSector,
-              selectedStatus: _selectedStatus,
               selectedStaff: _selectedStaff,
               selectedFundingSource: _selectedFundingSource,
               selectedMonth: _selectedMonth,
@@ -497,10 +485,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
               }),
               onSubSectorChanged: (val) =>
                   setState(() => _selectedSubSector = val ?? ''),
-              onStatusChanged: (val) => setState(() {
-                _selectedStatus = val;
-                _onFiltersChanged();
-              }),
               onStaffChanged: (val) => setState(() {
                 _selectedStaff = val ?? '';
                 _onFiltersChanged();
@@ -514,7 +498,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 _searchQuery = '';
                 _selectedSector = '';
                 _selectedSubSector = '';
-                _selectedStatus = null;
                 _selectedStaff = '';
                 _selectedFundingSource = '';
                 _selectedMonth = '';
@@ -542,7 +525,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           _searchQuery = '';
                           _selectedSector = '';
                           _selectedSubSector = '';
-                          _selectedStatus = null;
                           _selectedStaff = '';
                           _selectedFundingSource = '';
                           _selectedMonth = '';

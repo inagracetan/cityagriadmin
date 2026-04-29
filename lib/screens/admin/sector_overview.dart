@@ -466,7 +466,6 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> {
     for (final a in acts) {
       statusCount[a.status] = (statusCount[a.status] ?? 0) + 1;
     }
-    final presentStatuses = statusCount.keys.toList()..sort();
 
     final isOverspent = spent > total && total > 0;
     final headerColor = isOverspent
@@ -617,36 +616,6 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> {
             ],
           ),
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: presentStatuses
-                    .map(
-                      (s) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _statusColor(s),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${_statusToString(s)}: ${statusCount[s]}',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
             const Divider(height: 1),
             ...acts.map((a) => _buildActivityRow(a, fbService)),
             const SizedBox(height: 8),
@@ -661,7 +630,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> {
     final utilRate = a.approvedBudget > 0
         ? a.actualExpenditure / a.approvedBudget
         : 0.0;
-    final isLowBalance = a.approvedBudget > 0 && a.unexpendedBalance < 1000;
+    final isLowBalance = a.isLowBalance;
     final isOverspent = a.actualExpenditure > a.approvedBudget;
 
     return Padding(
@@ -757,25 +726,6 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> {
                           color: isOverspent ? Colors.red : Colors.orange,
                         ),
                       ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _statusColor(a.status).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _statusToString(a.status),
-                        style: GoogleFonts.inter(
-                          color: _statusColor(a.status),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -869,39 +819,6 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  String _statusToString(String status) {
-    switch (status) {
-      case 'Planned':
-        return 'PLANNED';
-      case 'PR Prepared':
-        return 'PR PREPARED';
-      case 'Obre & Abstract Signature':
-        return 'OBRE/ABSTRACT SIGNATURE';
-      case 'Obligated':
-        return 'OBLIGATED';
-      case 'Completed':
-        return 'COMPLETED';
-      default:
-        return status.toUpperCase();
-    }
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Planned':
-        return const Color(0xFF9CA3AF);
-      case 'PR Prepared':
-        return const Color(0xFFD4AF37);
-      case 'Obre & Abstract Signature':
-        return const Color(0xFF1B5E20);
-      case 'Obligated':
-        return const Color(0xFF166534);
-      case 'Completed':
-        return const Color(0xFF064E3B);
-      default:
-        return Colors.blueGrey;
-    }
-  }
 
   Color _sectorColor(String sector) {
     const colors = [

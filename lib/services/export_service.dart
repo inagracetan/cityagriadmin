@@ -46,10 +46,9 @@ class ExportService {
         'PR #',
         'PR',
         'Balance',
-        'Date / Status',
+        'Date',
         'Responsible Person',
         'Funding Source Inputted By',
-        'Status Inputted By',
         'ACCOM Remarks',
         'Actual Conduct',
         'Breakdown',
@@ -82,10 +81,9 @@ class ExportService {
         act.prNumber,
         fmt(act.prAmount),
         fmt(act.unexpendedBalance),
-        formatDateAndStatus(act),
+        formatToMMDDYYYY(act.statusDate),
         act.responsiblePerson,
         act.fundingInputtedBy ?? '',
-        act.statusInputtedBy ?? '',
         act.accommRemarks,
         act.actualConduct,
         '',
@@ -95,8 +93,12 @@ class ExportService {
       for (var item in act.breakdown) {
         List<dynamic> bRow = List.filled(35, '');
         bRow[3] = '    ${item.name}';
+        String qStr = '';
+        if ((item.q1Qty ?? 0) > 0 || (item.q2Qty ?? 0) > 0 || (item.q3Qty ?? 0) > 0 || (item.q4Qty ?? 0) > 0) {
+          qStr = ' (Q1:${item.q1Qty ?? 0}, Q2:${item.q2Qty ?? 0}, Q3:${item.q3Qty ?? 0}, Q4:${item.q4Qty ?? 0})';
+        }
         bRow[34] =
-            '${item.fullDisplayNameWithFallback(act.fundingSource, act.objectOfExpenditure)}: ${fmt(item.amount)}';
+            '${item.fullDisplayNameWithFallback(act.fundingSource, act.objectOfExpenditure)}: ${fmt(item.amount)}$qStr';
         csvData.add(bRow);
       }
     }
@@ -213,7 +215,6 @@ class ExportService {
       'PO Amount', // I
       'Supplier', // J
       'BARCODE', // K
-      'Status', // L
     ];
 
     sheet.appendRow(headers.map((e) => TextCellValue(e)).toList());
@@ -290,7 +291,6 @@ class ExportService {
           act.actualExpenditure > 0 ? DoubleCellValue(act.actualExpenditure) : TextCellValue(''), // I
           TextCellValue(act.otherMoeSuppliers), // J
           TextCellValue(act.barcodeApprop), // K
-          TextCellValue(act.status), // L
         ]);
 
         for (int i = 0; i < 12; i++) {
@@ -689,8 +689,13 @@ class ExportService {
                   a.breakdown.isNotEmpty
                       ? a.breakdown
                             .map(
-                              (e) =>
-                                  '${e.fullDisplayNameWithFallback(a.fundingSource, a.objectOfExpenditure)}: ${fmt(e.amount)}',
+                                (e) {
+                                  String qStr = '';
+                                  if ((e.q1Qty ?? 0) > 0 || (e.q2Qty ?? 0) > 0 || (e.q3Qty ?? 0) > 0 || (e.q4Qty ?? 0) > 0) {
+                                    qStr = ' (Q1:${e.q1Qty ?? 0}, Q2:${e.q2Qty ?? 0}, Q3:${e.q3Qty ?? 0}, Q4:${e.q4Qty ?? 0})';
+                                  }
+                                  return '${e.fullDisplayNameWithFallback(a.fundingSource, a.objectOfExpenditure)}: ${fmt(e.amount)}$qStr';
+                                },
                             )
                             .join('\n')
                       : 'N/A',
@@ -735,12 +740,6 @@ class ExportService {
     return d;
   }
 
-  static String formatDateAndStatus(Activity a) {
-    String d = formatToMMDDYYYY(a.statusDate);
-    return d.isNotEmpty
-        ? (a.status.isEmpty ? d : '$d / ${a.status}')
-        : a.status;
-  }
 
   static pw.Widget buildStatBox(String label, double val, PdfColor color) {
     return pw.Container(
@@ -765,22 +764,6 @@ class ExportService {
     );
   }
 
-  static String getStatusColorHex(String s) {
-    switch (s) {
-      case 'BAC APPROVED OBRE':
-        return '#F0F4C3'; // Lime 100
-      case 'Completed':
-        return '#C6EFCE';
-      case 'Obligated':
-        return '#DEEAF6';
-      case 'PR Prepared':
-        return '#FFEB9C';
-      case 'IAR':
-        return '#B2EBF2'; // Light cyan
-      default:
-        return '#FFFFFF';
-    }
-  }
 
   static String sanitizeSheetName(String n, Set<String> exist) {
     String s = n.replaceAll(RegExp(r'[:\\/?*\[\]]'), '').trim();
@@ -798,12 +781,4 @@ class ExportService {
     return res;
   }
 
-  static String _getExcelColumnName(int c) {
-    String res = '';
-    while (c >= 0) {
-      res = String.fromCharCode((c % 26) + 65) + res;
-      c = (c ~/ 26) - 1;
-    }
-    return res;
-  }
 }

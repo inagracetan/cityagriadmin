@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:google_fonts/google_fonts.dart';
@@ -26,7 +25,7 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize date formatting for Intl
   await initializeDateFormatting('en_US', null);
 
@@ -344,58 +343,57 @@ class AuthWrapperState extends State<AuthWrapper> {
       builder: (context, authService, child) {
         Widget content;
         try {
-
-        if (authService.isLoading) {
-          content = const Scaffold(
-            key: ValueKey('loading'),
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else {
-          final user = authService.currentUser;
-          if (user == null) {
-            content = AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.05, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              child: showLogin
-                  ? LoginScreen(
-                      key: const ValueKey('login'),
-                      onRegisterTap: toggleView,
-                    )
-                  : RegisterScreen(
-                      key: const ValueKey('register'),
-                      onLoginTap: toggleView,
-                    ),
+          if (authService.isLoading) {
+            content = const Scaffold(
+              key: ValueKey('loading'),
+              body: Center(child: CircularProgressIndicator()),
             );
-          } else if (user.role == 'admin' || user.role == 'staff') {
-            content = const MainLayout(key: ValueKey('main'));
           } else {
-            // Unrecognized role or data error
-            content = Scaffold(
-              key: const ValueKey('error'),
-              body: EnhancedErrorState(
-                title: 'Access Restricted',
-                message: user.role.isEmpty 
-                    ? 'Your account does not have a designated role yet. Please contact an administrator.'
-                    : 'The role "${user.role}" is not recognized by the system.',
-                icon: Icons.lock_person_outlined,
-                actionLabel: 'Sign Out & Try Other Method',
-                onAction: () => authService.signOut(),
-              ),
-            );
+            final user = authService.currentUser;
+            if (user == null) {
+              content = AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.05, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: showLogin
+                    ? LoginScreen(
+                        key: const ValueKey('login'),
+                        onRegisterTap: toggleView,
+                      )
+                    : RegisterScreen(
+                        key: const ValueKey('register'),
+                        onLoginTap: toggleView,
+                      ),
+              );
+            } else if (user.role == 'admin' || user.role == 'staff') {
+              content = const MainLayout(key: ValueKey('main'));
+            } else {
+              // Unrecognized role or data error
+              content = Scaffold(
+                key: const ValueKey('error'),
+                body: EnhancedErrorState(
+                  title: 'Access Restricted',
+                  message: user.role.isEmpty
+                      ? 'Your account does not have a designated role yet. Please contact an administrator.'
+                      : 'The role "${user.role}" is not recognized by the system.',
+                  icon: Icons.lock_person_outlined,
+                  actionLabel: 'Sign Out & Try Other Method',
+                  onAction: () => authService.signOut(),
+                ),
+              );
+            }
           }
-        }
-      } catch (e) {
+        } catch (e) {
           // General error recovery
           content = Scaffold(
             key: const ValueKey('runtime_error'),

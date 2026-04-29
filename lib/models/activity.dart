@@ -45,18 +45,36 @@ enum ActivityStatus {
 class BreakdownItem {
   final String name;
   final double amount;
+  final String? unit;
+  final double? quantity;
+  final double? price;
+  final int? quarter; // Primary quarter (legacy support or if only one is selected)
+  final double? q1Qty;
+  final double? q2Qty;
+  final double? q3Qty;
+  final double? q4Qty;
   final String? fundingSource;
   final String? objectOfExpenditure;
   final String? supplier;
   final String? status;
+  final String? statusDate;
 
   BreakdownItem({
     required this.name,
     required this.amount,
+    this.unit,
+    this.quantity,
+    this.price,
+    this.quarter,
+    this.q1Qty,
+    this.q2Qty,
+    this.q3Qty,
+    this.q4Qty,
     this.fundingSource,
     this.objectOfExpenditure,
     this.supplier,
     this.status,
+    this.statusDate,
   });
 
   String get sourceText {
@@ -70,23 +88,33 @@ class BreakdownItem {
     return s.isNotEmpty ? s : o;
   }
 
-  String get fullDisplayName => name;
-
-  String fullDisplayNameWithFallback(
-    String fallbackSource, [
-    String? fallbackOE,
-  ]) {
-    return name;
+  String fullDisplayNameWithFallback(String parentFS, String? parentOE) {
+    final fs = (fundingSource != null && fundingSource!.isNotEmpty) ? fundingSource! : parentFS;
+    final oe = (objectOfExpenditure != null && objectOfExpenditure!.isNotEmpty) ? objectOfExpenditure! : (parentOE ?? '');
+    
+    if (fs == 'Agri MOOE') return oe.isNotEmpty ? '$oe ($fs)' : fs;
+    return oe.isNotEmpty ? '$fs - $oe' : fs;
   }
+
+  double get totalQuantity => quantity ?? (q1Qty ?? 0) + (q2Qty ?? 0) + (q3Qty ?? 0) + (q4Qty ?? 0);
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'amount': amount,
+      'unit': unit ?? '',
+      'quantity': quantity ?? 0.0,
+      'price': price ?? 0.0,
+      'quarter': quarter ?? 0,
+      'q1_qty': q1Qty ?? 0.0,
+      'q2_qty': q2Qty ?? 0.0,
+      'q3_qty': q3Qty ?? 0.0,
+      'q4_qty': q4Qty ?? 0.0,
       'fundingSource': fundingSource ?? '',
       'objectOfExpenditure': objectOfExpenditure ?? '',
       'supplier': supplier ?? '',
       'status': status ?? '',
+      'statusDate': statusDate ?? '',
     };
   }
 
@@ -104,10 +132,19 @@ class BreakdownItem {
     return BreakdownItem(
       name: safeStr(map['name']),
       amount: parseDouble(map['amount']),
+      unit: safeStr(map['unit']),
+      quantity: parseDouble(map['quantity']),
+      price: parseDouble(map['price']),
+      quarter: (map['quarter'] as num?)?.toInt(),
+      q1Qty: parseDouble(map['q1_qty']),
+      q2Qty: parseDouble(map['q2_qty']),
+      q3Qty: parseDouble(map['q3_qty']),
+      q4Qty: parseDouble(map['q4_qty']),
       fundingSource: safeStr(map['fundingSource']),
       objectOfExpenditure: safeStr(map['objectOfExpenditure']),
       supplier: safeStr(map['supplier']),
       status: safeStr(map['status']),
+      statusDate: safeStr(map['statusDate']),
     );
   }
 }
@@ -276,6 +313,7 @@ class Activity {
 
   double get unexpendedPR => approvedBudget - prAmount;
 
+  bool get isLowBalance => approvedBudget > 0 && unexpendedBalance < 1000;
 
   String get formattedSource {
     final s = fundingSource;

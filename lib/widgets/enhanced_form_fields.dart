@@ -20,6 +20,7 @@ class EnhancedTextFormField extends StatefulWidget {
   final String? errorText;
   final bool showCounter;
   final void Function()? onEditingComplete;
+  final String? tooltip;
 
   const EnhancedTextFormField({
     super.key,
@@ -40,6 +41,7 @@ class EnhancedTextFormField extends StatefulWidget {
     this.errorText,
     this.showCounter = false,
     this.onEditingComplete,
+    this.tooltip,
   });
 
   @override
@@ -60,8 +62,6 @@ class _EnhancedTextFormFieldState extends State<EnhancedTextFormField> {
     _focusNode.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,87 +100,95 @@ class _EnhancedTextFormFieldState extends State<EnhancedTextFormField> {
           ),
         ),
         // Text form field with enhanced styling
-        TextFormField(
-          controller: widget.controller,
-          validator: widget.validator,
-          onChanged: widget.onChanged,
-          keyboardType: widget.keyboardType,
-          obscureText: widget.obscureText,
-          maxLines: widget.obscureText ? 1 : widget.maxLines,
-          minLines: widget.minLines,
-          maxLength: widget.maxLength,
-          focusNode: _focusNode,
-          onEditingComplete: widget.onEditingComplete,
-          style: theme.textTheme.bodyMedium,
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            helperText: widget.helperText,
-            errorText: widget.errorText,
-            prefixIcon: widget.prefixIcon != null
-                ? Padding(
-                    padding: const EdgeInsets.all(AppDesignSystem.spacing12),
-                    child: widget.prefixIcon,
-                  )
-                : null,
-            suffixIcon: widget.suffixIcon != null
-                ? Padding(
-                    padding: const EdgeInsets.all(AppDesignSystem.spacing12),
-                    child: widget.suffixIcon,
-                  )
-                : null,
-            counterText: widget.showCounter ? null : '',
-            filled: true,
-            fillColor: isDark
-                ? const Color(0xFF2C2C2C)
-                : const Color(0xFFF3F4F6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : const Color(0xFFE5E7EB),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : const Color(0xFFE5E7EB),
-                width: 1.5,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide(
-                color: isDark
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFF2E7D32),
-                width: 2.0,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: const BorderSide(
-                color: Color(0xFFDC2626),
-                width: 1.5,
-              ),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: const BorderSide(
-                color: Color(0xFFDC2626),
-                width: 2.0,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDesignSystem.spacing16,
-              vertical: AppDesignSystem.spacing14,
-            ),
-          ),
-        ),
+        _buildTextField(theme, isDark),
       ],
     );
+  }
+
+  Widget _buildTextField(ThemeData theme, bool isDark) {
+    final textField = TextFormField(
+      controller: widget.controller,
+      validator: widget.validator,
+      onChanged: widget.onChanged,
+      keyboardType: widget.keyboardType,
+      obscureText: widget.obscureText,
+      maxLines: widget.obscureText ? 1 : widget.maxLines,
+      minLines: widget.minLines,
+      maxLength: widget.maxLength,
+      focusNode: _focusNode,
+      onEditingComplete: widget.onEditingComplete,
+      style: theme.textTheme.bodyMedium,
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        helperText: widget.helperText,
+        errorText: widget.errorText,
+        prefixIcon: widget.prefixIcon != null
+            ? Padding(
+                padding: const EdgeInsets.all(AppDesignSystem.spacing12),
+                child: widget.prefixIcon,
+              )
+            : null,
+        suffixIcon: widget.suffixIcon != null
+            ? Padding(
+                padding: const EdgeInsets.all(AppDesignSystem.spacing12),
+                child: widget.suffixIcon,
+              )
+            : null,
+        counterText: widget.showCounter ? null : '',
+        filled: true,
+        fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF3F4F6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : const Color(0xFFE5E7EB),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : const Color(0xFFE5E7EB),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32),
+            width: 2.0,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: const BorderSide(
+            color: Color(0xFFDC2626),
+            width: 1.5,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: const BorderSide(
+            color: Color(0xFFDC2626),
+            width: 2.0,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppDesignSystem.spacing16,
+          vertical: AppDesignSystem.spacing14,
+        ),
+      ),
+    );
+
+    if (widget.tooltip != null) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: textField,
+      );
+    }
+    return textField;
   }
 }
 
@@ -194,6 +202,7 @@ class EnhancedDropdownField<T> extends StatefulWidget {
   final bool required;
   final String? Function(T?)? validator;
   final Widget? prefixIcon;
+  final String? tooltip;
 
   const EnhancedDropdownField({
     super.key,
@@ -205,6 +214,7 @@ class EnhancedDropdownField<T> extends StatefulWidget {
     this.required = false,
     this.validator,
     this.prefixIcon,
+    this.tooltip,
   });
 
   @override
@@ -262,55 +272,63 @@ class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
             ],
           ),
         ),
-        DropdownButtonFormField<T>(
-          initialValue: widget.value,
-          items: widget.items,
-          onChanged: widget.onChanged,
-          validator: widget.validator,
-          focusNode: _focusNode,
-          menuMaxHeight: 250,
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            prefixIcon: widget.prefixIcon != null
-                ? Padding(
-                    padding: const EdgeInsets.all(AppDesignSystem.spacing12),
-                    child: widget.prefixIcon,
-                  )
-                : null,
-            filled: true,
-            fillColor: isDark
-                ? const Color(0xFF2C2C2C)
-                : const Color(0xFFF3F4F6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : const Color(0xFFE5E7EB),
-                width: 1.5,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-              borderSide: BorderSide(
-                color: isDark
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFF2E7D32),
-                width: 2.0,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDesignSystem.spacing16,
-              vertical: AppDesignSystem.spacing14,
-            ),
-          ),
-        ),
+        _buildDropdownField(theme, isDark),
       ],
     );
+  }
+
+  Widget _buildDropdownField(ThemeData theme, bool isDark) {
+    final dropdown = DropdownButtonFormField<T>(
+      initialValue: widget.value,
+      items: widget.items,
+      onChanged: widget.onChanged,
+      validator: widget.validator,
+      focusNode: _focusNode,
+      menuMaxHeight: 250,
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        prefixIcon: widget.prefixIcon != null
+            ? Padding(
+                padding: const EdgeInsets.all(AppDesignSystem.spacing12),
+                child: widget.prefixIcon,
+              )
+            : null,
+        filled: true,
+        fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF3F4F6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : const Color(0xFFE5E7EB),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32),
+            width: 2.0,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppDesignSystem.spacing16,
+          vertical: AppDesignSystem.spacing14,
+        ),
+      ),
+    );
+
+    if (widget.tooltip != null) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: dropdown,
+      );
+    }
+    return dropdown;
   }
 }
 
@@ -328,6 +346,7 @@ class EnhancedSearchableDropdownField<T> extends StatefulWidget {
   final bool enableFilter;
   final double? width;
   final TextEditingController? controller;
+  final String? tooltip;
 
   const EnhancedSearchableDropdownField({
     super.key,
@@ -343,6 +362,7 @@ class EnhancedSearchableDropdownField<T> extends StatefulWidget {
     this.enableFilter = true,
     this.width,
     this.controller,
+    this.tooltip,
   });
 
   @override
@@ -388,80 +408,7 @@ class _EnhancedSearchableDropdownFieldState<T>
             ],
           ),
         ),
-        // Searchable Dropdown Menu
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final double menuWidth = widget.width ?? constraints.maxWidth;
-            
-            return DropdownMenu<T>(
-              controller: widget.controller,
-              initialSelection: widget.value,
-              dropdownMenuEntries: widget.entries,
-              onSelected: widget.onSelected,
-              hintText: widget.hint,
-              enableSearch: widget.enableSearch,
-              enableFilter: widget.enableFilter,
-              width: menuWidth,
-              menuHeight: 250,
-              leadingIcon: widget.prefixIcon != null
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppDesignSystem.spacing8),
-                    child: widget.prefixIcon,
-                  )
-                : null,
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: isDark
-                    ? const Color(0xFF2C2C2C)
-                    : const Color(0xFFF3F4F6),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : const Color(0xFFE5E7EB),
-                    width: 1.5,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFF2E7D32),
-                    width: 2.0,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppDesignSystem.spacing16,
-                  vertical: AppDesignSystem.spacing14,
-                ),
-                constraints: BoxConstraints(
-                  maxHeight: 56,
-                  minWidth: menuWidth,
-                ),
-              ),
-              textStyle: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? Colors.white : const Color(0xFF111827),
-              ),
-              menuStyle: MenuStyle(
-                backgroundColor: WidgetStateProperty.all(
-                  isDark ? const Color(0xFF1E293B) : Colors.white,
-                ),
-                elevation: WidgetStateProperty.all(8),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        _buildDropdownMenu(theme, isDark),
         if (widget.errorText != null)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 12),
@@ -474,5 +421,87 @@ class _EnhancedSearchableDropdownFieldState<T>
           ),
       ],
     );
+  }
+
+  Widget _buildDropdownMenu(ThemeData theme, bool isDark) {
+    final dropdownMenu = LayoutBuilder(
+      builder: (context, constraints) {
+        final double menuWidth = widget.width ?? constraints.maxWidth;
+
+        return DropdownMenu<T>(
+          controller: widget.controller,
+          initialSelection: widget.value,
+          dropdownMenuEntries: widget.entries,
+          onSelected: widget.onSelected,
+          hintText: widget.hint,
+          enableSearch: widget.enableSearch,
+          enableFilter: widget.enableFilter,
+          width: menuWidth,
+          menuHeight: 250,
+          leadingIcon: widget.prefixIcon != null
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDesignSystem.spacing8,
+                  ),
+                  child: widget.prefixIcon,
+                )
+              : null,
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF3F4F6),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+              borderSide: BorderSide(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : const Color(0xFFE5E7EB),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32),
+                width: 2.0,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppDesignSystem.spacing16,
+              vertical: AppDesignSystem.spacing14,
+            ),
+            constraints: BoxConstraints(
+              maxHeight: 56,
+              minWidth: menuWidth,
+            ),
+          ),
+          textStyle: theme.textTheme.bodyMedium?.copyWith(
+            color: isDark ? Colors.white : const Color(0xFF111827),
+          ),
+          menuStyle: MenuStyle(
+            backgroundColor: WidgetStateProperty.all(
+              isDark ? const Color(0xFF1E293B) : Colors.white,
+            ),
+            elevation: WidgetStateProperty.all(8),
+            shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (widget.tooltip != null) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: dropdownMenu,
+      );
+    }
+    return dropdownMenu;
   }
 }

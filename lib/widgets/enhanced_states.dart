@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/design_system.dart';
+import 'skeleton_loading.dart';
 
 /// Enhanced empty state widget
 class EnhancedEmptyState extends StatelessWidget {
@@ -237,17 +238,12 @@ class EnhancedLoadingState extends StatelessWidget {
             color: isDark
                 ? Colors.white.withValues(alpha: 0.05)
                 : const Color(0xFFF3F4F6),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
           ),
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32),
-              ),
-            ),
+          child: SkeletonLoading(
+            width: size * 2,
+            height: size / 2,
+            borderRadius: AppDesignSystem.radiusSmall,
           ),
         ),
         if (message != null) ...[

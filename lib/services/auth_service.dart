@@ -26,6 +26,15 @@ class AuthService extends ChangeNotifier {
     final uid = prefs.getString('uid');
 
     if (uid != null) {
+      // Safety timeout: If Firestore doesn't respond in 3 seconds, 
+      // stop the loading state to prevent infinite spinning.
+      Future.delayed(const Duration(seconds: 3), () {
+        if (isLoading) {
+          debugPrint('Auth loading timed out. Clearing loading state.');
+          isLoading = false;
+          notifyListeners();
+        }
+      });
       subscribeToUser(uid);
     } else {
       isLoading = false;
@@ -40,11 +49,23 @@ class AuthService extends ChangeNotifier {
         .doc(uid)
         .snapshots()
         .listen((doc) {
-          if (doc.exists) {
-            currentUser = UserModel.fromFirestore(doc);
-          } else {
+        if (doc.exists) {
+          final newUser = UserModel.fromFirestore(doc);
+        // Only notify if data actually changed or if we were in loading state to ensure UI updates
+        if (currentUser?.uid != newUser.uid || currentUser?.role != newUser.role || currentUser?.name != newUser.name || isLoading) {
+          currentUser = newUser;
+          isLoading = false;
+          notifyListeners();
+        }
+        } else {
+          if (currentUser != null) {
             currentUser = null;
+            isLoading = false;
+            notifyListeners();
           }
+        }
+      }, onError: (e) {
+          debugPrint('Auth subscription error: $e');
           isLoading = false;
           notifyListeners();
         });
@@ -66,33 +87,49 @@ class AuthService extends ChangeNotifier {
     bool rememberMe = false,
     String? expectedRole,
   }) async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email.trim())
-        .where('password', isEqualTo: password)
-        .limit(1)
-        .get();
+    final cleanEmail = email.trim().toLowerCase();
+    debugPrint('Attempting sign in for: $cleanEmail');
+    
+    isLoading = true;
+    notifyListeners();
 
-    if (querySnapshot.docs.isNotEmpty) {
-      final userDoc = querySnapshot.docs.first;
-      final tempUser = UserModel.fromFirestore(userDoc);
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: cleanEmail)
+          .where('password', isEqualTo: password)
+          .limit(1)
+          .get();
 
-      currentUser = tempUser;
-      final prefs = await SharedPreferences.getInstance();
+      if (querySnapshot.docs.isNotEmpty) {
+        final userDoc = querySnapshot.docs.first;
+        final tempUser = UserModel.fromFirestore(userDoc);
 
-      if (rememberMe) {
-        await prefs.setString('uid', currentUser!.uid);
-        await prefs.setString('saved_email', email.trim());
-        await prefs.setString('saved_password', password);
+        currentUser = tempUser;
+        debugPrint('Sign in successful: ${currentUser?.name} (${currentUser?.role})');
+        
+        final prefs = await SharedPreferences.getInstance();
+
+        if (rememberMe) {
+          await prefs.setString('uid', currentUser!.uid);
+          await prefs.setString('saved_email', cleanEmail);
+          await prefs.setString('saved_password', password);
+        } else {
+          await prefs.remove('uid');
+          await prefs.remove('saved_email');
+          await prefs.remove('saved_password');
+        }
+
+        subscribeToUser(currentUser!.uid);
       } else {
-        await prefs.remove('uid');
-        await prefs.remove('saved_email');
-        await prefs.remove('saved_password');
+        debugPrint('Sign in failed: Invalid email or password');
+        throw Exception('Invalid email or password');
       }
-
-      subscribeToUser(currentUser!.uid);
-    } else {
-      throw Exception('Invalid email or password');
+    } catch (e) {
+      debugPrint('Sign in error: $e');
+      isLoading = false;
+      notifyListeners();
+      rethrow;
     }
   }
 
@@ -182,9 +219,10 @@ class AuthService extends ChangeNotifier {
     String name, {
     String role = 'staff',
   }) async {
+    final cleanEmail = email.trim().toLowerCase();
     final existing = await FirebaseFirestore.instance
         .collection('users')
-        .where('email', isEqualTo: email.trim())
+        .where('email', isEqualTo: cleanEmail)
         .limit(1)
         .get();
 
@@ -195,7 +233,7 @@ class AuthService extends ChangeNotifier {
     final docRef = FirebaseFirestore.instance.collection('users').doc();
     final newUser = UserModel(
       uid: docRef.id,
-      email: email.trim(),
+      email: cleanEmail,
       role: role.trim(),
       name: name.trim(),
       password: password.trim(),
@@ -279,9 +317,10 @@ class AuthService extends ChangeNotifier {
     String fullName,
     String newPassword,
   ) async {
+    final cleanEmail = email.trim().toLowerCase();
     final query = await FirebaseFirestore.instance
         .collection('users')
-        .where('email', isEqualTo: email.trim())
+        .where('email', isEqualTo: cleanEmail)
         .where('name', isEqualTo: fullName.trim())
         .limit(1)
         .get();

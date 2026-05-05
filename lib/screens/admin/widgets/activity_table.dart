@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import '../../../models/activity.dart';
 import '../../../core/date_formatter.dart';
 import '../../../services/firebase_service.dart';
+import '../../../core/design_system.dart';
+import '../../../core/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ActivityTable extends StatelessWidget {
   final List<Activity> activities;
@@ -12,6 +15,13 @@ class ActivityTable extends StatelessWidget {
   final int? sortColumnIndex;
   final bool sortAscending;
   final Function(int, bool)? onSort;
+  final Set<String> selectedIds;
+  final Function(String, bool) onSelectionChanged;
+  final Function(bool) onSelectAll;
+  final double totalPPMPBalance;
+  final double totalPR;
+  final double totalPOAmount;
+
 
   const ActivityTable({
     super.key,
@@ -22,6 +32,12 @@ class ActivityTable extends StatelessWidget {
     this.sortColumnIndex,
     this.sortAscending = true,
     this.onSort,
+    required this.selectedIds,
+    required this.onSelectionChanged,
+    required this.onSelectAll,
+    required this.totalPPMPBalance,
+    required this.totalPR,
+    required this.totalPOAmount,
   });
 
   @override
@@ -36,24 +52,30 @@ class ActivityTable extends StatelessWidget {
     Widget tableContent = Column(
       children: [
         _buildHeader(context),
-        ListView.separated(
-          shrinkWrap: true,
-          padding: EdgeInsets.zero,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: activities.length,
-          itemBuilder: (context, index) {
-            final activity = activities[index];
-            final isEven = index % 2 == 0;
-            return Container(
-              color: isEven
-                  ? (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.transparent)
-                  : (isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF9FAFB)),
-              child: _buildRow(context, activity),
-            );
-          },
-          separatorBuilder: (context, index) => Divider(
-            height: 1,
-            color: theme.dividerColor.withValues(alpha: 0.05),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 100),
+            itemCount: activities.length,
+            itemBuilder: (context, index) {
+              final activity = activities[index];
+              final isEven = index % 2 == 0;
+              return Container(
+                decoration: BoxDecoration(
+                  color: isEven
+                      ? (isDark
+                            ? Colors.white.withValues(alpha: 0.02)
+                            : Colors.transparent)
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : const Color(0xFFF9FAFB)),
+                ),
+                child: _buildRow(context, activity),
+              );
+            },
+            separatorBuilder: (context, index) => Divider(
+              height: 1,
+              color: theme.dividerColor.withValues(alpha: 0.05),
+            ),
           ),
         ),
         _buildFooter(context),
@@ -64,26 +86,37 @@ class ActivityTable extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
           ),
         ],
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: isDark ? Slate.shade800 : Slate.shade200,
+          width: 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: shouldScroll
-          ? Scrollbar(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: minTableWidth,
-                  child: tableContent,
-                ),
-              ),
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                return Scrollbar(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: minTableWidth,
+                        minHeight: constraints.maxHeight,
+                        maxHeight: constraints.maxHeight,
+                      ),
+                      child: tableContent,
+                    ),
+                  ),
+                );
+              },
             )
           : tableContent,
     );
@@ -93,42 +126,29 @@ class ActivityTable extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    double totalPPMPBalance = 0;
-    double totalPR = 0;
-    double totalPRBalance = 0;
-    double totalPOAmount = 0;
-
-    for (var a in activities) {
-      final budget = a.totalBudget;
-      totalPPMPBalance += budget;
-      totalPR += a.prAmount;
-      totalPOAmount += a.effectivePOAmount;
-    }
-    totalPRBalance = totalPPMPBalance - totalPR;
+    final totalPRBalance = totalPPMPBalance - totalPR;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : const Color(0xFFF3F4F6),
+            ? Slate.shade900
+            : Slate.shade50,
         border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+          top: BorderSide(color: isDark ? Slate.shade800 : Slate.shade200),
         ),
       ),
       child: Row(
         children: [
+          const SizedBox(width: 48), // Checkbox spacer
           Expanded(
             flex: 6,
             child: Text(
-              'TOTAL',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                inherit: true,
+              'GRAND TOTALS',
+              style: AppDesignSystem.labelMedium.copyWith(
                 fontWeight: FontWeight.w900,
-                fontSize: 13,
-                letterSpacing: 1.5,
-                color: isDark ? Colors.white70 : const Color(0xFF374151),
+                letterSpacing: 1.2,
+                color: isDark ? Colors.white70 : Slate.shade700,
               ),
             ),
           ),
@@ -139,12 +159,9 @@ class ActivityTable extends StatelessWidget {
               formatCurrency.format(totalPPMPBalance),
               textAlign: TextAlign.right,
               style: TextStyle(
-                inherit: true,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.7,
-                ),
+                color: isDark ? Colors.white60 : Slate.shade600,
               ),
             ),
           ),
@@ -155,7 +172,6 @@ class ActivityTable extends StatelessWidget {
               formatCurrency.format(totalPR),
               textAlign: TextAlign.right,
               style: TextStyle(
-                inherit: true,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: Colors.orange.shade700,
@@ -169,10 +185,9 @@ class ActivityTable extends StatelessWidget {
               formatCurrency.format(totalPRBalance),
               textAlign: TextAlign.right,
               style: TextStyle(
-                inherit: true,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: AppColors.primary,
               ),
             ),
           ),
@@ -183,7 +198,6 @@ class ActivityTable extends StatelessWidget {
               formatCurrency.format(totalPOAmount),
               textAlign: TextAlign.right,
               style: TextStyle(
-                inherit: true,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: Colors.teal.shade700,
@@ -203,49 +217,74 @@ class ActivityTable extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      color: isDark
-          ? Colors.white.withValues(alpha: 0.02)
-          : const Color(0xFFF9FAFB),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      decoration: BoxDecoration(
+        color: isDark ? Slate.shade900 : Slate.shade800,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
+          SizedBox(
+            width: 48,
+            child: Checkbox(
+              value: activities.isNotEmpty && selectedIds.length == activities.length,
+              onChanged: (val) => onSelectAll(val ?? false),
+              activeColor: AppColors.primary,
+              side: const BorderSide(color: Colors.white54, width: 2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+          ),
           _headerCell(
             context,
-            'SECTION/UNIT',
+            'UNIT',
             flex: 2,
             sortIndex: 0,
             alignment: MainAxisAlignment.center,
+            isHeader: true,
           ),
           _headerCell(
             context,
-            'ACTIVITY',
+            'ACTIVITY NAME',
             flex: 4,
             sortIndex: 2,
             alignment: MainAxisAlignment.center,
+            isHeader: true,
           ),
           _headerCell(
             context,
-            'PPMP BALANCE',
+            'PPMP BUDGET',
             flex: 2,
             sortIndex: 12,
             isNumeric: true,
-            alignment: MainAxisAlignment.center,
+            alignment: MainAxisAlignment.end,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            isHeader: true,
           ),
           _headerCell(
             context,
-            'PR',
+            'PR AMOUNT',
             flex: 2,
             sortIndex: 13,
             isNumeric: true,
-            alignment: MainAxisAlignment.center,
+            alignment: MainAxisAlignment.end,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            isHeader: true,
           ),
           _headerCell(
             context,
-            'PR BALANCE',
+            'BALANCE',
             flex: 2,
             sortIndex: 8,
             isNumeric: true,
-            alignment: MainAxisAlignment.center,
+            alignment: MainAxisAlignment.end,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            isHeader: true,
           ),
           _headerCell(
             context,
@@ -253,14 +292,25 @@ class ActivityTable extends StatelessWidget {
             flex: 2,
             sortIndex: 14,
             isNumeric: true,
-            alignment: MainAxisAlignment.center,
+            alignment: MainAxisAlignment.end,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            isHeader: true,
           ),
           _headerCell(
             context,
-            'STAFF',
+            'DATE',
+            flex: 2,
+            sortIndex: 15,
+            alignment: MainAxisAlignment.center,
+            isHeader: true,
+          ),
+          _headerCell(
+            context,
+            'RESPONSIBLE',
             flex: 2,
             sortIndex: 11,
             alignment: MainAxisAlignment.center,
+            isHeader: true,
           ),
           const SizedBox(width: 48),
         ],
@@ -276,52 +326,53 @@ class ActivityTable extends StatelessWidget {
     bool isNumeric = false,
     MainAxisAlignment alignment = MainAxisAlignment.center,
     EdgeInsets? padding,
+    bool isHeader = false,
   }) {
     final isSorted = sortColumnIndex == sortIndex;
-    final theme = Theme.of(context);
 
     return Expanded(
       flex: flex,
       child: InkWell(
-        onTap:
-            sortIndex != null
-                ? () => onSort?.call(sortIndex, !sortAscending)
-                : null,
+        onTap: sortIndex != null
+            ? () => onSort?.call(sortIndex, !sortAscending)
+            : null,
         child: Container(
           padding: padding,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: alignment == MainAxisAlignment.center
-                    ? Alignment.center
-                    : (alignment == MainAxisAlignment.start
-                        ? Alignment.centerLeft
-                        : Alignment.centerRight),
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    inherit: true,
-                    color: theme.textTheme.bodySmall?.color?.withValues(
-                      alpha: 0.7,
+          child: Align(
+            alignment: alignment == MainAxisAlignment.center
+                ? Alignment.center
+                : (alignment == MainAxisAlignment.start
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: alignment == MainAxisAlignment.start
+                        ? TextAlign.left
+                        : (alignment == MainAxisAlignment.end
+                            ? TextAlign.right
+                            : TextAlign.center),
+                    style: AppDesignSystem.labelSmall.copyWith(
+                      color: isHeader ? Colors.white : Slate.shade500,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                      fontSize: 10,
                     ),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    letterSpacing: 0.8,
                   ),
                 ),
-              ),
-              if (isSorted)
-                Positioned(
-                  right: 0,
-                  child: Icon(
+                if (isSorted) ...[
+                  const SizedBox(width: 4),
+                  Icon(
                     sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
                     size: 14,
-                    color: theme.colorScheme.primary,
+                    color: isHeader ? Colors.white : AppColors.primary,
                   ),
-                ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -330,6 +381,7 @@ class ActivityTable extends StatelessWidget {
 
   Widget _buildRow(BuildContext context, Activity activity) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isLowBalance = activity.isLowBalance;
 
     final now = DateTime.now();
@@ -342,16 +394,33 @@ class ActivityTable extends StatelessWidget {
     return InkWell(
       onTap: () => onActionTap(activity),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
         decoration: BoxDecoration(
           color: isLowBalance
-              ? Colors.red.withValues(alpha: 0.02)
+              ? Colors.red.withValues(alpha: 0.04)
               : isDelayed
-              ? Colors.orange.withValues(alpha: 0.02)
+              ? Colors.orange.withValues(alpha: 0.04)
               : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: isLowBalance 
+                ? Colors.red 
+                : (isDelayed ? Colors.orange : Colors.transparent),
+              width: 4,
+            ),
+          ),
         ),
         child: Row(
           children: [
+            SizedBox(
+              width: 48,
+              child: Checkbox(
+                value: selectedIds.contains(activity.id),
+                onChanged: (val) => onSelectionChanged(activity.id, val ?? false),
+                activeColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
             // Section
             Expanded(
               flex: 2,
@@ -359,25 +428,31 @@ class ActivityTable extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    activity.sector,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      inherit: true,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: theme.textTheme.titleSmall?.color,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: isDark ? Colors.white10 : Slate.shade200),
+                    ),
+                    child: Text(
+                      activity.sector,
+                      textAlign: TextAlign.center,
+                      style: AppDesignSystem.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white70 : Slate.shade700,
+                      ),
                     ),
                   ),
-                  if (activity.subSector != null)
-                    Text(
-                      activity.subSector!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        inherit: true,
-                        fontSize: 11,
-                        color: theme.textTheme.bodySmall?.color?.withValues(
-                          alpha: 0.5,
+                  if (activity.subSector != null && activity.subSector!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        activity.subSector!,
+                        textAlign: TextAlign.center,
+                        style: AppDesignSystem.bodySmall.copyWith(
+                          fontSize: 10,
+                          color: isDark ? Colors.white38 : Slate.shade400,
                         ),
                       ),
                     ),
@@ -393,24 +468,22 @@ class ActivityTable extends StatelessWidget {
                   Text(
                     activity.activityName,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      inherit: true,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: theme.textTheme.titleMedium?.color,
+                    style: AppDesignSystem.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Slate.shade800,
+                      height: 1.2,
                     ),
                   ),
+                  _buildValidationBadges(activity),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.location_on_outlined,
                         size: 11,
-                        color: theme.textTheme.bodySmall?.color?.withValues(
-                          alpha: 0.4,
-                        ),
+                        color: isDark ? Colors.white24 : Slate.shade400,
                       ),
                       const SizedBox(width: 4),
                       Flexible(
@@ -418,11 +491,8 @@ class ActivityTable extends StatelessWidget {
                           activity.location ?? 'No location',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            inherit: true,
-                            fontSize: 11,
-                            color: theme.textTheme.bodySmall?.color?.withValues(
-                              alpha: 0.5,
-                            ),
+                            fontSize: 10,
+                            color: isDark ? Colors.white30 : Slate.shade500,
                           ),
                         ),
                       ),
@@ -437,13 +507,10 @@ class ActivityTable extends StatelessWidget {
               child: Text(
                 formatCurrency.format(activity.totalBudget),
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  inherit: true,
-                  fontSize: 14,
+                style: GoogleFonts.robotoMono(
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(
-                    alpha: 0.7,
-                  ),
+                  color: isDark ? Colors.white54 : Slate.shade500,
                 ),
               ),
             ),
@@ -451,11 +518,10 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.prAmount),
+                formatCurrency.format(activity.effectivePRAmount),
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  inherit: true,
-                  fontSize: 14,
+                style: GoogleFonts.robotoMono(
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.orange.shade700,
                 ),
@@ -465,32 +531,26 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.totalBudget - activity.prAmount),
+                formatCurrency.format(activity.ppmpBalanceCalculated),
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  inherit: true,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+                style: GoogleFonts.robotoMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
                 ),
               ),
             ),
             // PO Amount
             Expanded(
               flex: 2,
-              child: Builder(
-                builder: (context) {
-                  return Text(
-                    formatCurrency.format(activity.effectivePOAmount),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      inherit: true,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal.shade700,
-                    ),
-                  );
-                },
+              child: Text(
+                formatCurrency.format(activity.effectivePOAmount),
+                textAlign: TextAlign.right,
+                style: GoogleFonts.robotoMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal.shade700,
+                ),
               ),
             ),
             // Date
@@ -502,15 +562,23 @@ class ActivityTable extends StatelessWidget {
                   children: [
                     if (activity.statusDate != null &&
                         activity.statusDate!.isNotEmpty)
-                      Text(
-                        AppDateFormatter.format(AppDateFormatter.parse(activity.statusDate!) ?? DateTime.now()),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.textTheme.bodySmall?.color?.withValues(
-                            alpha: 0.6,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          DateFormatter.format(
+                            DateFormatter.parse(activity.statusDate!) ??
+                                DateTime.now(),
                           ),
-                          fontWeight: FontWeight.w500,
+                          textAlign: TextAlign.center,
+                          style: AppDesignSystem.labelSmall.copyWith(
+                            fontSize: 10,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                   ],
@@ -523,12 +591,9 @@ class ActivityTable extends StatelessWidget {
               child: Text(
                 activity.responsiblePerson,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  inherit: true,
-                  fontSize: 13,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(
-                    alpha: 0.8,
-                  ),
+                style: AppDesignSystem.bodySmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : Slate.shade700,
                 ),
               ),
             ),
@@ -536,14 +601,68 @@ class ActivityTable extends StatelessWidget {
             SizedBox(
               width: 48,
               child: IconButton(
-                icon: Icon(
-                  Icons.chevron_right,
-                  color: theme.dividerColor.withValues(alpha: 0.5),
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: isDark ? Colors.white54 : Slate.shade500,
+                  ),
                 ),
                 onPressed: () => onActionTap(activity),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildValidationBadges(Activity activity) {
+    final List<Widget> badges = [];
+    if (activity.hasNoBudget || activity.isRodenticideWarning) {
+      badges.add(_badge('NO BUDGET', Colors.red));
+    }
+    if (activity.isRecanvasWarning) {
+      badges.add(_badge('RECANVAS', Colors.orange));
+    }
+    if (activity.isOverObligated) {
+      badges.add(_badge('OVER-OBLIGATED', Colors.orange));
+    }
+    if (activity.isTimelineVariance) {
+      badges.add(_badge('TIMELINE VARIANCE', Colors.purple));
+    }
+    if (badges.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        children: badges,
+      ),
+    );
+  }
+
+  Widget _badge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 0.5,
         ),
       ),
     );

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants.dart';
+
 import '../core/localization.dart';
 
 class SettingsProvider extends ChangeNotifier {
   bool notificationsEnabled = true;
   String language = 'English';
   bool isDarkMode = false;
-  String geminiApiKey = '';
+
 
   AppLocalization get l10n => AppLocalization(language);
 
@@ -20,16 +20,10 @@ class SettingsProvider extends ChangeNotifier {
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     language = prefs.getString('language') ?? 'English';
     isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    geminiApiKey = prefs.getString('geminiApiKey') ?? AppConstants.geminiApiKey;
+
     notifyListeners();
   }
 
-  Future<void> setGeminiApiKey(String value) async {
-    geminiApiKey = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('geminiApiKey', value);
-    notifyListeners();
-  }
 
   Future<void> toggleNotifications(bool value) async {
     notificationsEnabled = value;

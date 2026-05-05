@@ -7,6 +7,9 @@ import '../../services/auth_service.dart';
 import '../../services/navigation_provider.dart';
 import '../../core/responsive_utils.dart';
 import '../../core/app_colors.dart';
+import '../../core/design_system.dart';
+import '../../widgets/skeleton_loading.dart';
+
 
 class UserManagementScreen extends StatefulWidget {
   final bool isActive;
@@ -16,7 +19,10 @@ class UserManagementScreen extends StatefulWidget {
   State<UserManagementScreen> createState() => _UserManagementScreenState();
 }
 
-class _UserManagementScreenState extends State<UserManagementScreen> {
+class _UserManagementScreenState extends State<UserManagementScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String _searchQuery = '';
 
@@ -36,9 +42,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     navProvider.updateLayout(title: 'User Management', actions: [], fab: null);
   }
 
+  Stream<QuerySnapshot>? _usersStream;
+
   @override
   void initState() {
     super.initState();
+    _usersStream = _firestore.collection('users').snapshots();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.isActive) _updateNav();
@@ -149,7 +158,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1B5E20),
+              backgroundColor: AppColors.emeraldPrimary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -158,7 +167,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
             child: Text(
               'Save ID',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              style: AppDesignSystem.labelMedium.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         ],
@@ -168,15 +177,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final authService = context.read<AuthService>();
     final currentUser = authService.currentUser;
+    final theme = Theme.of(context);
 
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('users').snapshots(),
+      stream: _usersStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const SkeletonList();
         }
+
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text('No users found.'));
         }
@@ -200,39 +212,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 onChanged: (value) => setState(() => _searchQuery = value),
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
-                  hintText:
-                      'Search by name, email, or role (abbreviations allowed)...',
-                  hintStyle: GoogleFonts.inter(
-                    color: Slate.shade400,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  hintText: 'Search by name, email, or role...',
+                  hintStyle: AppDesignSystem.bodyMedium.copyWith(color: AppColors.textMuted),
                   prefixIcon: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Icon(
                       Icons.search_rounded,
-                      color: Color(0xFF1B5E20),
+                      color: AppColors.emeraldPrimary,
                       size: 22,
                     ),
                   ),
                   filled: true,
-                  fillColor: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E293B)
-                      : Slate.shade50,
+                  fillColor: Theme.of(context).cardColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Slate.shade100),
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF1B5E20),
-                      width: 2.0,
-                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: const BorderSide(color: AppColors.emeraldPrimary, width: 2.0),
                   ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -253,20 +255,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     constraints: const BoxConstraints(maxWidth: 800),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: Slate.shade200.withValues(alpha: 0.5),
-                        ),
-                      ),
+                      child: GlassCard(
+                        padding: EdgeInsets.zero,
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
                       leading: Container(
@@ -293,10 +283,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           Expanded(
                             child: Text(
                               user.name,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w800,
+                              style: AppDesignSystem.headingSmall.copyWith(
                                 fontSize: 16,
-                                letterSpacing: -0.3,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
@@ -357,19 +345,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           const SizedBox(height: 4),
                           Text(
                             user.email,
-                            style: GoogleFonts.inter(
-                              color: Slate.shade500,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                            style: AppDesignSystem.bodySmall.copyWith(
+                              color: AppColors.textMuted,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'UID: ${user.uid}',
-                            style: GoogleFonts.inter(
-                              color: Slate.shade300,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
+                            style: AppDesignSystem.labelSmall.copyWith(
+                              color: AppColors.textMuted.withValues(alpha: 0.5),
+                              fontSize: 9,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -386,12 +371,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             ),
                             child: Text(
                               user.role.toUpperCase(),
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
+                              style: AppDesignSystem.labelSmall.copyWith(
                                 fontWeight: FontWeight.w900,
                                 color: user.role == 'admin'
                                     ? const Color(0xFFE11D48)
-                                    : const Color(0xFF059669),
+                                    : AppColors.emeraldPrimary,
                                 letterSpacing: 1,
                               ),
                             ),
@@ -457,17 +441,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                   ),
                                 ),
                               ],
-                            ),
-                    ),
+                              ),
+                      ),
                     ),
                   ),
-                );
-              },
-              ),
-            ),
-          ],
-        );
-      },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
+  },
+);
   }
 }

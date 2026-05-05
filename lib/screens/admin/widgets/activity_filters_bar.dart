@@ -6,6 +6,7 @@ import '../../../services/firebase_service.dart';
 import '../../../core/constants.dart';
 import '../../../core/responsive_utils.dart';
 import '../../../core/app_colors.dart';
+import '../../../core/design_system.dart';
 
 
 class ActivityFiltersBar extends StatefulWidget {
@@ -54,11 +55,14 @@ class ActivityFiltersBar extends StatefulWidget {
 
 class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
   late TextEditingController _searchController;
+  bool _showFilters = false;
+  Stream<List<UserModel>>? _usersStream;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.searchQuery);
+    _usersStream = context.read<FirebaseService>().streamUsers();
   }
 
   @override
@@ -78,183 +82,155 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
   @override
   Widget build(BuildContext context) {
     final bool isMobile = ResponsiveUtils.isMobile(context);
-    return Container(
+    return GlassCard(
       margin: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 24,
-        vertical: isMobile ? 8 : 16,
+        horizontal: isMobile ? 12 : 0,
+        vertical: 0,
       ),
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(isMobile ? 20 : 28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 40,
-            offset: const Offset(0, 20),
-            spreadRadius: -10,
-          ),
-        ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-          width: 1.5,
-        ),
-      ),
+      padding: EdgeInsets.all(isMobile ? 16 : 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
           LayoutBuilder(
             builder: (context, constraints) {
               final isSmall = constraints.maxWidth < ResponsiveUtils.mobileBreakpoint;
-              final headerContent = Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.tune_rounded,
-                      size: 20,
+              
+              final searchField = TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by name, PR, staff...',
+                  hintStyle: AppDesignSystem.bodyMedium.copyWith(color: AppColors.textMuted),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 18,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            widget.onSearchChanged('');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : Slate.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Slate.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
                       color: Theme.of(context).colorScheme.primary,
+                      width: 1.5,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  if (!isSmall)
-                    Text(
-                      'Search & Filters',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  const Spacer(),
-                  if (!isSmall) _headerActions(),
-                ],
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  isDense: true,
+                ),
+                style: AppDesignSystem.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurface),
+                onChanged: widget.onSearchChanged,
               );
 
               if (isSmall) {
                 return Column(
                   children: [
-                    headerContent,
-                    const SizedBox(height: 16),
+                    searchField,
+                    const SizedBox(height: 12),
                     SizedBox(width: double.infinity, child: _headerActions()),
                   ],
                 );
               }
-              return headerContent;
-            },
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText:
-                  'Search by name, PR, staff, or any details (abbreviations allowed)...',
-              hintStyle: const TextStyle(color: Slate.shade400, fontSize: 15),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 22,
-                ),
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 20),
-                      onPressed: () {
-                        _searchController.clear();
-                        widget.onSearchChanged('');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1E293B)
-                  : Slate.shade50,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Slate.shade100),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 2.0,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 20),
-            ),
-            onChanged: widget.onSearchChanged,
-          ),
-          const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isSmall = constraints.maxWidth < ResponsiveUtils.mobileBreakpoint;
-              final crossAxisCount = ResponsiveUtils.gridCrossAxisCount(
-                context, 
-                mobile: 1, 
-                tablet: 2, 
-                desktop: 3,
-              );
 
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: isSmall ? 12 : 24,
-                mainAxisSpacing: isSmall ? 16 : 20,
-                childAspectRatio: crossAxisCount == 1
-                    ? 3.8
-                    : (crossAxisCount == 2 ? 3.2 : 4),
+              return Row(
                 children: [
-                  _filterDropdown(
-                    label: 'Sector',
-                    initialValue: widget.selectedSector,
-                    items: AppConstants.sectors,
-                    onChanged: (val) => widget.onSectorChanged(val ?? ''),
-                    icon: Icons.category_outlined,
-                  ),
-                  _filterDropdown(
-                    label: 'Sub-sector',
-                    initialValue: widget.selectedSubSector,
-                    items: AppConstants.subSectors,
-                    onChanged: (val) => widget.onSubSectorChanged(val ?? ''),
-                    icon: Icons.grid_view_outlined,
-                  ),
-                  _filterDropdown(
-                    label: 'Funding Source',
-                    initialValue: widget.selectedFundingSource,
-                    items: AppConstants.fundingSources,
-                    onChanged: (val) => widget.onFundingSourceChanged(val),
-                    icon: Icons.account_balance_wallet_outlined,
-                  ),
-                  _filterDropdown(
-                    label: 'Target Month',
-                    initialValue: widget.selectedMonth,
-                    items: AppConstants.months,
-                    onChanged: (val) => widget.onMonthChanged(val ?? ''),
-                    icon: Icons.calendar_month_outlined,
-                  ),
-                  _filterDropdown(
-                    label: 'Target Year',
-                    initialValue: widget.selectedYear,
-                    items: AppConstants.years,
-                    onChanged: (val) => widget.onYearChanged(val ?? ''),
-                    icon: Icons.event_available_outlined,
-                  ),
-                  _buildStaffDropdown(context),
+                  Expanded(child: searchField),
+                  const SizedBox(width: 12),
+                  _headerActions(),
                 ],
               );
             },
+          ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: !_showFilters
+                ? const SizedBox(width: double.infinity)
+                : Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isSmall = constraints.maxWidth < ResponsiveUtils.mobileBreakpoint;
+                          final crossAxisCount = ResponsiveUtils.gridCrossAxisCount(
+                            context, 
+                            mobile: 1, 
+                            tablet: 2, 
+                            desktop: 3,
+                          );
+
+                          return GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: isSmall ? 8 : 12,
+                            mainAxisSpacing: isSmall ? 8 : 12,
+                            childAspectRatio: crossAxisCount == 1
+                                ? 5.0
+                                : (crossAxisCount == 2 ? 4.5 : 5.5),
+                            children: [
+                              _filterDropdown(
+                                label: 'Sector',
+                                initialValue: widget.selectedSector,
+                                items: AppConstants.sectors,
+                                onChanged: (val) => widget.onSectorChanged(val ?? ''),
+                                icon: Icons.category_outlined,
+                              ),
+                              _filterDropdown(
+                                label: 'Sub-sector',
+                                initialValue: widget.selectedSubSector,
+                                items: AppConstants.subSectors,
+                                onChanged: (val) => widget.onSubSectorChanged(val ?? ''),
+                                icon: Icons.grid_view_outlined,
+                              ),
+                              _filterDropdown(
+                                label: 'Funding Source',
+                                initialValue: widget.selectedFundingSource,
+                                items: AppConstants.fundingSources,
+                                onChanged: (val) => widget.onFundingSourceChanged(val),
+                                icon: Icons.account_balance_wallet_outlined,
+                              ),
+                              _filterDropdown(
+                                label: 'Target Month',
+                                initialValue: widget.selectedMonth,
+                                items: AppConstants.months,
+                                onChanged: (val) => widget.onMonthChanged(val ?? ''),
+                                icon: Icons.calendar_month_outlined,
+                              ),
+                              _filterDropdown(
+                                label: 'Target Year',
+                                initialValue: widget.selectedYear,
+                                items: AppConstants.years,
+                                onChanged: (val) => widget.onYearChanged(val ?? ''),
+                                icon: Icons.event_available_outlined,
+                              ),
+                              _buildStaffDropdown(context),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -263,10 +239,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
 
   Widget _buildStaffDropdown(BuildContext context) {
     return StreamBuilder<List<UserModel>>(
-      stream: Provider.of<FirebaseService>(
-        context,
-        listen: false,
-      ).streamUsers(),
+      stream: _usersStream,
       builder: (context, userSnap) {
         final users = userSnap.data ?? [];
         final userNames = users.map((u) => u.name).toSet();
@@ -306,12 +279,12 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
       initialSelection: (initialValue == null || initialValue.isEmpty)
           ? null
           : initialValue,
-      label: Text(label),
+      label: Text(label, style: AppDesignSystem.labelMedium),
       leadingIcon: Container(
-        margin: const EdgeInsets.all(10),
+        margin: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
@@ -324,7 +297,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
         fillColor: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1E293B)
             : Slate.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Slate.shade100),
@@ -360,9 +333,44 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
   }
 
   Widget _headerActions() {
+    final activeFiltersCount = [
+      widget.selectedSector,
+      widget.selectedSubSector,
+      widget.selectedStaff,
+      widget.selectedFundingSource,
+      widget.selectedMonth,
+    ].where((f) => f.isNotEmpty).length;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        OutlinedButton.icon(
+          icon: Icon(
+            _showFilters ? Icons.filter_list_off_rounded : Icons.filter_list_rounded,
+            size: 18,
+          ),
+          label: Text(
+            _showFilters 
+                ? 'Hide Filters' 
+                : (activeFiltersCount > 0 ? 'Filters ($activeFiltersCount)' : 'Filters')
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _showFilters || activeFiltersCount > 0 
+                ? Theme.of(context).colorScheme.primary 
+                : Theme.of(context).textTheme.bodyMedium?.color,
+            side: BorderSide(
+              color: _showFilters || activeFiltersCount > 0
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+                  : Theme.of(context).dividerColor,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+        ),
+        const SizedBox(width: 8),
         FilledButton.icon(
           icon: const Icon(Icons.calendar_month_rounded, size: 18),
           label: const Text('Monthly View'),
@@ -371,7 +379,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
               context,
             ).colorScheme.primaryContainer.withValues(alpha: 0.5),
             foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -385,7 +393,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.red.shade700,
             side: BorderSide(color: Colors.red.shade100),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),

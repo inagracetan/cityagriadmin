@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
 import '../core/app_colors.dart';
+import 'skeleton_loading.dart';
+
 
 class AgriUI {
   /// Custom success snackbar
@@ -113,63 +114,22 @@ class AgriUI {
 
   /// Shimmer loading for cards
   static Widget cardShimmer({int count = 3}) {
-    return Builder(
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: count,
-          itemBuilder: (context, index) => Shimmer.fromColors(
-            baseColor: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.grey.shade200,
-            highlightColor: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.grey.shade50,
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        );
-      },
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: count,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) => const SkeletonCard(),
     );
   }
 
+
   /// Skeleton for Table
   static Widget tableShimmer() {
-    return Builder(
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Shimmer.fromColors(
-          baseColor: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.grey.shade200,
-          highlightColor: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.grey.shade50,
-          child: Column(
-            children: List.generate(
-              5,
-              (index) => Container(
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    return const SkeletonList();
   }
+
 }
 
 class AgriHoverCard extends StatefulWidget {

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../core/responsive_utils.dart';
+import '../../core/design_system.dart';
 import '../../services/firebase_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/activity.dart';
-import '../../models/user_model.dart';
 import '../../services/export_service.dart';
 import '../../services/import_service.dart';
 import 'package:open_file/open_file.dart';
@@ -13,13 +12,11 @@ import '../../widgets/dashboard_modules.dart';
 import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../widgets/agri_ui.dart';
-import '../../core/constants.dart';
 import '../../core/app_colors.dart';
-import '../admin/activity_details_dialog.dart';
-import '../admin/monthly_aggregation.dart';
-import '../admin/edit_activity_dialog.dart';
-import '../admin/widgets/activity_card_list.dart';
 import '../../services/activity_form_provider.dart';
+import '../../services/seed_data_loader.dart';
+import '../../widgets/skeleton_loading.dart';
+
 
 class StaffDashboard extends StatefulWidget {
   final String staffName;
@@ -38,13 +35,10 @@ class StaffDashboard extends StatefulWidget {
 
 class _StaffDashboardState extends State<StaffDashboard> {
   final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
-  bool _showAll = false;
-  String _searchQuery = '';
-  String _selectedSector = '';
-  String _selectedStaff = '';
-  String _selectedMonth = '';
-  String _selectedYear = DateTime.now().year.toString();
-  List<Activity> _activities = [];
+  final bool _showAll = false;
+  final String _selectedSector = '';
+  final String _selectedStaff = '';
+  final List<Activity> _activities = [];
   Stream<List<Activity>>? _activitiesStream;
 
   // Track filter values to know when to recreate the stream
@@ -86,6 +80,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
           onPressed: () =>
               _showExportOptions(context, _activities, authService),
         ),
+        IconButton(
+          icon: const Icon(Icons.data_usage, color: Color(0xFFD4AF37)),
+          tooltip: 'Seed Data',
+          onPressed: () => _seedData(context, fbService),
+        ),
       ],
       fab: null,
     );
@@ -101,20 +100,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final fbService = context.read<FirebaseService>();
-    final authService = context.read<AuthService>();
-    final isAdmin = authService.currentUser?.role == 'admin';
-
-    // Only recreate activity stream if filter parameters changed
     final currentSector = _selectedSector.isEmpty ? null : _selectedSector;
 
     if (_activitiesStream == null ||
         _lastSector != currentSector ||
         _lastShowAll != _showAll) {
-      // We no longer pass currentStaff to the stream.
-      // We fetch all relevant activities and filter by staff name in the UI
-      // to handle cases with extra spaces or different casing.
       _activitiesStream = fbService.streamActivities(
         sector: currentSector,
         responsiblePerson: null,
@@ -122,24 +115,27 @@ class _StaffDashboardState extends State<StaffDashboard> {
       _lastSector = currentSector;
       _lastShowAll = _showAll;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.watch<SettingsProvider>().l10n;
+    final theme = Theme.of(context);
 
     return StreamBuilder<List<Activity>>(
       stream: _activitiesStream!,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             _activities.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(children: [AgriUI.cardShimmer(count: 3)]),
-          );
+          return const SkeletonDashboard();
         }
+
 
         if (snapshot.hasError) {
           return AgriUI.emptyState(
-            icon: Icons.error_outline,
+            icon: Icons.error_outline_rounded,
             title: 'Something Went Wrong',
-            message:
-                'We could not load your activities. Please check your connection and try again.',
+            message: 'We could not load your activities. Please check your connection.',
             onAction: () => setState(() {}),
             actionLabel: 'Retry',
           );
@@ -147,457 +143,285 @@ class _StaffDashboardState extends State<StaffDashboard> {
 
         final rawActivities = snapshot.hasData ? snapshot.data! : _activities;
 
-        // Normalize whitespace helper: collapse multiple spaces to one
         String normalize(String s) =>
             s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
         final activities = rawActivities.where((a) {
           final targetStaff = _showAll ? _selectedStaff : widget.staffName;
-
           if (targetStaff.isNotEmpty) {
-            final match =
-                normalize(a.responsiblePerson) == normalize(targetStaff);
+            final match = normalize(a.responsiblePerson) == normalize(targetStaff);
             if (!match) return false;
           }
-
-          if (_selectedMonth.isNotEmpty &&
-              !a.targetDate.toLowerCase().contains(_selectedMonth.toLowerCase())) {
-            return false;
-          }
-
-          if (_selectedYear.isNotEmpty && !a.targetDate.contains(_selectedYear)) {
-            return false;
-          }
-
-          final matchesSearch = a.matchesSearch(_searchQuery);
-
-          return matchesSearch;
+          return true;
         }).toList();
 
-        // Sync filtered list to state for use in AppBar actions (no setState to avoid rebuild loop)
-        _activities = activities;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth > 1000;
+            final horizontalPadding = constraints.maxWidth > 1200 ? 40.0 : 24.0;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildStaffSummary(activities),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: BudgetSectionUnitChart(activities: activities),
-              ),
-              _buildFilters(rawActivities),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _showAll ? 'All Activities' : 'Assigned Tasks',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(vertical: 40, horizontal: horizontalPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(theme),
+                  
+                  const SizedBox(height: 40),
+                  
+                  _buildSectionHeader(
+                    _showAll ? 'TOTAL WFP BUDGET' : 'MY ASSIGNED BUDGET', 
+                    'Financial overview of agricultural programs assigned to you.', 
+                    theme
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  _buildStaffSummary(activities, theme),
+
+                  const SizedBox(height: 48),
+                  
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader(l10n.translate('financial_insights'), 'Budget distribution visualization.', theme),
+                              const SizedBox(height: 24),
+                              BudgetSectionUnitChart(activities: activities),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.calendar_month),
-                      label: const Text('Monthly View'),
-                      onPressed: () => showDialog(
-                        context: context,
-                        builder: (_) =>
-                            MonthlyAggregationViewer(activities: activities),
-                      ),
-                    ),
+                        const SizedBox(width: 32),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Navigation', 'Quick access to tools.', theme),
+                              const SizedBox(height: 24),
+                              _buildQuickActionCard(theme),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    _buildSectionHeader(l10n.translate('financial_insights'), 'Budget distribution visualization.', theme),
+                    const SizedBox(height: 24),
+                    BudgetSectionUnitChart(activities: activities),
+                    const SizedBox(height: 48),
+                    _buildSectionHeader('Navigation', 'Quick access to tools.', theme),
+                    const SizedBox(height: 24),
+                    _buildQuickActionCard(theme),
                   ],
-                ),
+                  
+                  const SizedBox(height: 80),
+                ],
               ),
-              if (activities.isEmpty)
-                AgriUI.emptyState(
-                  icon: _showAll
-                      ? Icons.search_off
-                      : Icons.assignment_turned_in,
-                  title: _showAll ? 'No Activities Found' : 'No Tasks Yet',
-                  message: _showAll
-                      ? 'No activities match your current filters.'
-                      : 'You don\'t have any activities assigned to you yet.',
-                  onAction: !_showAll
-                      ? () => setState(() => _showAll = true)
-                      : null,
-                  actionLabel: 'View All Activities',
-                )
-              else
-                ActivityCardList(
-                  activities: activities,
-                  fbService: fbService,
-                  formatCurrency: formatCurrency,
-                  onActionTap: (act) =>
-                      _showActivityDetails(context, act, fbService, isAdmin),
-                ),
-              const SizedBox(height: 80),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildFilters(List<Activity> activities) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
-      ),
+  Widget _buildHeader(ThemeData theme) {
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Filter Activities',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4B5563),
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Row(
-                children: [
-                  const Text(
-                    'All Activities',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch.adaptive(
-                    value: _showAll,
-                    activeTrackColor: AppColors.primary,
-                    onChanged: (val) => setState(() => _showAll = val),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Search (abbreviations allowed)...',
-              prefixIcon: Icon(Icons.search, size: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: AppColors.emeraldPrimary.withValues(alpha: 0.2)),
             ),
-            onChanged: (val) => setState(() => _searchQuery = val),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.auto_awesome, size: 14, color: AppColors.emeraldPrimary),
+                const SizedBox(width: 8),
+                Text(
+                  'STAFF PORTAL',
+                  style: AppDesignSystem.labelSmall.copyWith(
+                    color: AppColors.emeraldPrimary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Hello, ${widget.staffName}',
+            style: AppDesignSystem.headingLarge.copyWith(color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final sectorDropdown = DropdownMenu<String>(
-                initialSelection: _selectedSector.isEmpty ? null : _selectedSector,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                expandedInsets: EdgeInsets.zero,
-                label: const Text('Section/Unit'),
-                dropdownMenuEntries: AppConstants.sectors
-                    .map((s) => DropdownMenuEntry(value: s, label: s))
-                    .toList(),
-                onSelected: (val) => setState(() => _selectedSector = val ?? ''),
-              );
-
-
-              final clearBtn = IconButton(
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                  color: Color(0xFF9CA3AF),
-                ),
-                onPressed: () => setState(() {
-                  _selectedSector = '';
-                }),
-              );
-
-              if (constraints.maxWidth < ResponsiveUtils.mobileBreakpoint) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    sectorDropdown,
-                    if (!_showAll) ...[
-                      const SizedBox(height: 4),
-                      Align(alignment: Alignment.centerRight, child: clearBtn),
-                    ],
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: sectorDropdown),
-                  if (!_showAll) ...[const SizedBox(width: 4), clearBtn],
-                ],
-              );
-            },
-          ),
-          if (_showAll) ...[
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final staffDropdown = StreamBuilder<List<UserModel>>(
-                  stream: Provider.of<FirebaseService>(
-                    context,
-                    listen: false,
-                  ).streamUsers(),
-                  builder: (context, userSnap) {
-                    final users = userSnap.data ?? [];
-                    final userNames = users.map((u) => u.name).toSet();
-
-                    final activityNames = activities
-                        .map((a) => a.responsiblePerson)
-                        .where((name) => name.isNotEmpty)
-                        .toSet();
-
-                    final allNames = (userNames.union(activityNames)).toList()
-                      ..sort();
-
-                    return DropdownMenu<String>(
-                      initialSelection: _selectedStaff.isEmpty ? null : _selectedStaff,
-                      enableSearch: true,
-                      enableFilter: true,
-                      menuHeight: 250,
-                      expandedInsets: EdgeInsets.zero,
-                      label: const Text('Staff'),
-                      dropdownMenuEntries: [
-                        const DropdownMenuEntry(value: '', label: 'All Staff'),
-                        ...allNames.map((s) => DropdownMenuEntry(value: s, label: s)),
-                      ],
-                      onSelected: (val) => setState(() => _selectedStaff = val ?? ''),
-                    );
-                  },
-                );
-
-                final clearBtn = IconButton(
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                  onPressed: () => setState(() {
-                    _selectedStaff = '';
-                  }),
-                );
-
-                if (constraints.maxWidth < ResponsiveUtils.mobileBreakpoint) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      staffDropdown,
-                      const SizedBox(height: 4),
-                      Align(alignment: Alignment.centerRight, child: clearBtn),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: [
-                    Expanded(child: staffDropdown),
-                    const SizedBox(width: 4),
-                    clearBtn,
-                  ],
-                );
-              },
+          Text(
+            'Manage your assigned activities and track budget utilization efficiently.',
+            style: AppDesignSystem.bodyLarge.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
-          ],
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final monthDropdown = DropdownMenu<String>(
-                initialSelection: _selectedMonth.isEmpty ? null : _selectedMonth,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                expandedInsets: EdgeInsets.zero,
-                label: const Text('Target Month'),
-                dropdownMenuEntries: AppConstants.months
-                    .map((s) => DropdownMenuEntry(value: s, label: s))
-                    .toList(),
-                onSelected: (val) => setState(() => _selectedMonth = val ?? ''),
-              );
-
-              final yearDropdown = DropdownMenu<String>(
-                initialSelection: _selectedYear.isEmpty ? null : _selectedYear,
-                enableSearch: true,
-                enableFilter: true,
-                menuHeight: 250,
-                expandedInsets: EdgeInsets.zero,
-                label: const Text('Target Year'),
-                dropdownMenuEntries: AppConstants.years
-                    .map((s) => DropdownMenuEntry(value: s, label: s))
-                    .toList(),
-                onSelected: (val) => setState(() => _selectedYear = val ?? ''),
-              );
-
-              final clearBtn = IconButton(
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                  color: Color(0xFF9CA3AF),
-                ),
-                onPressed: () => setState(() {
-                  _selectedMonth = '';
-                  _selectedYear = DateTime.now().year.toString();
-                }),
-              );
-
-              if (constraints.maxWidth < ResponsiveUtils.mobileBreakpoint) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    monthDropdown,
-                    const SizedBox(height: 12),
-                    yearDropdown,
-                    const SizedBox(height: 4),
-                    Align(alignment: Alignment.centerRight, child: clearBtn),
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: monthDropdown),
-                  const SizedBox(width: 12),
-                  Expanded(child: yearDropdown),
-                  const SizedBox(width: 4),
-                  clearBtn,
-                ],
-              );
-            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStaffSummary(List<Activity> activities) {
+  Widget _buildSectionHeader(String title, String subtitle, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldPrimary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                title,
+                style: AppDesignSystem.headingMedium.copyWith(color: theme.colorScheme.onSurface),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Text(
+              subtitle,
+              style: AppDesignSystem.bodySmall.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard(ThemeData theme) {
+    return GlassCard(
+      onTap: () {
+        context.read<NavigationProvider>().updateLayout(
+          title: 'Activity Management',
+          selectedIndex: 1,
+        );
+      },
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.list_alt_rounded, color: AppColors.emeraldPrimary, size: 32),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Activity Management',
+            style: AppDesignSystem.headingSmall.copyWith(color: theme.colorScheme.onSurface),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'View and track all agricultural activities assigned to you.',
+            style: AppDesignSystem.bodyMedium.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Text(
+                'Open Records',
+                style: AppDesignSystem.labelMedium.copyWith(
+                  color: AppColors.emeraldPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward, size: 16, color: AppColors.emeraldPrimary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaffSummary(List<Activity> activities, ThemeData theme) {
     double myTotal = 0;
     double mySpent = 0;
     for (var a in activities) {
       myTotal += a.approvedBudget;
-      mySpent += a.actualExpenditure;
+      mySpent += a.effectivePOAmount;
     }
     double myRemaining = myTotal - mySpent;
 
-    return Container(
-      margin: ResponsiveUtils.screenPadding(context).copyWith(bottom: 16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-          width: 1,
-        ),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _showAll ? 'TOTAL WFP BUDGET' : 'ASSIGNED BUDGET',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 600;
+              final isNarrow = constraints.maxWidth < 700;
               if (isNarrow) {
                 return Column(
                   children: [
-                    _summaryItem(
-                      'Total Budget',
-                      myTotal,
-                      AppColors.primary,
-                      Icons.account_balance_wallet,
+                    _summaryItem('Total Budget', myTotal, AppColors.emeraldPrimary, Icons.account_balance_wallet_rounded, theme),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Divider(),
                     ),
-                    const Divider(height: 32),
-                    _summaryItem(
-                      'Spent',
-                      mySpent,
-                      const Color(0xFFE65100),
-                      Icons.shopping_cart,
+                    _summaryItem('Spent', mySpent, const Color(0xFFF59E0B), Icons.shopping_cart_rounded, theme),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Divider(),
                     ),
-                    const Divider(height: 32),
-                    _summaryItem(
-                      'Remaining',
-                      myRemaining,
-                      const Color(0xFF1976D2),
-                      Icons.account_balance,
-                    ),
+                    _summaryItem('Remaining', myRemaining, const Color(0xFF3B82F6), Icons.account_balance_rounded, theme),
                   ],
                 );
               }
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Expanded(
-                    child: _summaryItem(
-                      'Total Budget',
-                      myTotal,
-                      AppColors.primary,
-                      Icons.account_balance_wallet,
-                    ),
-                  ),
-                  Container(width: 1, height: 40, color: Colors.grey.shade200),
-                  Expanded(
-                    child: _summaryItem(
-                      'Spent',
-                      mySpent,
-                      const Color(0xFFE65100),
-                      Icons.shopping_cart,
-                    ),
-                  ),
-                  Container(width: 1, height: 40, color: Colors.grey.shade200),
-                  Expanded(
-                    child: _summaryItem(
-                      'Remaining',
-                      myRemaining,
-                      const Color(0xFF1976D2),
-                      Icons.account_balance,
-                    ),
-                  ),
+                  Expanded(child: _summaryItem('Total Budget', myTotal, AppColors.emeraldPrimary, Icons.account_balance_wallet_rounded, theme)),
+                  Container(width: 1, height: 60, color: theme.dividerColor.withValues(alpha: 0.1)),
+                  Expanded(child: _summaryItem('Spent', mySpent, const Color(0xFFF59E0B), Icons.shopping_cart_rounded, theme)),
+                  Container(width: 1, height: 60, color: theme.dividerColor.withValues(alpha: 0.1)),
+                  Expanded(child: _summaryItem('Remaining', myRemaining, const Color(0xFF3B82F6), Icons.account_balance_rounded, theme)),
                 ],
               );
             },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           const Divider(),
-          const SizedBox(height: 20),
-          _buildQuarterlyRow(activities),
+          const SizedBox(height: 24),
+          _buildQuarterlyRow(activities, theme),
         ],
       ),
     );
   }
 
-  Widget _buildQuarterlyRow(List<Activity> activities) {
+
+
+  Widget _buildQuarterlyRow(List<Activity> activities, ThemeData theme) {
     double q1 = 0, q2 = 0, q3 = 0, q4 = 0;
     for (var a in activities) {
       q1 += a.q1Budget;
@@ -608,41 +432,38 @@ class _StaffDashboardState extends State<StaffDashboard> {
 
     return Wrap(
       spacing: 12,
-      runSpacing: 12,
+      runSpacing: 24,
       alignment: WrapAlignment.spaceAround,
       children: [
-        _quarterStat('Q1', q1),
-        _quarterStat('Q2', q2),
-        _quarterStat('Mid-Year', q1 + q2),
-        _quarterStat('Q3', q3),
-        _quarterStat('Q4', q4),
-        _quarterStat('Whole Year', q1 + q2 + q3 + q4),
+        _quarterStat('Q1', q1, theme),
+        _quarterStat('Q2', q2, theme),
+        _quarterStat('Mid-Year', q1 + q2, theme),
+        _quarterStat('Q3', q3, theme),
+        _quarterStat('Q4', q4, theme),
+        _quarterStat('Whole Year', q1 + q2 + q3 + q4, theme),
       ],
     );
   }
 
-  Widget _quarterStat(String label, double amount) {
+  Widget _quarterStat(String label, double amount, ThemeData theme) {
     return SizedBox(
-      width: 100, // Fixed width for wrap items
+      width: 120,
       child: Column(
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+            style: AppDesignSystem.labelSmall.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               formatCurrency.format(amount),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF374151),
+              style: AppDesignSystem.headingSmall.copyWith(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ),
@@ -651,37 +472,38 @@ class _StaffDashboardState extends State<StaffDashboard> {
     );
   }
 
-  Widget _summaryItem(String label, double amount, Color color, IconData icon) {
+  Widget _summaryItem(String label, double amount, Color color, IconData icon, ThemeData theme) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: AppDesignSystem.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             formatCurrency.format(amount),
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleLarge?.color,
+            style: AppDesignSystem.headingMedium.copyWith(
+              fontSize: 24,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -689,48 +511,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
     );
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Activity'),
-        content: Text(
-          'Are you sure you want to permanently delete "${activity.activityName}"?\n\nThis will also delete associated PR logs.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
 
-    if (confirmed == true && context.mounted) {
-      try {
-        await fbService.deleteActivity(activity.id);
-        if (context.mounted) {
-          AgriUI.showSuccess(
-            context,
-            '"${activity.activityName}" deleted successfully.',
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          AgriUI.showError(context, 'Delete error: $e');
-        }
-      }
-    }
-  }
 
   void _showAddActivityDialog(BuildContext context, FirebaseService fbService) {
     Provider.of<ActivityFormProvider>(
@@ -739,42 +520,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
     ).openForm(initialResponsiblePersons: [widget.staffName]);
   }
 
-  void _showActivityDetails(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-    bool isAdmin,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => ActivityDetailsDialog(
-        activity: activity,
-        fbService: fbService,
-        onEdit: () {
-          Navigator.pop(ctx);
-          _showEditActivityDialog(context, activity, fbService);
-        },
-        onDelete: isAdmin
-            ? () {
-                Navigator.pop(ctx);
-                _confirmDelete(context, activity, fbService);
-              }
-            : null,
-      ),
-    );
-  }
 
-  void _showEditActivityDialog(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-  ) {
-    showDialog(
-      context: context,
-      builder: (_) =>
-          EditActivityDialog(activity: activity, fbService: fbService),
-    );
-  }
 
   void _showExportOptions(
     BuildContext context,
@@ -898,6 +644,35 @@ class _StaffDashboardState extends State<StaffDashboard> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(SnackBar(content: Text('Import error: $e')));
+      }
+    }
+  }
+
+  void _seedData(BuildContext context, FirebaseService fbService) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Starting data seed...')),
+      );
+
+      await SeedDataLoader.load(fbService, force: true);
+
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Seed data loaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error loading seed data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

@@ -2,28 +2,47 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow reading all documents
+    // Global read access required for unauthenticated login checks and background data loading
     match /{document=**} {
       allow read: if true;
     }
 
-    // Activities collection
-    match /activities/{activityId} {
-      allow write: if true;
+    // Users collection: Required for manual login and registration
+    match /users/{userId} {
+      allow read, write: if true;
+    }
 
-      match /transactions/{transactionId} {
-        allow write: if true;
+    // Activities & PR Logs: Core functionality
+    match /activities/{activityId} {
+      allow read, write: if true;
+      match /{allSubcollections=**} {
+        allow read, write: if true;
       }
     }
 
-    // PR Logs collection
-    match /pr_logs/{logId} {
-      allow write: if true;
+    // Budget & Expenditure Tracking: Required for background initialization (main.dart)
+    match /budget_lines/{lineId} {
+      allow read, write: if true;
     }
 
-    // Users collection
-    match /users/{userId} {
+    match /expenditures/{expId} {
       allow read, write: if true;
+    }
+
+    match /programs/{progId} {
+      allow read, write: if true;
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
+    }
+
+    match /pr_logs/{logId} {
+      allow read, write: if true;
+    }
+    
+    // Fallback for any other collections being initialized
+    match /{document=**} {
+      allow write: if true;
     }
   }
 }

@@ -57,6 +57,7 @@ dependencies:
   barcode_widget: ^2.0.4
   google_generative_ai: ^0.4.7
   flutter_markdown: ^0.7.7+1
+  connectivity_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +85,8 @@ flutter:
     - assets/agri.png
     - assets/AgriLogo.png
     - assets/glogo.jpg
+    - assets/agri_login_bg.png
+    - assets/seed_data.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

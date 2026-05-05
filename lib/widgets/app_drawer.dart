@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/settings_provider.dart';
-import '../screens/admin/user_management_screen.dart';
-import '../screens/admin/sector_overview.dart';
+import '../core/design_system.dart';
+import '../core/app_colors.dart';
 
 class AppDrawer extends StatelessWidget {
   final String role;
@@ -20,6 +21,8 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       child: AppMenuContent(role: role, staffName: staffName, staffId: staffId),
     );
   }
@@ -49,25 +52,22 @@ class AppMenuContent extends StatelessWidget {
     final l10n = context.watch<SettingsProvider>().l10n;
 
     return Container(
-      color: isSidebar ? Theme.of(context).colorScheme.surface : null,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B121E), // Deeper, darker navy for a more premium look
+        border: isSidebar 
+          ? Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.03)))
+          : null,
+      ),
       child: Column(
         children: [
+          // Header Section
           Container(
             width: double.infinity,
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 24,
-              bottom: 24,
-              left: 24,
-              right: 24,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-                  width: 1,
-                ),
-              ),
+              bottom: 20,
+              left: 20,
+              right: 20,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,45 +75,43 @@ class AppMenuContent extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16),
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Image.asset(
                         'assets/AgriLogo.png',
-                        height: 42,
+                        height: 28,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => 
+                          const Icon(Icons.agriculture_rounded, color: AppColors.primaryAccent, size: 24),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            role == 'admin'
-                                ? l10n.translate('admin_panel')
-                                : l10n.translate('staff_panel'),
+                            (role == 'admin' ? 'ADMIN PANEL' : 'STAFF PANEL'),
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: AppColors.primaryAccent.withValues(alpha: 0.8),
                               letterSpacing: 1.2,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
-                            'AWFPS Admin',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Theme.of(
-                                context,
-                              ).textTheme.titleLarge?.color,
+                            'CityAgri Portal',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -122,198 +120,116 @@ class AppMenuContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (staffName != null) ...[
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                            width: 2,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                          child: Text(
-                            staffName![0].toUpperCase(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              staffName!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.titleLarge?.color,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (staffId != null && staffId!.isNotEmpty)
-                              Text(
-                                'ID: $staffId',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.color
-                                      ?.withValues(alpha: 0.6),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+
+
               ],
             ),
           ),
+          
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               children: [
+                _buildSectionHeader('PLANNING'),
                 _buildItem(
                   context,
                   index: 0,
-                  icon: Icons.dashboard,
-                  title: l10n.translate('dashboard'),
-                  onTap: () {
-                    if (onItemSelected != null) {
-                      onItemSelected!(0);
-                    } else {
-                      if (!isSidebar) Navigator.pop(context);
-                    }
-                  },
+                  icon: Icons.grid_view_rounded,
+                  title: 'Dashboard',
+                  onTap: () => _handleNavigation(0, context),
                 ),
                 _buildItem(
                   context,
-                  index: 1,
-                  icon: Icons.category,
-                  title: l10n.translate('section_unit_overview'),
-                  onTap: () {
-                    if (onItemSelected != null) {
-                      onItemSelected!(1);
-                    } else {
-                      if (!isSidebar) Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const SectionUnitOverviewScreen(),
-                        ),
-                      );
-                    }
-                  },
+                  index: 8,
+                  icon: Icons.folder_rounded,
+                  title: 'Projects (PPMP)',
+                  onTap: () => _handleNavigation(8, context),
                 ),
                 _buildItem(
                   context,
                   index: 2,
-                  icon: Icons.bar_chart,
-                  title: l10n.translate('financial_reports'),
-                  onTap: () {
-                    if (onItemSelected != null) {
-                      onItemSelected!(2);
-                    } else {
-                      if (!isSidebar) Navigator.pop(context);
-                    }
-                  },
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Budget Allocation',
+                  onTap: () => _handleNavigation(2, context),
                 ),
-                if (role == 'admin') ...[
-                  _buildItem(
-                    context,
-                    index: 4,
-                    icon: Icons.people,
-                    title: l10n.translate('user_management'),
-                    onTap: () {
-                      if (onItemSelected != null) {
-                        onItemSelected!(4);
-                      } else {
-                        if (!isSidebar) Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const UserManagementScreen(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
                 _buildItem(
                   context,
-                  index: 3,
-                  icon: Icons.settings,
-                  title: l10n.translate('settings'),
-                  onTap: () {
-                    if (onItemSelected != null) {
-                      onItemSelected!(3);
-                    } else {
-                      if (!isSidebar) Navigator.pop(context);
-                    }
-                  },
+                  index: 4,
+                  icon: Icons.event_note_rounded,
+                  title: 'WFP (WFP Monthly)',
+                  onTap: () => _handleNavigation(4, context),
+                ),
+                
+                const SizedBox(height: 24),
+                _buildSectionHeader('EXECUTION'),
+                _buildItem(
+                  context,
+                  index: 1,
+                  icon: Icons.shopping_cart_rounded,
+                  title: 'Procurement',
+                  onTap: () => _handleNavigation(1, context),
+                ),
+                _buildItem(
+                  context,
+                  index: 9,
+                  icon: Icons.assignment_turned_in_rounded,
+                  title: 'Approvals',
+                  onTap: () => _handleNavigation(9, context),
+                ),
+                _buildItem(
+                  context,
+                  index: 5,
+                  icon: Icons.analytics_rounded,
+                  title: 'Reports',
+                  onTap: () => _handleNavigation(5, context),
+                ),
+                _buildItem(
+                  context,
+                  index: 6,
+                  icon: Icons.settings_rounded,
+                  title: 'Settings',
+                  onTap: () => _handleNavigation(6, context),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          
+          // Logout Section
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(20),
             child: _buildItem(
               context,
-              index: -1, // No highlight for logout
-              icon: Icons.logout,
-              title: l10n.translate('logout'),
-              color: Colors.redAccent,
-              onTap: () {
-                if (!isSidebar) Navigator.pop(context);
-                showDialog(
-                  context: context,
-                  builder: (BuildContext dialogContext) {
-                    return AlertDialog(
-                      title: Text(l10n.translate('confirm_logout')),
-                      content: Text(l10n.translate('logout_confirm_msg')),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: Text(l10n.translate('cancel')),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            authService.signOut();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text(l10n.translate('logout')),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+              index: -1,
+              icon: Icons.logout_rounded,
+              title: 'Logout',
+              color: Colors.white.withValues(alpha: 0.6),
+              onTap: () => _showLogoutDialog(context, authService, l10n),
             ),
           ),
-          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index, BuildContext context) {
+    if (onItemSelected != null) {
+      onItemSelected!(index);
+    } else {
+      if (!isSidebar) Navigator.pop(context);
+    }
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.2),
+          letterSpacing: 2.0,
+          fontWeight: FontWeight.w900,
+          fontSize: 10,
+        ),
       ),
     );
   }
@@ -327,68 +243,99 @@ class AppMenuContent extends StatelessWidget {
     Color? color,
   }) {
     final isSelected = index == selectedIndex;
-    final theme = Theme.of(context);
-    final activeColor = color ?? theme.colorScheme.primary;
+    final activeColor = color ?? const Color(0xFF10B981); // Vibrant Green
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isSelected
-              ? activeColor.withValues(alpha: 0.08)
-              : Colors.transparent,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: isSelected ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              border: isSelected ? Border.all(
+                color: Colors.white.withValues(alpha: 0.05),
+              ) : null,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.4),
+                  size: 20,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                      color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                      fontSize: 14,
+                    ),
                   ),
-                ]
-              : [],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: ListTile(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: activeColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.6),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-            selected: isSelected,
-            leading: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? activeColor.withValues(alpha: 0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected
-                    ? activeColor
-                    : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
-                size: 20,
-              ),
-            ),
-            title: Text(
-              title,
-              style: TextStyle(
-                inherit: true,
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected
-                    ? activeColor
-                    : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-                letterSpacing: 0.1,
-              ),
-            ),
-            onTap: onTap,
           ),
         ),
       ),
     );
   }
+
+  void _showLogoutDialog(BuildContext context, AuthService authService, dynamic l10n) {
+    if (!isSidebar) Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(l10n.translate('confirm_logout'), style: AppDesignSystem.headingSmall),
+          content: Text(l10n.translate('logout_confirm_msg'), style: AppDesignSystem.bodyMedium),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.translate('cancel'), style: TextStyle(color: AppColors.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                authService.signOut();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(l10n.translate('logout')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 }

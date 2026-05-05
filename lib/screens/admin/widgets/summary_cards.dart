@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/activity.dart';
-import '../../../widgets/agri_ui.dart';
 import '../../../services/settings_provider.dart';
 import '../../../core/responsive_utils.dart';
+import '../../../core/design_system.dart';
 
 class SummaryCardsRow extends StatelessWidget {
   final List<Activity> activities;
@@ -23,13 +23,16 @@ class SummaryCardsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.watch<SettingsProvider>().l10n;
     double totalMOOE = 0;
+    double spentMOOE = 0;
     double totalCapitalOutlay = 0;
     double totalDF20 = 0;
 
     for (var a in activities) {
       final budget = a.totalBudget;
+      final spent = a.effectivePOAmount;
       if (a.fundingSource == 'Agri MOOE') {
         totalMOOE += budget;
+        spentMOOE += spent;
       } else if (a.fundingSource == 'Capital Outlay') {
         totalCapitalOutlay += budget;
       } else if (a.fundingSource == '20% DF') {
@@ -71,6 +74,7 @@ class SummaryCardsRow extends StatelessWidget {
               if (activities.isNotEmpty) ...[
                 _SummaryCard(
                   title: l10n.translate('allocated_budget'),
+                  helpText: 'Total budget approved for all agricultural programs in the current fiscal year.',
                   amount: totalApproved,
                   color: const Color(0xFF2E7D32),
                   icon: Icons.account_balance,
@@ -80,6 +84,7 @@ class SummaryCardsRow extends StatelessWidget {
                 ),
                 _SummaryCard(
                   title: l10n.translate('overall_total'),
+                  helpText: 'Total amount already committed or spent via Purchase Requests (PR).',
                   amount: totalSpent,
                   color: const Color(0xFF1976D2),
                   icon: Icons.payments,
@@ -89,6 +94,7 @@ class SummaryCardsRow extends StatelessWidget {
                 ),
                 _SummaryCard(
                   title: l10n.translate('overall_unexpended_balance'),
+                  helpText: 'Remaining funds available for future procurement or projects.',
                   amount: totalApproved - totalSpent,
                   color: const Color(0xFFE65100),
                   icon: Icons.account_balance_wallet,
@@ -98,6 +104,7 @@ class SummaryCardsRow extends StatelessWidget {
                 ),
                 _SummaryCard(
                   title: l10n.translate('utilization'),
+                  helpText: 'Percentage of the budget that has been spent. Higher is usually better for project completion.',
                   amount: totalSpent,
                   color: const Color(0xFF6A1B9A),
                   icon: Icons.pie_chart,
@@ -110,13 +117,14 @@ class SummaryCardsRow extends StatelessWidget {
               ],
               if (activities.any((a) => a.fundingSource == 'Agri MOOE'))
                 _SummaryCard(
-                  title: 'Total Agri MOOE',
-                  amount: totalMOOE,
+                  title: 'Agri MOOE Spent',
+                  amount: spentMOOE,
                   color: const Color(0xFF1976D2),
                   icon: Icons.business_center,
                   width: cardWidth,
-                  utilRate: totalApproved > 0 ? totalMOOE / totalApproved : 0,
+                  utilRate: totalMOOE > 0 ? spentMOOE / totalMOOE : 0,
                   formatCurrency: formatCurrency,
+                  subtitle: 'of ${formatCurrency.format(totalMOOE)}',
                   onTap: () => onFundSelected('Agri MOOE'),
                 ),
               if (activities.any((a) => a.fundingSource == 'Capital Outlay'))
@@ -173,6 +181,7 @@ class _SummaryCard extends StatelessWidget {
   final double? utilRate;
   final NumberFormat formatCurrency;
   final String? subtitle;
+  final String? helpText;
   final VoidCallback onTap;
 
   const _SummaryCard({
@@ -184,20 +193,19 @@ class _SummaryCard extends StatelessWidget {
     this.utilRate,
     required this.formatCurrency,
     this.subtitle,
+    this.helpText,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool useVerticalLayout = width < 280 && width > 0;
 
     return SizedBox(
       width: width,
-      child: AgriHoverCard(
+      child: GlassCard(
         onTap: onTap,
         padding: const EdgeInsets.all(24),
-        borderRadius: 24,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -262,14 +270,29 @@ class _SummaryCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title.toUpperCase(),
-          style: GoogleFonts.inter(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title.toUpperCase(),
+                style: GoogleFonts.inter(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            if (helpText != null)
+              Tooltip(
+                message: helpText!,
+                child: Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         FittedBox(

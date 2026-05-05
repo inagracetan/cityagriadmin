@@ -1,22 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PRLog {
-  final String id;
-  final String activityId;
-  final String status;
-  final String prNumber;
-  final double amount;
-  final String remarks;
-  final DateTime timestamp;
-  final String? updatedBy;
+  String id;
+  String activityId;
+  String status;
+  String prNumber;
+  double prAmount;
+  String poNumber;
+  double poAmount;
+  String? statusDate;
+  String remarks;
+  DateTime timestamp;
+  String? updatedBy;
 
   PRLog({
     required this.id,
     required this.activityId,
     required this.status,
     required this.prNumber,
-    required this.amount,
-    required this.remarks,
+    required this.prAmount,
+    this.poNumber = '',
+    this.poAmount = 0.0,
+    this.statusDate,
+    this.remarks = '',
     required this.timestamp,
     this.updatedBy,
   });
@@ -26,7 +32,10 @@ class PRLog {
       'activity_id': activityId,
       'status': status,
       'pr_number': prNumber,
-      'amount': amount,
+      'pr_amount': prAmount,
+      'po_number': poNumber,
+      'po_amount': poAmount,
+      'status_date': statusDate,
       'remarks': remarks,
       'timestamp': Timestamp.fromDate(timestamp),
       'updated_by': updatedBy,
@@ -39,10 +48,16 @@ class PRLog {
       activityId: data['activity_id'] ?? '',
       status: data['status'] ?? '',
       prNumber: data['pr_number'] ?? '',
-      amount: (data['amount'] ?? 0).toDouble(),
+      prAmount: (data['pr_amount'] ?? data['amount'] ?? 0).toDouble(),
+      poNumber: data['po_number'] ?? '',
+      poAmount: (data['po_amount'] ?? 0).toDouble(),
+      statusDate: data['status_date'],
       remarks: data['remarks'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
+      timestamp: data['timestamp'] != null 
+          ? (data['timestamp'] as Timestamp).toDate() 
+          : DateTime.now(),
       updatedBy: data['updated_by'],
     );
   }
 }
+

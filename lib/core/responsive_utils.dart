@@ -37,7 +37,7 @@ class ResponsiveUtils {
       context,
       mobile: const EdgeInsets.all(16),
       tablet: const EdgeInsets.all(24),
-      desktop: const EdgeInsets.all(32),
+      desktop: const EdgeInsets.fromLTRB(32, 32, 96, 32),
     );
   }
 

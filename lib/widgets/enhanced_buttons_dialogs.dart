@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../core/design_system.dart';
+import 'skeleton_loading.dart';
 
 /// Enhanced button with better accessibility and variants
 class EnhancedButton extends StatefulWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final bool isEnabled;
   final ButtonVariant variant;
@@ -14,10 +15,12 @@ class EnhancedButton extends StatefulWidget {
   final double? width;
   final double? height;
 
+  final String? tooltip;
+
   const EnhancedButton({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.isLoading = false,
     this.isEnabled = true,
     this.variant = ButtonVariant.primary,
@@ -25,6 +28,7 @@ class EnhancedButton extends StatefulWidget {
     this.icon,
     this.width,
     this.height,
+    this.tooltip,
   });
 
   @override
@@ -66,17 +70,10 @@ class _EnhancedButtonState extends State<EnhancedButton> {
           const SizedBox(width: AppDesignSystem.spacing8),
         ],
         if (widget.isLoading)
-          SizedBox(
-            width: _fontSize,
+          SkeletonLoading(
+            width: _fontSize * 4,
             height: _fontSize,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                widget.variant == ButtonVariant.primary
-                    ? Colors.white
-                    : (isDark ? Colors.white : const Color(0xFF2E7D32)),
-              ),
-            ),
+            borderRadius: AppDesignSystem.radiusSmall,
           ),
         if (!widget.isLoading)
           Text(
@@ -94,7 +91,7 @@ class _EnhancedButtonState extends State<EnhancedButton> {
       buttonContent = SizedBox(width: widget.width, child: buttonContent);
     }
 
-    return MouseRegion(
+    final Widget button = MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: widget.isEnabled && !widget.isLoading
@@ -198,6 +195,15 @@ class _EnhancedButtonState extends State<EnhancedButton> {
         },
       ),
     );
+
+    if (widget.tooltip != null) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: button,
+      );
+    }
+
+    return button;
   }
 }
 

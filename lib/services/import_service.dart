@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart';
+import 'package:flutter/foundation.dart';
 import '../models/activity.dart';
+import '../models/budget_line.dart';
 import 'firebase_service.dart';
 
 class ImportService {
@@ -24,7 +26,18 @@ class ImportService {
       }
 
       if (bytes == null) return;
-      var excel = Excel.decodeBytes(bytes);
+      Excel excel;
+      try {
+        excel = Excel.decodeBytes(bytes);
+      } catch (e) {
+        debugPrint('Excel decoding failed: $e');
+        if (e.toString().contains('numFmtId')) {
+          throw Exception(
+            'The Excel file has incompatible formatting. Please try to "Save As" the file in Excel to clean up custom styles, or use a simpler XLSX file.',
+          );
+        }
+        rethrow;
+      }
 
       List<Activity> activitiesToImport = [];
 
@@ -215,9 +228,158 @@ class ImportService {
     }
   }
 
+  static Future<Map<String, dynamic>> importAgriPPMPFromExcel(
+    FirebaseService fbService,
+  ) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+    );
+
+    if (result == null) return {'status': 'cancelled'};
+
+    List<int>? bytes;
+    if (result.files.single.bytes != null) {
+      bytes = result.files.single.bytes;
+    } else if (result.files.single.path != null) {
+      File file = File(result.files.single.path!);
+      bytes = file.readAsBytesSync();
+    }
+
+    if (bytes == null) return {'status': 'error', 'message': 'Could not read file'};
+    var excel = Excel.decodeBytes(bytes);
+
+    // Load budget lines for validation
+    final budgetLinesSnapshot = await fbService.db.collection('budget_lines').get();
+    final budgetLines = budgetLinesSnapshot.docs
+        .map((doc) => BudgetLine.fromFirestore(doc.data(), doc.id))
+        .toList();
+
+    List<Activity> activitiesToImport = [];
+    List<String> errorLogs = [];
+    int successCount = 0;
+
+    var sheet = excel.tables['2026'];
+    sheet ??= excel.tables[excel.tables.keys.first];
+
+    if (sheet == null) return {'status': 'error', 'message': 'Sheet not found'};
+
+    int headerRowIndex = -1;
+    for (int i = 0; i < (sheet.maxRows > 15 ? 15 : sheet.maxRows); i++) {
+      final row = sheet.rows[i];
+      final rowValues = row.map((c) => c?.value?.toString().toLowerCase().trim() ?? '').toList();
+      if (rowValues.contains('item & specifications') || rowValues.contains('ppa')) {
+        headerRowIndex = i;
+        break;
+      }
+    }
+
+    if (headerRowIndex == -1) headerRowIndex = 0;
+
+    final headerRow = sheet.rows[headerRowIndex]
+        .map((c) => c?.value?.toString().toLowerCase().trim() ?? '')
+        .toList();
+
+    int idxActivity = headerRow.indexWhere((h) => h.contains('item & specifications') || h.contains('activity'));
+    int idxJan = headerRow.indexWhere((h) => h == 'jan');
+    int idxFeb = headerRow.indexWhere((h) => h == 'feb');
+    int idxMar = headerRow.indexWhere((h) => h == 'mar');
+    int idxApr = headerRow.indexWhere((h) => h == 'apr');
+    int idxMay = headerRow.indexWhere((h) => h == 'may');
+    int idxJun = headerRow.indexWhere((h) => h == 'jun');
+    int idxJul = headerRow.indexWhere((h) => h == 'jul');
+    int idxAug = headerRow.indexWhere((h) => h == 'aug');
+    int idxSep = headerRow.indexWhere((h) => h == 'sep');
+    int idxOct = headerRow.indexWhere((h) => h == 'oct');
+    int idxNov = headerRow.indexWhere((h) => h == 'nov');
+    int idxDec = headerRow.indexWhere((h) => h == 'dec');
+    int idxTotalQnty = headerRow.indexWhere((h) => h.contains('total qnty') || h.contains('quantity'));
+    int idxTotalAmount = headerRow.indexWhere((h) => h.contains('total amount') || h == 'total');
+
+    bool inTrainingsSection = false;
+
+    for (int i = headerRowIndex + 1; i < sheet.maxRows; i++) {
+      var row = sheet.rows[i];
+      if (row.isEmpty) continue;
+
+      String firstCell = valToString(row[0]?.value) ?? '';
+      if (firstCell.toUpperCase().contains('TRAININGS & SEMINARS')) {
+        inTrainingsSection = true;
+        continue;
+      } else if (firstCell.isNotEmpty && firstCell.length < 50 && firstCell == firstCell.toUpperCase()) {
+        // Possible new section header
+        inTrainingsSection = false;
+      }
+
+      String activityName = valToString(idxActivity != -1 && idxActivity < row.length ? row[idxActivity]?.value : null) ?? '';
+      if (activityName.isEmpty) continue;
+
+      double totalAmount = valToDouble(idxTotalAmount != -1 && idxTotalAmount < row.length ? row[idxTotalAmount]?.value : null) ?? 0.0;
+      int targetNo = valToInt(idxTotalQnty != -1 && idxTotalQnty < row.length ? row[idxTotalQnty]?.value : null) ?? 0;
+
+      // Monthly distribution
+      List<double> monthly = List.filled(12, 0.0);
+      final monthIndices = [idxJan, idxFeb, idxMar, idxApr, idxMay, idxJun, idxJul, idxAug, idxSep, idxOct, idxNov, idxDec];
+      for (int m = 0; m < 12; m++) {
+        if (monthIndices[m] != -1 && monthIndices[m] < row.length) {
+          monthly[m] = valToDouble(row[monthIndices[m]]?.value) ?? 0.0;
+        }
+      }
+
+      // Validation Rule: Compare with Approved Budget
+      // Assuming we can find a budget line that matches either by account code or by description
+      // In this specific import, we'll try to find a matching budget line.
+      String accountCode = inTrainingsSection ? '5-02-02-010' : '';
+      
+      BudgetLine? matchingBudget;
+      if (accountCode.isNotEmpty) {
+        matchingBudget = budgetLines.firstWhere((bl) => bl.accountCode == accountCode, orElse: () => budgetLines.first); // fallback just for logic
+      }
+
+      if (matchingBudget != null && totalAmount > matchingBudget.approvedAmount) {
+        errorLogs.add('Rejected "$activityName": Total Amount ($totalAmount) exceeds Approved Budget (${matchingBudget.approvedAmount}) for ${matchingBudget.accountCode}');
+        continue;
+      }
+
+      activitiesToImport.add(
+        Activity(
+          id: '',
+          sector: 'Administrative Support Services Unit', // Default or parsed
+          activityName: activityName,
+          performanceIndicator: 'As specified',
+          targetNo: targetNo,
+          fundingSource: 'Agri MOOE',
+          q1Budget: monthly[0] + monthly[1] + monthly[2],
+          q2Budget: monthly[3] + monthly[4] + monthly[5],
+          q3Budget: monthly[6] + monthly[7] + monthly[8],
+          q4Budget: monthly[9] + monthly[10] + monthly[11],
+          ppmpAmount: totalAmount,
+          responsiblePerson: 'Unassigned',
+          status: 'Planned',
+          targetDate: '2026',
+          monthlyDistribution: monthly,
+          accountCode: accountCode,
+        ),
+      );
+      successCount++;
+    }
+
+    if (activitiesToImport.isNotEmpty) {
+      await fbService.batchAddActivities(activitiesToImport);
+    }
+
+    return {
+      'status': 'success',
+      'imported': successCount,
+      'errors': errorLogs,
+    };
+  }
+
   static String? valToString(CellValue? cell) {
     if (cell == null) return null;
-    return cell.toString();
+    final s = cell.toString();
+    return s.toLowerCase() == 'null' ? '' : s.replaceAll('_', ' ');
   }
 
   static int? valToInt(CellValue? cell) {

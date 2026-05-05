@@ -4,10 +4,11 @@ import '../core/constants.dart';
 class UserModel {
   final String uid;
   final String email;
-  final String role;
+  final String role; // 'admin', 'program_head', 'staff'
   final String name;
   final String password;
   final String? staffId;
+  final String? assignedProgramId; // Matches Program ID in Firestore
 
   UserModel({
     required this.uid,
@@ -16,6 +17,7 @@ class UserModel {
     required this.name,
     this.password = '',
     this.staffId,
+    this.assignedProgramId,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -23,10 +25,11 @@ class UserModel {
     return UserModel(
       uid: doc.id,
       email: (data['email'] as String? ?? '').trim(),
-      role: (data['role'] as String? ?? '').trim(),
+      role: (data['role'] as String? ?? 'staff').trim(),
       name: (data['name'] as String? ?? '').trim(),
       password: (data['password'] as String? ?? '').trim(),
       staffId: (data['staff_id'] as String?)?.trim(),
+      assignedProgramId: (data['assigned_program'] as String?)?.trim(),
     );
   }
 
@@ -37,6 +40,7 @@ class UserModel {
     String? name,
     String? password,
     String? staffId,
+    String? assignedProgramId,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -45,6 +49,7 @@ class UserModel {
       name: name ?? this.name,
       password: password ?? this.password,
       staffId: staffId ?? this.staffId,
+      assignedProgramId: assignedProgramId ?? this.assignedProgramId,
     );
   }
 
@@ -55,7 +60,17 @@ class UserModel {
       'name': name,
       'password': password,
       'staff_id': staffId,
+      'assigned_program': assignedProgramId,
     };
+  }
+
+  bool get isAdmin => role == 'admin';
+  bool get isProgramHead => role == 'program_head';
+
+  bool canEditProgram(String programId) {
+    if (isAdmin) return true;
+    if (isProgramHead && assignedProgramId == programId) return true;
+    return false;
   }
 
   bool matchesSearch(String query) {
@@ -79,6 +94,7 @@ class UserModel {
     return contains(name) ||
         contains(email) ||
         contains(role) ||
-        contains(staffId);
+        contains(staffId) ||
+        contains(assignedProgramId);
   }
 }

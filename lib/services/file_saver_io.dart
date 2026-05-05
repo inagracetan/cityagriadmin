@@ -19,11 +19,12 @@ Future<String?> saveFileSafely(
     allowedExtensions: [cleanExt],
   );
 
+  // User cancelled the save dialog
   if (path == null) return null;
 
   // Final check to ensure extension is present, case-insensitively
   if (!path.toLowerCase().endsWith('.${cleanExt.toLowerCase()}')) {
-    path += '.$cleanExt';
+    path = '$path.$cleanExt';
   }
 
   try {

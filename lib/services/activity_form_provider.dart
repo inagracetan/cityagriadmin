@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/activity.dart';
 import '../core/currency_formatter.dart';
+import '../core/activity_templates.dart';
 
 class BreakdownEntry {
   final TextEditingController nameCtl;
@@ -16,6 +17,7 @@ class BreakdownEntry {
   final TextEditingController supplierCtl;
   final TextEditingController statusCtl;
   final TextEditingController statusDateCtl;
+  final TextEditingController accountCodeCtl; // Added
   int quarter = 1;
 
   BreakdownEntry({
@@ -32,6 +34,7 @@ class BreakdownEntry {
     String? supplier,
     String? status,
     String? statusDate,
+    String? accountCode,
   }) : nameCtl = TextEditingController(text: name),
        unitCtl = TextEditingController(text: unit ?? ''),
        quantityCtl = TextEditingController(text: quantity > 0 ? quantity.toString() : ''),
@@ -45,7 +48,8 @@ class BreakdownEntry {
        q4QtyCtl = TextEditingController(text: q4Qty > 0 ? q4Qty.toString() : ''),
        supplierCtl = TextEditingController(text: supplier ?? ''),
        statusCtl = TextEditingController(text: status ?? ''),
-       statusDateCtl = TextEditingController(text: statusDate ?? '');
+       statusDateCtl = TextEditingController(text: statusDate ?? ''),
+       accountCodeCtl = TextEditingController(text: accountCode ?? '');
 
   void dispose() {
     nameCtl.dispose();
@@ -60,6 +64,7 @@ class BreakdownEntry {
     supplierCtl.dispose();
     statusCtl.dispose();
     statusDateCtl.dispose();
+    accountCodeCtl.dispose();
   }
 }
 
@@ -72,8 +77,13 @@ class FundSourceEntry {
   final TextEditingController amountCtl;
   final List<BreakdownEntry> breakdownItems = [];
 
-  FundSourceEntry({String amount = ''})
-    : amountCtl = TextEditingController(text: amount);
+  FundSourceEntry({
+    String amount = '',
+    String? initialSource,
+    String? initialOE,
+  }) : fundingSource = initialSource ?? 'Agri MOOE',
+       objectOfExpenditure = initialOE ?? 'Other-MOE Expenses',
+       amountCtl = TextEditingController(text: amount);
 
   void dispose() {
     customFundingSourceCtl.dispose();
@@ -95,7 +105,7 @@ class ActivityFormProvider extends ChangeNotifier {
   // Form State
   String sector = AppConstants.sectors.first;
   String? subSector;
-  String selectedStatus = AppConstants.activityStatuses.first;
+  String selectedStatus = AppConstants.prStatuses.first;
   String selectedMonth = AppConstants.months[DateTime.now().month - 1];
   String? selectedToMonth;
   String selectedYear = DateTime.now().year.toString();
@@ -123,6 +133,7 @@ class ActivityFormProvider extends ChangeNotifier {
   final customStatusDateCtl = TextEditingController();
   final otherMoeSuppliersCtl = TextEditingController();
   final customObjectOfExpenditureCtl = TextEditingController();
+  final accountCodeCtl = TextEditingController();
 
   // Accomplishment Fields
   final actualConductCtl = TextEditingController();
@@ -219,9 +230,97 @@ class ActivityFormProvider extends ChangeNotifier {
     final item = BreakdownEntry(
       supplier: lastEntry?.supplierCtl.text,
       status: lastEntry?.statusCtl.text,
+      accountCode: lastEntry?.accountCodeCtl.text ?? accountCodeCtl.text,
     );
     item.amountCtl.addListener(updateTotalBudget);
     fs.breakdownItems.add(item);
+    notifyListeners();
+  }
+
+  void pasteBreakdownItems(FundSourceEntry fs, String tsvData) {
+    final rows = tsvData.split(RegExp(r'\r?\n'));
+    for (var row in rows) {
+      if (row.trim().isEmpty) continue;
+      final columns = row.split('\t');
+      if (columns.length < 2) continue; // Must have at least name and unit or qty
+
+      // Expected format: Description, Unit, Q1, Q2, Q3, Q4, Price, Supplier
+      final name = columns[0].trim();
+      final unit = columns.length > 1 ? columns[1].trim() : '';
+      final q1 = columns.length > 2 ? double.tryParse(columns[2]) ?? 0.0 : 0.0;
+      final q2 = columns.length > 3 ? double.tryParse(columns[3]) ?? 0.0 : 0.0;
+      final q3 = columns.length > 4 ? double.tryParse(columns[4]) ?? 0.0 : 0.0;
+      final q4 = columns.length > 5 ? double.tryParse(columns[5]) ?? 0.0 : 0.0;
+      final price =
+          columns.length > 6
+              ? CurrencyInputFormatter.parse(columns[6])
+              : 0.0;
+      final supplier = columns.length > 7 ? columns[7].trim() : '';
+
+      final entry = BreakdownEntry(
+        name: name,
+        unit: unit,
+        q1Qty: q1,
+        q2Qty: q2,
+        q3Qty: q3,
+        q4Qty: q4,
+        price: price,
+        supplier: supplier,
+        accountCode: fs.breakdownItems.isNotEmpty 
+            ? fs.breakdownItems.last.accountCodeCtl.text 
+            : accountCodeCtl.text,
+      );
+
+      // Recalculate total qty and amount
+      final totalQty = q1 + q2 + q3 + q4;
+      entry.quantityCtl.text = totalQty.toString();
+      entry.amountCtl.text = CurrencyInputFormatter.formatDouble(
+        totalQty * price,
+      );
+
+      entry.amountCtl.addListener(updateTotalBudget);
+      fs.breakdownItems.add(entry);
+    }
+    updateTotalBudget();
+    notifyListeners();
+  }
+
+  void loadTemplate(ActivityTemplate template) {
+    activityNameCtl.text = template.name;
+    sector = template.sector;
+    subSector = template.subSector;
+
+    // Reset fund sources and add a default one for the template items
+    for (var fs in fundSourceEntries) {
+      fs.dispose();
+    }
+    fundSourceEntries.clear();
+
+    final fs = FundSourceEntry();
+    fs.fundingSource = 'Agri MOOE';
+    fs.objectOfExpenditure = 'Trainings and Seminar Expenses';
+    fs.amountCtl.addListener(updateTotalBudget);
+
+    for (var item in template.items) {
+      final entry = BreakdownEntry(
+        name: item.name,
+        unit: item.unit,
+        q1Qty: item.q1,
+        q2Qty: item.q2,
+        q3Qty: item.q3,
+        q4Qty: item.q4,
+        price: item.price,
+      );
+
+      final totalQty = item.q1 + item.q2 + item.q3 + item.q4;
+      entry.quantityCtl.text = totalQty.toString();
+      entry.amountCtl.text = CurrencyInputFormatter.formatDouble(totalQty * item.price);
+      entry.amountCtl.addListener(updateTotalBudget);
+      fs.breakdownItems.add(entry);
+    }
+
+    fundSourceEntries.add(fs);
+    updateTotalBudget();
     notifyListeners();
   }
 
@@ -234,7 +333,7 @@ class ActivityFormProvider extends ChangeNotifier {
   }
 
   void openForm({Activity? activity, List<String>? initialResponsiblePersons}) {
-    initialResponsiblePersons = initialResponsiblePersons;
+    this.initialResponsiblePersons = initialResponsiblePersons;
     if (activity != null) {
       isEditing = true;
       editingActivity = activity;
@@ -256,9 +355,9 @@ class ActivityFormProvider extends ChangeNotifier {
     if (sector == 'Other') customSectorCtl.text = activity.sector;
 
     subSector = activity.subSector;
-    selectedStatus = AppConstants.activityStatuses.contains(activity.status)
+    selectedStatus = AppConstants.prStatuses.contains(activity.status)
         ? activity.status
-        : AppConstants.activityStatuses.last; // 'Other'
+        : AppConstants.prStatuses.last; // 'Other'
     if (selectedStatus == 'Other') customStatusCtl.text = activity.status;
 
     // Handle Target Date and Year
@@ -339,6 +438,7 @@ class ActivityFormProvider extends ChangeNotifier {
     barcodeAppropCtl.text = activity.barcodeApprop;
     statusAppropCtl.text = activity.statusApprop;
     statusAppropDateCtl.text = activity.statusAppropDate ?? '';
+    accountCodeCtl.text = activity.accountCode ?? '';
 
     // Populate fund sources and breakdowns
     for (var fs in fundSourceEntries) {
@@ -403,6 +503,7 @@ class ActivityFormProvider extends ChangeNotifier {
               supplier: item.supplier,
               status: item.status,
               statusDate: item.statusDate,
+              accountCode: item.accountCode,
             );
             be.amountCtl.addListener(updateTotalBudget);
             entry.breakdownItems.add(be);
@@ -452,6 +553,7 @@ class ActivityFormProvider extends ChangeNotifier {
             supplier: item.supplier,
             status: item.status,
             statusDate: item.statusDate,
+            accountCode: item.accountCode,
           );
           be.amountCtl.addListener(updateTotalBudget);
           entry.breakdownItems.add(be);
@@ -525,6 +627,7 @@ class ActivityFormProvider extends ChangeNotifier {
     // supplierAppropCtl and statusAppropCtl are now persistent
     barcodeAppropCtl.clear();
     statusAppropDateCtl.clear();
+    accountCodeCtl.clear();
 
     for (var fs in fundSourceEntries) {
       fs.amountCtl.removeListener(updateTotalBudget);
@@ -572,6 +675,7 @@ class ActivityFormProvider extends ChangeNotifier {
     barcodeAppropCtl.dispose();
     statusAppropCtl.dispose();
     statusAppropDateCtl.dispose();
+    accountCodeCtl.dispose();
     for (var fs in fundSourceEntries) {
       fs.dispose();
     }

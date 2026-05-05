@@ -85,33 +85,55 @@ class AppConstants {
     'Other',
   ];
 
-  // Activity Statuses
+  // Activity Statuses (New Workflow Sequence)
   static const List<String> activityStatuses = [
+    statusPRPreparation,
+    statusBACProcessing,
+    statusObreAbstractSig,
+    statusCompleted,
+    // Other statuses for backward compatibility or special cases
+    statusPlanned,
+    statusNoBudget,
+    statusNoBudgetYet,
+    statusPRPrepared,
     statusBACApprovedOBRE,
     statusBACBidding,
     statusBACShopping,
     statusBacForPRNumber,
     statusBacOffice,
-    statusCompleted,
-    statusIAR,
-    statusNoBudget,
-    statusNoBudgetYet,
     statusObligated,
-    statusObreAbstract,
-    statusPOPrepared,
-    statusPRPrepared,
-    statusPlanned,
+    statusIAR,
     statusRecanvas,
   ];
 
+  // Procurement Statuses (For PR Logs)
+  static const List<String> prStatuses = [
+    statusPRStage,
+    statusAbstractSigned,
+    statusPOStage,
+    statusObreAbstractSig,
+    statusPOSigned,
+    statusDelivered,
+    statusCompleted,
+    statusPending,
+    statusPaid,
+  ];
+
   static const String statusPlanned = 'Planned';
-  static const String statusPRPrepared = 'PR Prepared';
-  static const String statusBACApprovedOBRE = 'BAC APPROVED OBRE';
-  static const String statusObreAbstract = 'Obre & Abstract Signature';
+  static const String statusPRStage = 'PR Stage';
+  static const String statusAbstractSigned = 'Abstract Signed';
+  static const String statusPOStage = 'PO Stage';
+  static const String statusObreAbstractSig = 'Obre & Abstract Sig';
+  static const String statusPOSigned = 'PO Signed';
+  static const String statusDelivered = 'Delivered';
+  static const String statusCompleted = 'Completed';
+  
+  // Legacy or specialized statuses (keeping for compatibility)
+  static const String statusPRPreparation = 'PR Preparation';
+  static const String statusBACProcessing = 'BAC Processing';
   static const String statusPOPrepared = 'PO Prepared';
   static const String statusObligated = 'Obligated';
   static const String statusIAR = 'IAR';
-  static const String statusCompleted = 'Completed';
   static const String statusNoBudget = 'No Budget';
   static const String statusNoBudgetYet = 'No budget yet';
   static const String statusBACShopping = 'BAC Shopping';
@@ -119,6 +141,11 @@ class AppConstants {
   static const String statusBacForPRNumber = 'BAC-FOR PR NUMBER';
   static const String statusBACBidding = 'BAC-Bidding';
   static const String statusRecanvas = 'Recanvas';
+  static const String statusPRPrepared = 'PR Prepared';
+  static const String statusBACApprovedOBRE = 'BAC Approved/OBRE';
+  static const String statusDraft = 'Draft';
+  static const String statusPaid = 'Paid';
+  static const String statusPending = 'Pending';
 
   // Common Suppliers
   static const List<String> commonSuppliers = [
@@ -141,6 +168,26 @@ class AppConstants {
     'Admin',
     'Ina Tan',
     'Ina',
+  ];
+
+  // Common Units
+  static const List<String> commonUnits = [
+    'pcs',
+    'sets',
+    'units',
+    'liters',
+    'bottles',
+    'bags',
+    'packs',
+    'boxes',
+    'rolls',
+    'meters',
+    'grams',
+    'kilograms',
+    'meetings',
+    'sessions',
+    'pax',
+    'lot',
   ];
 
   static List<String> getFilteredObjectsOfExpenditure(
@@ -204,6 +251,13 @@ class AppConstants {
         .toUpperCase();
   }
 
-  // AI Configuration
-  static const String geminiApiKey = 'AIzaSyBxToOaM4wGjy91HXmSnhDRlp2AmNpCm-A';
+  // Sectional Performance Targets (2026 facilitated PPAs)
+  static const Map<String, int> sectorTargets = {
+    'Crop Section': 35,
+    'Inland Fisheries Section': 5,
+    'Institutional Development Section': 23,
+    'Monitoring and Evaluation Section': 11, // PMED
+  };
+
 }
+

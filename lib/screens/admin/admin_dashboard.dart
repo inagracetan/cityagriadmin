@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:open_file/open_file.dart';
-import '../../core/responsive_utils.dart';
+import '../../core/design_system.dart';
+import '../../core/app_colors.dart';
 
 // Services
 import '../../services/firebase_service.dart';
@@ -14,19 +14,16 @@ import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../services/activity_form_provider.dart';
 import '../../services/import_service.dart';
+import '../../services/seed_data_loader.dart';
 
 // Models
 import '../../models/activity.dart';
 
 // Dialogs
-import 'monthly_aggregation.dart';
 import '../../widgets/dashboard_modules.dart';
-import '../../widgets/agri_ui.dart';
 import 'widgets/summary_cards.dart';
-import 'widgets/activity_filters_bar.dart';
-import 'widgets/activity_table.dart';
-import 'widgets/activity_card_list.dart';
-import 'activity_details_dialog.dart';
+import '../../widgets/skeleton_loading.dart';
+
 
 class AdminDashboard extends StatefulWidget {
   final bool isActive;
@@ -36,17 +33,15 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
-  String _selectedSector = '';
-  String _selectedSubSector = '';
-  String _selectedStaff = '';
-  String _selectedFundingSource = '';
-  String _selectedMonth = '';
-  String _selectedYear = DateTime.now().year.toString();
-  String _searchQuery = '';
+class _AdminDashboardState extends State<AdminDashboard> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  final String _selectedSector = '';
+  final String _selectedStaff = '';
   List<Activity> _activities = [];
-  int? _sortColumnIndex;
-  bool _sortAscending = true;
+  bool _isLoading = true;
+
 
   Stream<List<Activity>>? _activitiesStream;
 
@@ -89,7 +84,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         IconButton(
           icon: const Icon(Icons.upload_file, color: Color(0xFFD4AF37)),
           tooltip: l10n.translate('import_excel'),
-          onPressed: () => _importData(context, fbService),
+          onPressed: () => _importData(fbService),
         ),
         IconButton(
           icon: const Icon(Icons.download, color: Color(0xFFD4AF37)),
@@ -97,19 +92,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
           onPressed: () =>
               _showExportOptions(context, _activities, authService, fbService),
         ),
+        IconButton(
+          icon: const Icon(Icons.data_exploration_outlined, color: Color(0xFFD4AF37)),
+          tooltip: 'Seed Data',
+          onPressed: () => _seedData(context, fbService),
+        ),
       ],
       fab: null,
     );
   }
 
-  void _onFiltersChanged() {
-    setState(() {
-      _activitiesStream = null;
-      _activitiesSub?.cancel();
-      _activitiesSub = null;
-      _activities = [];
-    });
+  void _seedData(BuildContext context, FirebaseService fbService) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Seeding data from seed_data.json...')),
+      );
+      await SeedDataLoader.load(fbService, force: true);
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Seed data loaded successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('Seeding error: $e')));
+      }
+    }
   }
+
+
 
   @override
   void initState() {
@@ -121,11 +133,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final fbService = context.read<FirebaseService>();
-    final l10n = context.watch<SettingsProvider>().l10n;
-    final theme = Theme.of(context);
-
+    
     // Only recreate activity stream if filter parameters changed
     final currentSector = _selectedSector.isEmpty ? null : _selectedSector;
     final currentStaff = _selectedStaff.isEmpty ? null : _selectedStaff;
@@ -136,546 +147,390 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _lastSector = currentSector;
       _lastStaff = currentStaff;
 
+      _activitiesSub?.cancel();
+      setState(() => _isLoading = true);
       _activitiesStream = fbService.streamActivities(
+
         sector: currentSector,
         responsiblePerson: currentStaff,
       );
-      _activitiesSub?.cancel();
       _activitiesSub = _activitiesStream!.listen((data) {
         if (mounted) {
           setState(() {
             _activities = data;
+            _isLoading = false;
           });
-          // Refresh Nav with fresh list for Export
-          _updateNav();
+
+          // Use postFrameCallback to update navigation without interrupting the build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && widget.isActive) _updateNav();
+          });
         }
       });
     }
+  }
 
-    if (_activities.isEmpty &&
-        _activitiesStream != null &&
-        (_activitiesSub == null || _activities.isEmpty)) {
-      // If we're waiting for data or it's empty, show loading or actual empty state
-      // We'll handle this refined in the UI below to allow showing the filter bar even when loading.
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final fbService = context.read<FirebaseService>();
+    final l10n = context.watch<SettingsProvider>().l10n;
+    final theme = Theme.of(context);
+
+    // Show premium skeleton loading screen
+    if (_isLoading) {
+      return const Scaffold(body: SkeletonDashboard());
     }
 
-    final allActivities = _activities;
-    final isAnyFilterActive =
-        _searchQuery.isNotEmpty ||
-        _selectedSector.isNotEmpty ||
-        _selectedStaff.isNotEmpty ||
-        _selectedFundingSource.isNotEmpty ||
-        _selectedSubSector.isNotEmpty ||
-        _selectedMonth.isNotEmpty;
+    final activities = _activities;
 
-    // Show blank loading screen ONLY on first load (when we don't even have a stream yet or data hasn't arrived)
-    if (_activitiesStream == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    // Normalize whitespace to handle minor spacing differences in names
-    String normalize(String s) =>
-        s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth > 1000;
+        final horizontalPadding = constraints.maxWidth > 1200 ? 40.0 : 24.0;
 
-    final activities = allActivities.where((a) {
-      if (_selectedStaff.isNotEmpty) {
-        final match =
-            normalize(a.responsiblePerson) == normalize(_selectedStaff);
-        if (!match) return false;
-      }
-
-      if (_selectedMonth.isNotEmpty &&
-          !a.targetDate.toLowerCase().contains(_selectedMonth.toLowerCase())) {
-        return false;
-      }
-
-      if (_selectedYear.isNotEmpty && !a.targetDate.contains(_selectedYear)) {
-        return false;
-      }
-
-      if (_selectedSubSector.isNotEmpty && a.subSector != _selectedSubSector) {
-        return false;
-      }
-
-      final matchesSearch = a.matchesSearch(_searchQuery);
-
-      final matchesFund =
-          _selectedFundingSource.isEmpty ||
-          a.fundingSource == _selectedFundingSource;
-
-      return matchesSearch && matchesFund;
-    }).toList();
-
-    // ── Apply Sorting ────────────────────────────────────────────────────
-    if (_sortColumnIndex != null) {
-      activities.sort((a, b) {
-        dynamic vA, vB;
-        switch (_sortColumnIndex) {
-          case 0:
-            vA = a.sector.toLowerCase();
-            vB = b.sector.toLowerCase();
-            break;
-          case 2:
-            vA = a.activityName.toLowerCase();
-            vB = b.activityName.toLowerCase();
-            break;
-          case 8:
-            vA = a.prBalance;
-            vB = b.prBalance;
-            break;
-          case 11:
-            vA = a.responsiblePerson.toLowerCase();
-            vB = b.responsiblePerson.toLowerCase();
-            break;
-          case 12:
-            vA = a.ppmpBalance;
-            vB = b.ppmpBalance;
-            break;
-          case 13:
-            vA = a.prAmount;
-            vB = b.prAmount;
-            break;
-          case 14:
-            vA = a.actualExpenditure;
-            vB = b.actualExpenditure;
-            break;
-          default:
-            return 0;
-        }
-        if (vA is String) {
-          return _sortAscending ? vA.compareTo(vB) : vB.compareTo(vA);
-        }
-        return _sortAscending ? vA.compareTo(vB) : vB.compareTo(vA);
-      });
-    }
-
-    // Sync filtered list for summary cards and table
-    // (We formerly overwrote _activities here, which caused permanent truncation.
-    // We now just use the local `activities` variable for rendering.)
-
-    // to keep the ActivityFiltersBar stable.
-
-    return Container(
-      decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Greeting Header ---
-            Container(
-              margin: const EdgeInsets.only(bottom: 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: Color(0xFF1B5E20),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Welcome Back',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1B5E20),
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Hello, ${context.watch<AuthService>().currentUser?.name ?? "Admin"}',
-                    style: GoogleFonts.inter(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.onSurface,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Track and manage agricultural activities and finances.',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          l10n.translate('executive_summary'),
-                          style: GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 22),
-                    child: Text(
-                      l10n.translate('executive_summary_subtitle'),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.5,
-                        ),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SummaryCardsRow(
-              activities: activities,
-              formatCurrency: formatCurrency,
-              onFundSelected: (fund) =>
-                  setState(() => _selectedFundingSource = fund),
-            ),
-            const SizedBox(height: 40),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          l10n.translate('financial_insights'),
-                          style: GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < ResponsiveUtils.tabletBreakpoint) {
-                    return Column(
-                      children: [
-                        BudgetSectionUnitChart(activities: activities),
-                      ],
-                    );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: BudgetSectionUnitChart(activities: activities),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 48),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      l10n.translate('activity_management'),
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurface,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ActivityFiltersBar(
-              activities: allActivities,
-              searchQuery: _searchQuery,
-              selectedSector: _selectedSector,
-              selectedSubSector: _selectedSubSector,
-              selectedStaff: _selectedStaff,
-              selectedFundingSource: _selectedFundingSource,
-              selectedMonth: _selectedMonth,
-              selectedYear: _selectedYear,
-              onSearchChanged: (val) => setState(() => _searchQuery = val),
-              onSectorChanged: (val) => setState(() {
-                _selectedSector = val ?? '';
-                _onFiltersChanged();
-              }),
-              onSubSectorChanged: (val) =>
-                  setState(() => _selectedSubSector = val ?? ''),
-              onStaffChanged: (val) => setState(() {
-                _selectedStaff = val ?? '';
-                _onFiltersChanged();
-              }),
-              onFundingSourceChanged: (val) =>
-                  setState(() => _selectedFundingSource = val ?? ''),
-              onMonthChanged: (val) =>
-                  setState(() => _selectedMonth = val ?? ''),
-              onYearChanged: (val) => setState(() => _selectedYear = val ?? ''),
-              onClearFilters: () => setState(() {
-                _searchQuery = '';
-                _selectedSector = '';
-                _selectedSubSector = '';
-                _selectedStaff = '';
-                _selectedFundingSource = '';
-                _selectedMonth = '';
-                _selectedYear = DateTime.now().year.toString();
-                _onFiltersChanged();
-              }),
-              onWfpMonthlyViewPressed: () => showDialog(
-                context: context,
-                builder: (_) =>
-                    MonthlyAggregationViewer(activities: activities),
-              ),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (activities.isEmpty) {
-                  if (isAnyFilterActive) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 60.0),
-                      child: AgriUI.emptyState(
-                        icon: Icons.search_off,
-                        title: l10n.translate('no_results'),
-                        message: l10n.translate('no_results_msg'),
-                        onAction: () => setState(() {
-                          _searchQuery = '';
-                          _selectedSector = '';
-                          _selectedSubSector = '';
-                          _selectedStaff = '';
-                          _selectedFundingSource = '';
-                          _selectedMonth = '';
-                        }),
-                        actionLabel: l10n.translate('clear_all_filters'),
-                      ),
-                    );
-                  } else if (_activities.isEmpty) {
-                    // Truly empty database
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 60.0),
-                      child: AgriUI.emptyState(
-                        icon: Icons.agriculture,
-                        title: l10n.translate('no_activities'),
-                        message: l10n.translate('no_activities_msg'),
-                        onAction: () =>
-                            _showAddActivityDialog(context, fbService),
-                        actionLabel: l10n.translate('add_first_activity'),
-                      ),
-                    );
-                  }
-                }
-
-                final isNarrow =
-                    constraints.maxWidth < ResponsiveUtils.tabletBreakpoint;
-
-                if (isNarrow) {
-                  return ActivityCardList(
-                    activities: activities,
-                    fbService: fbService,
-                    formatCurrency: formatCurrency,
-                    onActionTap: (activity) =>
-                        _showActivityDetails(context, activity, fbService),
-                  );
-                }
-                return ActivityTable(
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(vertical: 40, horizontal: horizontalPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Greeting Header ---
+              _buildHeader(theme),
+              
+              if (activities.isEmpty) 
+                Padding(
+                  padding: const EdgeInsets.only(top: 32),
+                  child: _buildEmptyState(context, fbService, theme),
+                )
+              else ...[
+                const SizedBox(height: 40),
+                _buildSectionHeader(l10n.translate('executive_summary'), l10n.translate('executive_summary_subtitle'), theme),
+                const SizedBox(height: 20),
+                SummaryCardsRow(
                   activities: activities,
-                  fbService: fbService,
                   formatCurrency: formatCurrency,
-                  sortColumnIndex: _sortColumnIndex,
-                  sortAscending: _sortAscending,
-                  onSort: (idx, asc) => setState(() {
-                    _sortColumnIndex = idx;
-                    _sortAscending = asc;
-                  }),
-                  onActionTap: (activity) =>
-                      _showActivityDetails(context, activity, fbService),
-                );
-              },
-            ),
-            const SizedBox(height: 80),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── dialog launchers ─────────────────────────────────────────────────────
-
-  void _showActivityDetails(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => ActivityDetailsDialog(
-        activity: activity,
-        fbService: fbService,
-        onEdit: () {
-          Navigator.pop(ctx);
-          _showEditActivityDialog(context, activity, fbService);
-        },
-        onDelete: () {
-          Navigator.pop(ctx);
-          _confirmDelete(context, activity, fbService);
-        },
-      ),
-    );
-  }
-
-  void _showAddActivityDialog(BuildContext context, FirebaseService fbService) {
-    context.read<ActivityFormProvider>().openForm();
-  }
-
-  void _showEditActivityDialog(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-  ) {
-    context.read<ActivityFormProvider>().openForm(activity: activity);
-  }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    Activity activity,
-    FirebaseService fbService,
-  ) async {
-    final l10n = context.read<SettingsProvider>().l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            const SizedBox(width: 8),
-            Text(l10n.translate('delete_activity')),
-          ],
-        ),
-        content: Text(
-          '${l10n.translate('delete_confirm_msg')} "${activity.activityName}"?\n\n${l10n.translate('delete_associated_msg')}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.translate('cancel')),
+                  onFundSelected: (fund) {},
+                ),
+                
+                const SizedBox(height: 48),
+                
+                // Responsive Content Grid
+                if (isDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionHeader(l10n.translate('financial_insights'), 'Visualize budget distribution across sectors.', theme),
+                            const SizedBox(height: 24),
+                            BudgetSectionUnitChart(activities: activities),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 32),
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionHeader('Management', 'Quick access to records.', theme),
+                            const SizedBox(height: 24),
+                            _buildQuickActionCard(theme),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                else ...[
+                  _buildSectionHeader(l10n.translate('financial_insights'), 'Visualize budget distribution across sectors.', theme),
+                  const SizedBox(height: 24),
+                  BudgetSectionUnitChart(activities: activities),
+                  const SizedBox(height: 48),
+                  _buildSectionHeader('Management', 'Quick access to records.', theme),
+                  const SizedBox(height: 24),
+                  _buildQuickActionCard(theme),
+                ],
+              ],
+              const SizedBox(height: 80),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme) {
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: AppColors.emeraldPrimary.withValues(alpha: 0.2)),
             ),
-            child: Text(l10n.translate('delete')),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.auto_awesome, size: 14, color: AppColors.emeraldPrimary),
+                const SizedBox(width: 8),
+                Text(
+                  'ADMIN DASHBOARD',
+                  style: AppDesignSystem.labelSmall.copyWith(
+                    color: AppColors.emeraldPrimary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Hello, ${context.watch<AuthService>().currentUser?.name ?? "Admin"}',
+            style: AppDesignSystem.headingLarge.copyWith(color: theme.colorScheme.onSurface),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Welcome back to the City Agriculture Management System. Here is an overview of the current operations and financial status.',
+            style: AppDesignSystem.bodyLarge.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
     );
+  }
 
-    if (confirmed == true && context.mounted) {
-      try {
-        await fbService.deleteActivity(activity.id);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '"${activity.activityName}" ${l10n.translate('delete_success')}',
-              ),
-              backgroundColor: Colors.red.shade700,
+  Widget _buildQuickActionCard(ThemeData theme) {
+    return GlassCard(
+      onTap: () {
+        context.read<NavigationProvider>().updateLayout(
+          title: 'Activity Management',
+          selectedIndex: 1,
+        );
+      },
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
+            child: const Icon(Icons.list_alt_rounded, color: AppColors.emeraldPrimary, size: 32),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Activity Management',
+            style: AppDesignSystem.headingSmall.copyWith(color: theme.colorScheme.onSurface),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Detailed view of all agricultural programs, procurement logs, and status tracking.',
+            style: AppDesignSystem.bodyMedium.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Text(
+                'View All Records',
+                style: AppDesignSystem.labelMedium.copyWith(
+                  color: AppColors.emeraldPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward, size: 16, color: AppColors.emeraldPrimary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildSectionHeader(String title, String subtitle, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldPrimary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                title,
+                style: AppDesignSystem.headingMedium.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Text(
+              subtitle,
+              style: AppDesignSystem.bodySmall.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, FirebaseService fbService, ThemeData theme) {
+    return GlassCard(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.rocket_launch_rounded, color: AppColors.emeraldPrimary, size: 32),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Getting Started with City Agriculture Admin',
+                      style: AppDesignSystem.headingSmall.copyWith(color: theme.colorScheme.onSurface),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'It looks like there are no activities recorded yet for the current filters. Here is how you can get started.',
+                      style: AppDesignSystem.bodyMedium.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+          _buildGuideItem(
             context,
-          ).showSnackBar(SnackBar(content: Text('Delete error: $e')));
-        }
-      }
-    }
+            icon: Icons.add_circle_outline,
+            color: const Color(0xFFD4AF37),
+            title: '1. Add a New Activity',
+            description: 'Use the "+" icon in the top right corner to manually add a new agricultural activity, training, or procurement request.',
+            onTap: () => _showAddActivityDialog(context, fbService),
+          ),
+          const SizedBox(height: 16),
+          _buildGuideItem(
+            context,
+            icon: Icons.upload_file_rounded,
+            color: AppColors.emeraldPrimary,
+            title: '2. Import PPMP Excel Data',
+            description: 'If you have an existing PPMP in Excel format, you can import it directly to populate the system instantly.',
+            onTap: () => _importData(fbService),
+          ),
+          const SizedBox(height: 16),
+          _buildGuideItem(
+            context,
+            icon: Icons.data_exploration_outlined,
+            color: const Color(0xFF3B82F6),
+            title: '3. Load Sample Seed Data',
+            description: 'Want to test the system? Load the 2026 sample agricultural data to see how the dashboard charts and management lists look.',
+            onTap: () => _seedData(context, fbService),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildGuideItem(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppDesignSystem.headingSmall.copyWith(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: AppDesignSystem.bodySmall.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: color.withValues(alpha: 0.5), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  void _showAddActivityDialog(BuildContext context, FirebaseService fbService) {
+    context.read<ActivityFormProvider>().openForm();
   }
 
   void _showExportOptions(
@@ -719,6 +574,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 onTap: () {
                   Navigator.pop(context);
                   _exportData(context, activities, authService, format: 'csv');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.description, color: Color(0xFF1B5E20)),
+                title: const Text('Rice & Corn Program Report (PPMP)'),
+                subtitle: const Text('Standardized format with Q1-Q4 distribution'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.showSnackBar(const SnackBar(content: Text('Generating specialized report...')));
+                  String? path = await ExportService.exportRiceAndCornProgramReport(activities);
+                  if (path != null) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Saved to: $path'),
+                        action: SnackBarAction(
+                          label: 'OPEN',
+                          onPressed: () => OpenFile.open(path),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
             ],
@@ -785,24 +663,93 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  void _importData(BuildContext context, FirebaseService fbService) async {
+  void _importData(FirebaseService fbService) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       messenger.showSnackBar(
         const SnackBar(content: Text('Opening file picker...')),
       );
 
-      await ImportService.importActivitiesFromExcel(fbService);
+      final result = await ImportService.importAgriPPMPFromExcel(fbService);
 
       if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Import successful!')),
-        );
+        if (result['status'] == 'success') {
+          int count = result['imported'] ?? 0;
+          List<String> errors = List<String>.from(result['errors'] ?? []);
+          
+          if (errors.isNotEmpty) {
+          if (mounted) {
+            _showImportErrors(context, count, errors);
+          }
+          } else {
+            messenger.showSnackBar(
+              SnackBar(content: Text('Successfully imported $count activities!')),
+            );
+          }
+        } else if (result['status'] == 'error') {
+          messenger.showSnackBar(
+            SnackBar(content: Text('Import failed: ${result['message']}')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(SnackBar(content: Text('Import error: $e')));
       }
     }
+  }
+
+  void _showImportErrors(BuildContext context, int successCount, List<String> errors) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 10),
+            Text('Import Results (${errors.length} Rejected)'),
+          ],
+        ),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Successfully imported $successCount records.'),
+              const SizedBox(height: 16),
+              const Text('Rejected Records:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: errors.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      '• ${errors[index]}',
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('DISMISS'),
+          ),
+        ],
+      ),
+    );
   }
 }

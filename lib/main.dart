@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
-import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 
 import 'services/auth_service.dart';
 import 'services/firebase_service.dart';
 import 'services/navigation_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/activity_form_provider.dart';
+import 'services/project_initialization_service.dart';
+import 'services/seed_data_loader.dart';
+import 'services/connectivity_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/main_layout.dart';
 import 'core/app_colors.dart';
+import 'core/design_system.dart';
 import 'widgets/enhanced_states.dart';
+import 'widgets/skeleton_loading.dart';
 
 import 'firebase_options.dart';
 
@@ -34,24 +37,19 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     // Offline Support
-    if (kIsWeb) {
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: false,
-      );
-      try {
-        await FirebaseFirestore.instance.clearPersistence();
-      } catch (e) {
-        debugPrint('Failed to clear persistence: $e');
-      }
-    } else {
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-      );
-    }
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
     debugPrint('Firebase init failed: $e');
   }
+
+  // Initialize 2026 Targets & Seed Data in background to prevent startup hang
+  final fbService = FirebaseService();
+  unawaited(ProjectInitializationService.initialize2026Targets(fbService));
+  unawaited(SeedDataLoader.load(fbService));
+
   runApp(
     MultiProvider(
       providers: [
@@ -64,6 +62,9 @@ void main() async {
         ),
         ChangeNotifierProvider<ActivityFormProvider>(
           create: (_) => ActivityFormProvider(),
+        ),
+        ChangeNotifierProvider<ConnectivityService>(
+          create: (_) => ConnectivityService(),
         ),
         Provider<FirebaseService>(create: (_) => FirebaseService()),
       ],
@@ -79,244 +80,111 @@ class LGUAgriApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
+        final isDark = settingsProvider.isDarkMode;
+        final textTheme = AppDesignSystem.createTextTheme(isDark: isDark);
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'AgriWork & Financial Planning System (AWFPS)',
-          themeMode: settingsProvider.isDarkMode
-              ? ThemeMode.dark
-              : ThemeMode.light,
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
           theme: ThemeData(
             useMaterial3: true,
-            textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme)
-                .copyWith(
-                  titleLarge: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
-                  bodyMedium: GoogleFonts.inter(letterSpacing: -0.1),
-                ),
+            textTheme: textTheme,
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF1B5E20),
-              primary: const Color(0xFF1B5E20),
-              onPrimary: Colors.white,
-              secondary: const Color(0xFFD4AF37),
-              onSecondary: Colors.black,
-              tertiary: const Color(0xFF2E7D32),
-              surface: Colors.white,
-              surfaceContainer: const Color(0xFFF8FAFC),
-              error: const Color(0xFFDC2626),
+              seedColor: AppColors.primary,
+              primary: AppColors.primary,
+              secondary: AppColors.secondary,
+              tertiary: AppColors.accent,
+              surface: AppColors.background,
+              error: AppColors.error,
               brightness: Brightness.light,
             ),
-            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-            appBarTheme: const AppBarTheme(
+            scaffoldBackgroundColor: AppColors.background,
+            appBarTheme: AppBarTheme(
               backgroundColor: Colors.transparent,
-              foregroundColor: Color(0xFF1B5E20),
+              foregroundColor: AppColors.primary,
               centerTitle: false,
               elevation: 0,
-              scrolledUnderElevation: 0,
-              titleTextStyle: TextStyle(
-                inherit: true,
-                fontSize: 24,
+              titleTextStyle: textTheme.headlineLarge?.copyWith(
+                color: AppColors.primary,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-                color: Color(0xFF1B5E20),
               ),
             ),
             dividerTheme: DividerThemeData(color: Slate.shade200, thickness: 1),
             elevatedButtonTheme: ElevatedButtonThemeData(
-              style:
-                  ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B5E20),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 18,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                    textStyle: const TextStyle(
-                      inherit: true,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      letterSpacing: 0.1,
-                    ),
-                  ).copyWith(
-                    overlayColor: WidgetStateProperty.all(
-                      Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
+              style: AppDesignSystem.primaryButton(isDark: false),
             ),
             cardTheme: CardThemeData(
               elevation: 0,
               color: Colors.white,
-              surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusXLarge,
+                ),
                 side: const BorderSide(color: Slate.shade100, width: 1),
               ),
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 20,
-              ),
+              contentPadding: const EdgeInsets.all(AppDesignSystem.spacing20),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusLarge,
+                ),
                 borderSide: const BorderSide(color: Slate.shade200),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusLarge,
+                ),
                 borderSide: const BorderSide(color: Slate.shade200),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF1B5E20),
-                  width: 2.0,
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusLarge,
                 ),
-              ),
-              labelStyle: const TextStyle(
-                inherit: true,
-                color: Slate.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-              hintStyle: const TextStyle(inherit: true, color: Slate.shade400),
-            ),
-            floatingActionButtonTheme: FloatingActionButtonThemeData(
-              backgroundColor: const Color(0xFF1B5E20),
-              foregroundColor: Colors.white,
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 2,
+                ),
               ),
             ),
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
-            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
-                .copyWith(
-                  titleLarge: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
-                  bodyMedium: GoogleFonts.inter(letterSpacing: -0.1),
-                ),
+            textTheme: textTheme,
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF4CAF50),
-              primary: const Color(0xFF4CAF50),
-              onPrimary: Colors.black,
-              secondary: const Color(0xFFD4AF37),
-              onSecondary: Colors.black,
-              tertiary: const Color(0xFF81C784),
-              surface: const Color(0xFF111827),
-              surfaceContainer: const Color(0xFF0F172A),
-              error: const Color(0xFFEF4444),
+              seedColor: AppColors.primary,
+              primary: AppColors.primary,
+              secondary: AppColors.secondary,
+              tertiary: AppColors.accent,
+              surface: AppColors.premiumNavy,
+              error: AppColors.error,
               brightness: Brightness.dark,
             ),
-            scaffoldBackgroundColor: const Color(0xFF0F172A),
-            appBarTheme: const AppBarTheme(
+            scaffoldBackgroundColor: AppColors.premiumNavy,
+            appBarTheme: AppBarTheme(
               backgroundColor: Colors.transparent,
               foregroundColor: Colors.white,
-              centerTitle: false,
               elevation: 0,
-              scrolledUnderElevation: 0,
-              titleTextStyle: TextStyle(
-                inherit: true,
+              titleTextStyle: textTheme.headlineLarge?.copyWith(
                 color: Colors.white,
-                fontSize: 24,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-              ),
-            ),
-            dividerTheme: DividerThemeData(
-              color: Colors.white.withValues(alpha: 0.1),
-              thickness: 1,
-            ),
-            elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 18,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-                textStyle: const TextStyle(
-                  inherit: true,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  letterSpacing: 0.1,
-                ),
               ),
             ),
             cardTheme: CardThemeData(
-              elevation: 0,
-              color: const Color(0xFF1E293B),
-              surfaceTintColor: Colors.transparent,
+              color: AppColors.premiumCard,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusXLarge,
+                ),
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-              ),
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            ),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: const Color(0xFF1E293B),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 20,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF4CAF50),
-                  width: 2.0,
-                ),
-              ),
-              labelStyle: const TextStyle(
-                inherit: true,
-                color: Color(0xFF94A3B8),
-                fontWeight: FontWeight.w500,
-              ),
-              hintStyle: const TextStyle(
-                inherit: true,
-                color: Color(0xFF64748B),
-              ),
-            ),
-            floatingActionButtonTheme: FloatingActionButtonThemeData(
-              backgroundColor: const Color(0xFFD4AF37),
-              foregroundColor: Colors.black,
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
               ),
             ),
           ),
-          home: const AuthWrapper(),
+          home: const SelectionArea(child: AuthWrapper()),
           navigatorObservers: [routeObserver],
-          builder: (context, child) {
-            return child!;
-          },
         );
       },
     );
@@ -346,20 +214,22 @@ class AuthWrapperState extends State<AuthWrapper> {
           if (authService.isLoading) {
             content = const Scaffold(
               key: ValueKey('loading'),
-              body: Center(child: CircularProgressIndicator()),
+              body: SkeletonDashboard(),
             );
           } else {
             final user = authService.currentUser;
             if (user == null) {
               content = AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
+                duration: const Duration(milliseconds: 400),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
                 transitionBuilder: (Widget child, Animation<double> animation) {
                   return FadeTransition(
                     opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.05, 0),
-                        end: Offset.zero,
+                    child: ScaleTransition(
+                      scale: Tween<double>(
+                        begin: 0.98,
+                        end: 1.0,
                       ).animate(animation),
                       child: child,
                     ),
@@ -408,7 +278,21 @@ class AuthWrapperState extends State<AuthWrapper> {
         }
 
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.01), // Subtle upward slide
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
           child: content,
         );
       },

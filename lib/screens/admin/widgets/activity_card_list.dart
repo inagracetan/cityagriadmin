@@ -23,9 +23,7 @@ class ActivityCardList extends StatelessWidget {
     final theme = Theme.of(context);
 
     return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 120),
       itemCount: activities.length,
       itemBuilder: (context, index) {
         final activity = activities[index];
@@ -55,19 +53,25 @@ class ActivityCardList extends StatelessWidget {
                         _miniBadge('DRAFT', Colors.blueGrey),
                       if (activity.isLowBalance)
                         _miniBadge('LOW BALANCE', Colors.red),
+                      if (activity.hasNoBudget)
+                        _miniBadge('NO BUDGET', Colors.red),
+                      if (activity.isOverObligated)
+                        _miniBadge('OVER-OBLIGATED', Colors.orange),
+                      if (activity.isTimelineVariance)
+                        _miniBadge('TIMELINE VARIANCE', Colors.purple),
                     ],
                   ),
                   const SizedBox(height: 12),
-                    Text(
-                      activity.activityName,
-                      style: TextStyle(
-                        inherit: true,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: theme.textTheme.titleLarge?.color,
-                        height: 1.2,
-                      ),
+                  Text(
+                    activity.activityName,
+                    style: TextStyle(
+                      inherit: true,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: theme.textTheme.titleLarge?.color,
+                      height: 1.2,
                     ),
+                  ),
                 ],
               ),
               subtitle: Column(
@@ -107,7 +111,8 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'PPMP BALANCE',
                               formatCurrency.format(activity.ppmpBalance),
-                              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                              color: theme.textTheme.bodySmall?.color
+                                  ?.withValues(alpha: 0.5),
                               fullWidth: true,
                             ),
                             const SizedBox(height: 12),
@@ -121,8 +126,10 @@ class ActivityCardList extends StatelessWidget {
                             const SizedBox(height: 12),
                             Builder(
                               builder: (context) {
-                                final breakdownTotal = activity.breakdown.fold<double>(0, (sum, item) => sum + item.amount);
-                                final displayAmt = breakdownTotal > 0 ? breakdownTotal : activity.actualExpenditure;
+                                final breakdownTotal = activity.totalBreakdown;
+                                final displayAmt = breakdownTotal > 0
+                                    ? breakdownTotal
+                                    : activity.effectivePOAmount;
                                 return _metricRow(
                                   context,
                                   'PO AMOUNT',
@@ -137,7 +144,9 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'BALANCE',
                               formatCurrency.format(activity.unexpendedBalance),
-                              color: activity.isLowBalance ? Colors.red : theme.colorScheme.primary,
+                              color: activity.isLowBalance
+                                  ? Colors.red
+                                  : theme.colorScheme.primary,
                               fullWidth: true,
                             ),
                           ],
@@ -150,7 +159,8 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'PPMP BALANCE',
                               formatCurrency.format(activity.ppmpBalance),
-                              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                              color: theme.textTheme.bodySmall?.color
+                                  ?.withValues(alpha: 0.5),
                             ),
                           ),
                           Expanded(
@@ -164,8 +174,10 @@ class ActivityCardList extends StatelessWidget {
                           Expanded(
                             child: Builder(
                               builder: (context) {
-                                final breakdownTotal = activity.breakdown.fold<double>(0, (sum, item) => sum + item.amount);
-                                final displayAmt = breakdownTotal > 0 ? breakdownTotal : activity.actualExpenditure;
+                                final breakdownTotal = activity.totalBreakdown;
+                                final displayAmt = breakdownTotal > 0
+                                    ? breakdownTotal
+                                    : activity.effectivePOAmount;
                                 return _metricRow(
                                   context,
                                   'PO AMOUNT',
@@ -180,14 +192,15 @@ class ActivityCardList extends StatelessWidget {
                               context,
                               'BALANCE',
                               formatCurrency.format(activity.unexpendedBalance),
-                              color: activity.isLowBalance ? Colors.red : theme.colorScheme.primary,
+                              color: activity.isLowBalance
+                                  ? Colors.red
+                                  : theme.colorScheme.primary,
                             ),
                           ),
                         ],
                       );
                     },
                   ),
-
                 ],
               ),
               children: [
@@ -277,7 +290,6 @@ class ActivityCardList extends StatelessWidget {
     );
   }
 
-
   Widget _miniBadge(String label, Color color) {
     return Container(
       margin: const EdgeInsets.only(left: 8),
@@ -336,5 +348,4 @@ class ActivityCardList extends StatelessWidget {
       ),
     );
   }
-
 }

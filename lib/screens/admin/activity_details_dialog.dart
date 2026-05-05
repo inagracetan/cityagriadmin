@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/skeleton_loading.dart';
 import '../../models/activity.dart';
-import '../../core/date_formatter.dart';
 import '../../models/pr_log.dart';
 import '../../services/firebase_service.dart';
 import '../../core/responsive_utils.dart';
+import '../../core/design_system.dart';
+import '../../core/app_colors.dart';
 
 class ActivityDetailsDialog extends StatefulWidget {
   final Activity activity;
@@ -87,13 +88,13 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
               ),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
+                  colors: [AppColors.emeraldPrimary, Color(0xFF064E3B)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.2),
+                    color: AppColors.emeraldPrimary.withValues(alpha: 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -104,6 +105,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                   if (isMobile)
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                      tooltip: 'Back to list',
                       onPressed: () => Navigator.pop(context),
                     ),
                   Container(
@@ -125,11 +127,9 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                       children: [
                         Text(
                           activity.activityName,
-                          style: GoogleFonts.inter(
+                          style: AppDesignSystem.headingMedium.copyWith(
                             color: Colors.white,
                             fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
                             height: 1.1,
                           ),
                         ),
@@ -146,10 +146,8 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                 const SizedBox(width: 6),
                                 Text(
                                   activity.sector,
-                                  style: GoogleFonts.inter(
+                                  style: AppDesignSystem.labelMedium.copyWith(
                                     color: Colors.white.withValues(alpha: 0.8),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -167,6 +165,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         color: Colors.white70,
                         size: 28,
                       ),
+                      tooltip: 'Close details',
                       onPressed: () => Navigator.pop(context),
                       splashRadius: 24,
                     ),
@@ -200,6 +199,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                           label: 'Edit',
                           color: theme.primaryColor,
                           onPressed: onEdit!,
+                          tooltip: 'Edit activity details and financial information.',
                         ),
 
                       const SizedBox(width: 12),
@@ -209,6 +209,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         label: 'PR Logs',
                         color: Colors.orange.shade800,
                         onPressed: _scrollToHistory,
+                        tooltip: 'View detailed Purchase Request history for this activity.',
                       ),
 
                       if (onDelete != null) ...[
@@ -219,6 +220,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                           label: 'Delete',
                           color: Colors.red,
                           onPressed: onDelete!,
+                          tooltip: 'Permanently remove this activity.',
                         ),
                       ],
                     ],
@@ -321,7 +323,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                               alignment: Alignment.centerLeft,
                                 child: Text(
                                 'Funding Source & Expenditures',
-                                style: GoogleFonts.inter(
+                                style: AppDesignSystem.bodyMedium.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: theme.primaryColor,
                                   fontSize: 14,
@@ -344,7 +346,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                       ),
                                       child: Text(
                                         'Expenditure / Program',
-                                        style: GoogleFonts.inter(
+                                        style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
                                           color: theme.disabledColor.withValues(
@@ -360,7 +362,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                       ),
                                       child: Text(
                                         'Funding Source',
-                                        style: GoogleFonts.inter(
+                                        style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
                                           color: theme.disabledColor.withValues(
@@ -377,7 +379,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                       child: Text(
                                         'Allocated',
                                         textAlign: TextAlign.right,
-                                        style: GoogleFonts.inter(
+                                        style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
                                           color: theme.disabledColor.withValues(
@@ -398,7 +400,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         ),
                                         child: Text(
                                           fs.objectOfExpenditure ?? 'N/A',
-                                          style: GoogleFonts.inter(
+                                          style: AppDesignSystem.bodyMedium.copyWith(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -410,7 +412,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         ),
                                         child: Text(
                                           fs.fundingSource,
-                                          style: GoogleFonts.inter(
+                                          style: AppDesignSystem.bodyMedium.copyWith(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -423,7 +425,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         child: Text(
                                           formatCurrency.format(fs.amount),
                                           textAlign: TextAlign.right,
-                                          style: GoogleFonts.inter(
+                                          style: AppDesignSystem.bodyMedium.copyWith(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w800,
                                             color: theme.primaryColor,
@@ -608,13 +610,14 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     required String label,
     required Color color,
     required VoidCallback onPressed,
+    String? tooltip,
   }) {
-    return TextButton.icon(
+    final button = TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18, color: color),
       label: Text(
         label,
-        style: GoogleFonts.inter(
+        style: AppDesignSystem.bodyMedium.copyWith(
           color: color,
           fontWeight: FontWeight.w700,
           fontSize: 13,
@@ -629,6 +632,11 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
         backgroundColor: color.withValues(alpha: 0.05),
       ),
     );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: button);
+    }
+    return button;
   }
 
   Widget _buildBreakdownSection(BuildContext context, Activity activity) {
@@ -640,10 +648,10 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     );
 
     final colors = [
-      const Color(0xFF1B5E20),
+      const Color(0xFF059669),
       const Color(0xFF1976D2),
       const Color(0xFFE65100),
-      const Color(0xFFD4AF37),
+      const Color(0xFFF59E0B),
       const Color(0xFF6A1B9A),
       const Color(0xFF00838F),
       const Color(0xFFC62828),
@@ -887,10 +895,10 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
       (sum, item) => sum + item.amount,
     );
     final colors = [
-      const Color(0xFF1B5E20),
+      const Color(0xFF059669),
       const Color(0xFF1976D2),
       const Color(0xFFE65100),
-      const Color(0xFFD4AF37),
+      const Color(0xFFF59E0B),
       const Color(0xFF6A1B9A),
       const Color(0xFF00838F),
       const Color(0xFFC62828),
@@ -1022,7 +1030,6 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     BreakdownItem e,
   ) {
     final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
-    final isMobile = ResponsiveUtils.isMobile(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       child: Column(
@@ -1129,11 +1136,10 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           const SizedBox(width: 12),
           Text(
             title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+            style: AppDesignSystem.labelSmall.copyWith(
               color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
               letterSpacing: 1.2,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -1163,7 +1169,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
         children: [
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: AppDesignSystem.labelSmall.copyWith(
               fontSize: 10,
               color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
               fontWeight: FontWeight.w800,
@@ -1184,7 +1190,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
               ),
               child: Text(
                 value,
-                style: GoogleFonts.inter(
+                style: AppDesignSystem.bodyMedium.copyWith(
                   color: badgeColor,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
@@ -1195,7 +1201,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           else
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: AppDesignSystem.bodyMedium.copyWith(
                 fontSize: highlight ? 24 : 16,
                 fontWeight: (isBold || highlight)
                     ? FontWeight.w900
@@ -1220,7 +1226,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
       stream: fbService.streamPRLogs(activity.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const SizedBox(height: 300, child: SkeletonList(itemCount: 3));
         }
         final logs = snapshot.data ?? [];
         if (logs.isEmpty) {
@@ -1295,7 +1301,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
               const SizedBox.shrink(),
               Text(
                 formatDate.format(log.timestamp),
-                style: GoogleFonts.inter(
+                style: AppDesignSystem.bodyMedium.copyWith(
                   fontSize: 11,
                   color: theme.disabledColor.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w600,
@@ -1320,7 +1326,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         const SizedBox(width: 8),
                         Text(
                           'PR #: ${log.prNumber.isNotEmpty ? log.prNumber : "N/A"}',
-                          style: GoogleFonts.inter(
+                          style: AppDesignSystem.bodyMedium.copyWith(
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                             color: theme.textTheme.titleMedium?.color,
@@ -1328,12 +1334,12 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         ),
                       ],
                     ),
-                    if (log.amount > 0)
+                    if (log.prAmount > 0)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          formatCurrency.format(log.amount),
-                          style: GoogleFonts.inter(
+                          formatCurrency.format(log.prAmount),
+                          style: AppDesignSystem.bodyMedium.copyWith(
                             fontSize: 18,
                             color: theme.primaryColor,
                             fontWeight: FontWeight.w900,
@@ -1356,7 +1362,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                     children: [
                       Text(
                         'UPDATED BY',
-                        style: GoogleFonts.inter(
+                        style: AppDesignSystem.bodyMedium.copyWith(
                           fontSize: 8,
                           fontWeight: FontWeight.w900,
                           color: theme.primaryColor.withValues(alpha: 0.5),
@@ -1365,7 +1371,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                       ),
                       Text(
                         log.updatedBy!,
-                        style: GoogleFonts.inter(
+                        style: AppDesignSystem.bodyMedium.copyWith(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: theme.primaryColor,
@@ -1388,7 +1394,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
               ),
               child: Text(
                 log.remarks,
-                style: GoogleFonts.inter(
+                style: AppDesignSystem.bodyMedium.copyWith(
                   fontSize: 13,
                   color: Colors.grey[700],
                   fontStyle: FontStyle.italic,

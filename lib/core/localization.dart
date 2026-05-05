@@ -139,6 +139,7 @@ class AppLocalization {
       'po_total': 'PO Total',
       'summary_details': 'Summary Details',
       'remaining': 'Remaining',
+      'approvals_review': 'Approvals Review',
     },
     'Tagalog': {
       'settings': 'Mga Setting',
@@ -276,12 +277,13 @@ class AppLocalization {
       'po_total': 'Kabuuang PO',
       'summary_details': 'Mga Detalye ng Buod',
       'remaining': 'Natitira',
+      'approvals_review': 'Pagsusuri ng mga Pag-apruba',
     },
   };
 
   String translate(String key) {
     return localizedValues[language]?[key] ??
         localizedValues['English']![key] ??
-        key;
+        key.replaceAll('_', ' ');
   }
 }

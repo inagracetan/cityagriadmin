@@ -2,58 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:barcode_widget/barcode_widget.dart';
 
+import '../../core/activity_templates.dart';
 import '../../core/constants.dart';
 import '../../core/currency_formatter.dart';
-import '../../core/date_formatter.dart';
 import '../../core/responsive_utils.dart';
 import '../../models/activity.dart';
 import '../../models/pr_log.dart';
 import '../../services/activity_form_provider.dart';
-import '../../services/auth_service.dart';
 import '../../services/firebase_service.dart';
+import '../../widgets/grid_form_fields.dart';
+import '../../widgets/enhanced_buttons_dialogs.dart';
 
 // ── Modern design constants ─────────────────────────────────────────────
 const modernGreen = Color(0xFF1B5E20);
 const modernDark = Color(0xFF064E3B);
-const headerBg = Color(0xFFF1F8E9);
-const rowOdd = Color(0xFFFFFFFF);
-const rowEven = Color(0xFFF9FBF7);
-const border = Color(0xFFE2E8F0); // Softer border
-const textMain = Color(0xFF1E293B);
-const labelBg = Color(0xFFF8FAFC);
-const labelText = Color(0xFF475569);
-
-// Removed local BreakdownEntry class to use the one from activity_form_provider.dart
-
-class FundSourceEntry {
-  String fundingSource = 'Agri MOOE';
-  String? objectOfExpenditure = 'Other-MOE Expenses';
-  final TextEditingController amountCtl;
-  final TextEditingController customFundingSourceCtl;
-  final TextEditingController customObjectOfExpenditureCtl;
-  final List<BreakdownEntry> breakdownItems = [];
-
-  FundSourceEntry({
-    String amount = '',
-    String? initialSource,
-    String? initialOE,
-  }) : fundingSource = initialSource ?? 'Agri MOOE',
-       objectOfExpenditure = initialOE ?? 'Other-MOE Expenses',
-       amountCtl = TextEditingController(text: amount),
-       customFundingSourceCtl = TextEditingController(),
-       customObjectOfExpenditureCtl = TextEditingController();
-
-  void dispose() {
-    amountCtl.dispose();
-    customFundingSourceCtl.dispose();
-    customObjectOfExpenditureCtl.dispose();
-    for (var e in breakdownItems) {
-      e.dispose();
-    }
-  }
-}
+const border = Color(0xFFE2E8F0);
 
 // =============================================================================
 // AddActivityDialog
@@ -73,9 +37,11 @@ class AddActivityDialog extends StatefulWidget {
 
 class AddActivityDialogState extends State<AddActivityDialog> {
   final formKey = GlobalKey<FormState>();
+  int currentStep = 0;
 
   String sector = AppConstants.sectors.first;
   String? subSector;
+  String activityStatus = AppConstants.statusPRStage;
   final activityNameCtl = TextEditingController();
   final unitHeadCtl = TextEditingController();
   final performanceIndicatorCtl = TextEditingController();
@@ -83,6 +49,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   final targetNoCtl = TextEditingController();
   final budgetCtl = TextEditingController();
   final ppmpAmountCtl = TextEditingController();
+  final inputtedAmountCtl = TextEditingController();
   final ppmpCtl = TextEditingController();
 
   final prAmountCtl = TextEditingController();
@@ -95,105 +62,173 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   final customSectorCtl = TextEditingController();
   final customSubSectorCtl = TextEditingController();
   final customResponsiblePersonCtl = TextEditingController();
-  final customStatusCtl = TextEditingController();
-  final customStatusDateCtl = TextEditingController();
   final otherMoeSuppliersCtl = TextEditingController();
   final statusAppropDateCtl = TextEditingController();
+  final accountCodeCtl = TextEditingController();
 
-  String selectedMonth = AppConstants.months[DateTime.now().month - 1];
-  String? selectedToMonth;
   String selectedYear = DateTime.now().year.toString();
   String responsiblePerson = '';
+  Set<String> selectedMonths = {AppConstants.months[DateTime.now().month - 1]};
 
   List<String> availableStaff = AppConstants.staffList;
   List<String> availableSuppliers = [];
   bool saving = false;
   final bool canPop = false;
   final List<FundSourceEntry> fundSourceEntries = [];
+  List<PRLog> prLogs = [];
+  double _trainingPoolBalance = 500000.00; // Default
 
-  final List<String> months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  final List<String> years = AppConstants.years;
-
-  int rowIndex = 0;
-  Color get nextRowColor {
-    final c = rowIndex.isOdd ? rowEven : rowOdd;
-    rowIndex++;
-    return c;
-  }
+  final List<String> steps = ['Classification', 'Budgeting', 'Procurement'];
+  final List<IconData> stepIcons = [Icons.info_outline, Icons.account_balance_wallet_outlined, Icons.shopping_cart_outlined];
 
   @override
   void initState() {
     super.initState();
     final formProvider = Provider.of<ActivityFormProvider>(context, listen: false);
-    
-    // Initialize from persistent provider state
+
     sector = formProvider.sector;
     subSector = formProvider.subSector;
-    selectedMonth = formProvider.selectedMonth;
-    selectedToMonth = formProvider.selectedToMonth;
     selectedYear = formProvider.selectedYear;
     responsiblePerson = formProvider.responsiblePerson;
     supplierAppropCtl.text = formProvider.supplierAppropCtl.text;
 
-    if (widget.initialResponsiblePersons != null &&
-        widget.initialResponsiblePersons!.isNotEmpty) {
+    if (widget.initialResponsiblePersons != null && widget.initialResponsiblePersons!.isNotEmpty) {
       responsiblePerson = widget.initialResponsiblePersons!.first;
     }
-    
-    fundSourceEntries.add(FundSourceEntry(
-      initialSource: formProvider.lastFundingSource,
-      initialOE: formProvider.lastObjectOfExpenditure,
-    ));
 
-    // PR Balance = Approved Budget - PR Amount
-    prAmountCtl.addListener(updatePRBalance);
-    // PPMP Balance = PPMP Amount - Approved Budget
-    ppmpAmountCtl.addListener(updatePPMPBalance);
+    fundSourceEntries.add(
+      FundSourceEntry(
+        initialSource: formProvider.lastFundingSource,
+        initialOE: formProvider.lastObjectOfExpenditure,
+      ),
+    );
 
-    // Only fund sources are linked to Approved Budget (not PO/breakdown items)
+    prAmountCtl.addListener(() {
+      updatePPMPBalance();
+      updatePRBalance();
+    });
+
     for (var entry in fundSourceEntries) {
       entry.amountCtl.addListener(updateTotalBudget);
-      entry.customFundingSourceCtl.addListener(() => setState(() {}));
-      entry.customObjectOfExpenditureCtl.addListener(() => setState(() {}));
     }
 
+    accountCodeCtl.addListener(_handleAccountCodeChange);
+    inputtedAmountCtl.addListener(updatePPMPBalance);
     loadData();
   }
 
-  // PPMP Balance = PPMP Amount - Approved Budget
-  void updatePPMPBalance() {
-    final ppmpAmount = CurrencyInputFormatter.parse(ppmpAmountCtl.text);
-    final budget = CurrencyInputFormatter.parse(budgetCtl.text);
-    final balance = ppmpAmount - budget;
-    final newText = CurrencyInputFormatter.formatDouble(balance);
-    if (ppmpCtl.text != newText) {
-      setState(() => ppmpCtl.text = newText);
+  void _handleAccountCodeChange() {
+    if (accountCodeCtl.text == '5-02-02-010') {
+      if (budgetCtl.text != '500,000.00') {
+        setState(() => budgetCtl.text = '500,000.00');
+      }
+      _fetchTrainingPool();
+    }
+    updatePPMPBalance();
+  }
+
+  Future<void> _fetchTrainingPool() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('budget_lines')
+          .doc('training-seminars-2026')
+          .get();
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        setState(() {
+          _trainingPoolBalance = (data['current_balance'] ?? 500000.00).toDouble();
+        });
+        updatePPMPBalance();
+      }
+    } catch (e) {
+      debugPrint('Error fetching training pool: $e');
     }
   }
 
-  // PR Balance = Approved Budget - PR Amount
-  void updatePRBalance() {
-    final budget = CurrencyInputFormatter.parse(budgetCtl.text);
+  void updatePPMPBalance() {
     final prAmount = CurrencyInputFormatter.parse(prAmountCtl.text);
-    final balance = budget - prAmount;
+    final inputted = CurrencyInputFormatter.parse(inputtedAmountCtl.text);
+    final budget = CurrencyInputFormatter.parse(budgetCtl.text);
+    
+    // Effective budget is the manual input if provided, otherwise the calculated budget
+    final effectiveBudget = inputted > 0 ? inputted : budget;
+
+    if (accountCodeCtl.text == '5-02-02-010') {
+      // Use the pool balance for training expenses
+      final balance = _trainingPoolBalance - prAmount;
+      final newText = CurrencyInputFormatter.formatDouble(balance);
+      if (ppmpCtl.text != newText) {
+        setState(() => ppmpCtl.text = newText);
+      }
+    } else {
+      // Default logic for other activities
+      final balance = effectiveBudget - prAmount;
+      final newText = CurrencyInputFormatter.formatDouble(balance);
+      if (ppmpCtl.text != newText) {
+        setState(() => ppmpCtl.text = newText);
+      }
+    }
+  }
+
+  void updatePRBalance() {
+    final double prAmount = CurrencyInputFormatter.parse(prAmountCtl.text);
+    double poAmount = 0;
+    for (var entry in fundSourceEntries) {
+      for (var b in entry.breakdownItems) {
+        poAmount += CurrencyInputFormatter.parse(b.amountCtl.text);
+      }
+    }
+    final double balance = prAmount - poAmount;
     setState(() {
       prBalanceCtl.text = CurrencyInputFormatter.formatDouble(balance);
     });
   }
 
+  void _loadTemplate(ActivityTemplate template) {
+    setState(() {
+      activityNameCtl.text = template.name;
+      sector = template.sector;
+      subSector = template.subSector;
+      unitHeadCtl.text = filteredSectionHead;
+      
+      // Clear existing fund sources and items
+      for (var e in fundSourceEntries) { e.dispose(); }
+      fundSourceEntries.clear();
+
+      final entry = FundSourceEntry(
+        initialSource: 'Agri MOOE',
+        initialOE: 'Trainings and Seminar Expenses',
+      );
+      
+      for (var item in template.items) {
+        final be = BreakdownEntry();
+        be.nameCtl.text = item.name;
+        be.unitCtl.text = item.unit;
+        be.q1QtyCtl.text = item.q1 > 0 ? item.q1.toString() : '';
+        be.q2QtyCtl.text = item.q2 > 0 ? item.q2.toString() : '';
+        be.q3QtyCtl.text = item.q3 > 0 ? item.q3.toString() : '';
+        be.q4QtyCtl.text = item.q4 > 0 ? item.q4.toString() : '';
+        be.priceCtl.text = CurrencyInputFormatter.formatDouble(item.price);
+        
+        // Initial calculation
+        final totalQty = item.q1 + item.q2 + item.q3 + item.q4;
+        be.quantityCtl.text = totalQty.toString();
+        be.amountCtl.text = CurrencyInputFormatter.formatDouble(totalQty * item.price);
+        
+        be.amountCtl.addListener(updateTotalBudget);
+        be.accountCodeCtl.text = '5-02-02-010'; // Default for these training-heavy templates
+        entry.breakdownItems.add(be);
+      }
+      
+      entry.amountCtl.addListener(updateTotalBudget);
+      fundSourceEntries.add(entry);
+      
+      // Auto-set account code for these templates as they are Training Expenses
+      accountCodeCtl.text = '5-02-02-010';
+      
+      updateTotalBudget();
+    });
+  }
 
   void updateTotalBudget() {
     double grandTotal = 0;
@@ -203,8 +238,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         for (var b in entry.breakdownItems) {
           entryTotal += CurrencyInputFormatter.parse(b.amountCtl.text);
         }
-        final formattedEntryTotal =
-            CurrencyInputFormatter.formatDouble(entryTotal);
+        final formattedEntryTotal = CurrencyInputFormatter.formatDouble(entryTotal);
         if (entry.amountCtl.text != formattedEntryTotal) {
           entry.amountCtl.text = formattedEntryTotal;
         }
@@ -220,60 +254,28 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         budgetCtl.text = formattedTotal;
       });
     }
-    // We no longer automatically force PPMP Amount to match Approved Budget.
-    // This allows users to track PPMP allocation vs actual approved budget.
     updatePPMPBalance();
     updatePRBalance();
-  }
-
-  int calculateQuartersInRange() {
-    final quarters = <int>{};
-    int getQ(String m) {
-      if (['January', 'February', 'March'].contains(m)) return 1;
-      if (['April', 'May', 'June'].contains(m)) return 2;
-      if (['July', 'August', 'September'].contains(m)) return 3;
-      if (['October', 'November', 'December'].contains(m)) return 4;
-      return 1;
-    }
-    
-    quarters.add(getQ(selectedMonth));
-    if (selectedToMonth != null) {
-      int qF = getQ(selectedMonth);
-      int qT = getQ(selectedToMonth!);
-      for (int i = qF; i <= qT; i++) {
-        quarters.add(i);
-      }
-    }
-    return quarters.length.clamp(1, 4);
   }
 
   Future<void> loadData() async {
     try {
       final staff = await widget.fbService.getAvailableStaff();
-      final actSnapshot = await FirebaseFirestore.instance
-          .collection('activities')
-          .get();
+      final actSnapshot = await FirebaseFirestore.instance.collection('activities').get();
 
       final suppSet = <String>{...AppConstants.commonSuppliers};
       for (var doc in actSnapshot.docs) {
         final data = doc.data();
         final supp = data['other_moe_suppliers'];
-        if (supp != null && supp is String && supp.trim().isNotEmpty) {
-          suppSet.add(supp.trim());
-        }
+        if (supp != null && supp is String && supp.trim().isNotEmpty) suppSet.add(supp.trim());
       }
 
       setState(() {
         availableStaff = staff.where((s) => s != 'Other').toList();
-
-        if (responsiblePerson.isNotEmpty &&
-            !availableStaff.contains(responsiblePerson)) {
+        if (responsiblePerson.isNotEmpty && !availableStaff.contains(responsiblePerson)) {
           availableStaff.insert(0, responsiblePerson);
         }
-        if (responsiblePerson.isEmpty && availableStaff.isNotEmpty) {
-          responsiblePerson = availableStaff.first;
-        }
-
+        if (responsiblePerson.isEmpty && availableStaff.isNotEmpty) responsiblePerson = availableStaff.first;
         availableSuppliers = suppSet.toList()..sort();
       });
     } catch (_) {}
@@ -288,8 +290,9 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     targetNoCtl.dispose();
     budgetCtl.dispose();
     ppmpAmountCtl.dispose();
+    inputtedAmountCtl.dispose();
     ppmpCtl.dispose();
-
+    accountCodeCtl.dispose();
     prAmountCtl.dispose();
     prBalanceCtl.dispose();
     prNumberCtl.dispose();
@@ -301,114 +304,58 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     customSubSectorCtl.dispose();
     customResponsiblePersonCtl.dispose();
     otherMoeSuppliersCtl.dispose();
-    customStatusDateCtl.dispose();
     statusAppropDateCtl.dispose();
-
     super.dispose();
   }
 
-  bool get isEdited {
-    // Only check fields that the user directly interacts with and that should count as an edit
-    final hasBasicInfo = activityNameCtl.text.trim().isNotEmpty ||
-        unitHeadCtl.text.trim().isNotEmpty ||
-        performanceIndicatorCtl.text.trim().isNotEmpty ||
-        locationCtl.text.trim().isNotEmpty ||
-        targetParticipantsCtl.text.trim().isNotEmpty ||
-        remarksCtl.text.trim().isNotEmpty;
-
-    final hasNumericChanges = (targetNoCtl.text.trim().isNotEmpty && targetNoCtl.text.trim() != '1') ||
-        (budgetCtl.text.trim().isNotEmpty && budgetCtl.text.trim() != '0.00') ||
-        (ppmpCtl.text.trim().isNotEmpty && ppmpCtl.text.trim() != '0.00') ||
-        (prAmountCtl.text.trim().isNotEmpty && prAmountCtl.text.trim() != '0.00');
-
-    final hasDropdownChanges = sector != AppConstants.sectors.first ||
-        (responsiblePerson.isNotEmpty && responsiblePerson != 'Admin');
-
-    final hasFundChanges = fundSourceEntries.length > 1 ||
-        fundSourceEntries.any((e) =>
-            (e.amountCtl.text.isNotEmpty && e.amountCtl.text != '0.00') ||
-            (e.fundingSource != 'Agri MOOE') ||
-            (e.objectOfExpenditure != 'Other-MOE Expenses') ||
-            (e.fundingSource == 'Other' && e.customFundingSourceCtl.text.trim().isNotEmpty));
-
-    final hasOtherChanges = otherMoeSuppliersCtl.text.trim().isNotEmpty ||
-        customStatusDateCtl.text.trim().isNotEmpty ||
-        customSectorCtl.text.trim().isNotEmpty ||
-        customSubSectorCtl.text.trim().isNotEmpty ||
-        customResponsiblePersonCtl.text.trim().isNotEmpty;
-
-    return hasBasicInfo ||
-        hasNumericChanges ||
-        hasDropdownChanges ||
-        hasFundChanges ||
-        hasOtherChanges;
-  }
+  bool get isEdited => activityNameCtl.text.trim().isNotEmpty || budgetCtl.text.trim().isNotEmpty && budgetCtl.text.trim() != '0.00' || fundSourceEntries.length > 1;
 
   Future<void> handleClose() async {
     if (!isEdited) {
-      if (mounted) {
-        context.read<ActivityFormProvider>().closeForm();
-      }
+      if (mounted) context.read<ActivityFormProvider>().closeForm();
       return;
     }
-
     final shouldClose = await showDialog<bool>(
       context: context,
       barrierColor: Colors.transparent,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: const Text('Discard changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to discard them?',
-        ),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Discard'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Discard')),
         ],
       ),
     );
-
-    if (shouldClose == true && mounted) {
-      context.read<ActivityFormProvider>().closeForm();
-    }
+    if (shouldClose == true && mounted) context.read<ActivityFormProvider>().closeForm();
   }
 
-  Widget buildRowPair(Widget left, Widget right) {
-    final width = MediaQuery.of(context).size.width;
-    // The dialog is approx 95% of screen width. Use 700 as a more comfortable breakpoint for side-by-side rows
-    if (width < 700) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          left,
-          right,
-        ],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: left),
-        Container(width: 1, color: border),
-        Expanded(child: right),
-      ],
-    );
+  List<String> get filteredSubSectors {
+    if (sector == 'Crop Section') return ['Rice', 'Corn', 'HVCDP', 'Organic Program'];
+    if (sector == 'Inland Fisheries Section') return ['Tilapia', 'Bangus', 'Seaweeds'];
+    return AppConstants.subSectors;
+  }
+
+  String get filteredSectionHead {
+    if (sector == 'Crop Section') return 'Engr. Ina Grace Tan';
+    if (sector == 'Administrative Support Services Unit') return 'Admin Head';
+    return 'Section Head';
+  }
+
+  bool get hasBudgetWarning {
+    final budget = CurrencyInputFormatter.parse(budgetCtl.text);
+    final prAmount = CurrencyInputFormatter.parse(prAmountCtl.text);
+    return prAmount > budget && budget > 0;
+  }
+
+  bool get isSaveDisabled {
+    return activityNameCtl.text.isEmpty || accountCodeCtl.text.isEmpty || CurrencyInputFormatter.parse(budgetCtl.text) <= 0;
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    rowIndex = 0; // reset before every build
-
     return PopScope(
       canPop: canPop,
       onPopInvokedWithResult: (didPop, _) async {
@@ -416,869 +363,524 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         await handleClose();
       },
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 1200),
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 900),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              spreadRadius: 2,
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
             ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                buildTitleBar(),
-                buildMenuBar(),
-                Flexible(
-                  child: Container(
-                    color: Colors.white,
-                    child: SingleChildScrollView(
-                      child: Form(
-                        key: formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            buildRowPair(
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader('A', 'CLASSIFICATION'),
-                                  xlRow(
-                                    'A1',
-                                    'Section / Unit',
-                                    buildSectorCell(),
-                                  ),
-                                  if (sector == 'Other')
-                                    xlRow(
-                                      'A2',
-                                      'Custom Sector',
-                                      textCell(customSectorCtl),
-                                    ),
-                                  if (sector == 'Crop Section') ...[
-                                    xlRow(
-                                      'A2',
-                                      'Crop Program',
-                                      buildSubSectorCell(),
-                                    ),
-                                    if (subSector == 'Other')
-                                      xlRow(
-                                        'A3',
-                                        'Custom Program',
-                                        textCell(customSubSectorCtl),
-                                      ),
-                                  ],
-                                  xlRow(
-                                    'A$rowIndex',
-                                    'Section / Unit Head',
-                                    textCell(unitHeadCtl),
-                                  ),
-                                  xlRow(
-                                    'A$rowIndex',
-                                    'PPA / Activity Name',
-                                    textCell(activityNameCtl),
-                                  ),
-                                  xlRow(
-                                    'A$rowIndex',
-                                    'Location',
-                                    textCell(locationCtl),
-                                  ),
-                                  xlRow(
-                                    'A$rowIndex',
-                                    'Performance Indicator',
-                                    textCell(performanceIndicatorCtl),
-                                  ),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader('B', 'TARGETS & BUDGET'),
-                                  xlRow(
-                                    'B1',
-                                    'Target No.',
-                                    numberCell(targetNoCtl),
-                                  ),
-                                  xlRow(
-                                    'B2',
-                                    'Approved Budget',
-                                    currencyCell(budgetCtl, readOnly: true),
-                                  ),
-                                  xlRow(
-                                    'B3',
-                                    'PPMP Amount',
-                                    currencyCell(ppmpAmountCtl), // Changed to editable
-                                  ),
-                                  xlRow(
-                                    'B4',
-                                    'PPMP Balance',
-                                    currencyCell(ppmpCtl, readOnly: true),
-                                  ),
-
-                                  xlRow(
-                                    'B5',
-                                    'Target Participants',
-                                    textCell(targetParticipantsCtl),
-                                  ),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                            ),
-                            buildRowPair(
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader(
-                                    'PR',
-                                    'PURCHASE REQUEST DETAILS',
-                                  ),
-                                  xlRow(
-                                    'PR1',
-                                    'PR Number',
-                                    textCell(prNumberCtl),
-                                  ),
-                                    xlRow('PR2', 'PR Amount', currencyCell(prAmountCtl)),
-                                  xlRow(
-                                    'PR3',
-                                    'PR Balance',
-                                    currencyCell(prBalanceCtl, readOnly: true),
-                                  ),
-                                  xlRow(
-                                    'PR4',
-                                    'Supplier',
-                                    supplierCell(supplierAppropCtl),
-                                  ),
-                                  xlRow(
-                                    'PR5',
-                                    'Barcode',
-                                    barcodeCell(barcodeAppropCtl),
-                                  ),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader('D', 'ASSIGNMENT'),
-                                  xlRow(
-                                    'D1',
-                                    'Responsible Person',
-                                    buildResponsiblePersonCell(),
-                                  ),
-                                  if (responsiblePerson == 'Other')
-                                    xlRow(
-                                      'D2',
-                                      'Custom Person',
-                                      textCell(customResponsiblePersonCtl),
-                                    ),
-                                  Container(height: 1, color: border),
-                                  // Reset index for section E
-                                  Builder(builder: (context) {
-                                    rowIndex = 1;
-                                    return const SizedBox.shrink();
-                                  }),
-                                  xlRow(
-                                    'E$rowIndex',
-                                    'Month (From)',
-                                    buildMonthCell(),
-                                  ),
-                                  xlRow(
-                                    'E$rowIndex',
-                                    'Month (To)',
-                                    buildToMonthCell(),
-                                  ),
-                                  xlRow(
-                                    'E$rowIndex',
-                                    'Year',
-                                    buildYearCell(),
-                                  ),
-                                  xlRow(
-                                    'E$rowIndex',
-                                    'Remarks',
-                                    textCell(remarksCtl, maxLines: 2),
-                                  ),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                            ),
-                            buildRowPair(
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader(
-                                    '',
-                                    'FUNDING SOURCE & EXPENDITURES',
-                                  ),
-                                  buildFundSourcesSection(),
-                                  xlRow(
-                                    '',
-                                    'Other MOE Suppliers',
-                                    supplierCell(
-                                      otherMoeSuppliersCtl,
-                                      allowsMultiple: true,
-                                    ),
-                                  ),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  buildSectionHeader(
-                                    'F',
-                                    'FINANCIAL BREAKDOWN',
-                                  ),
-                                  buildBreakdownsSection(),
-                                  Container(height: 1, color: border),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        ),
-                      ),
-                    ),
+          children: [
+            buildTitleBar(),
+            GridStatusBreadcrumbs(
+              currentStatus: activityStatus,
+              statuses: [
+                AppConstants.statusPRPreparation,
+                AppConstants.statusBACProcessing,
+                AppConstants.statusObreAbstractSig,
+                AppConstants.statusCompleted
+              ],
+              onStatusChanged: (val) => setState(() => activityStatus = val),
+            ),
+            GridStepIndicator(currentStep: currentStep, steps: steps, icons: stepIcons),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    children: [
+                      _buildStepGuidance(),
+                      if (currentStep == 0) buildStep1(),
+                      if (currentStep == 1) buildStep2(),
+                      if (currentStep == 2) buildStep3(),
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
-                buildFooter(),
-              ],
+              ),
             ),
-          ),
-      );
-  }
-
-  // ── Modern Title Bar ─────────────────────────────────────────────────────────
-  Widget buildTitleBar() {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: modernDark,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+            buildFooter(),
+          ],
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+    );
+  }
+
+  Widget _buildStepGuidance() {
+    String title = "";
+    String description = "";
+    IconData icon = Icons.help_outline;
+
+    switch (currentStep) {
+      case 0:
+        title = "Basic Information";
+        description = "Start by defining what this activity is and who is responsible. You can use a template to save time.";
+        icon = Icons.info_outline;
+        break;
+      case 1:
+        title = "Budget & Planning";
+        description = "Allocate funds and set targets. The PPMP Balance is automatically calculated based on your total budget.";
+        icon = Icons.account_balance_wallet_outlined;
+        break;
+      case 2:
+        title = "Procurement Details";
+        description = "Enter the specific Purchase Request details and supplier information to track the actual spending.";
+        icon = Icons.shopping_cart_outlined;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: modernGreen.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: modernGreen.withValues(alpha: 0.1)),
+      ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 22),
-          ),
+          Icon(icon, color: modernGreen, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add New Activity',
+                  title,
                   style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: -0.2,
+                    color: modernDark,
                   ),
                 ),
                 Text(
-                  'AgriWork & Financial Planning System (AWFPS)',
+                  description,
                   style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
+                    fontSize: 13,
+                    color: Colors.black54,
                   ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => Provider.of<ActivityFormProvider>(
-              context,
-              listen: false,
-            ).minimizeForm(),
-            icon: const Icon(Icons.remove_rounded, color: Colors.white),
-            tooltip: 'Minimize',
+        ],
+      ),
+    );
+  }
+
+  Widget buildTitleBar() => Container(
+    height: 80,
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [modernDark, modernGreen],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
           ),
-          IconButton(
+          child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Create Agri Activity',
+                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+              ),
+              Text(
+                'Follow the steps to plan your procurement and budget.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        Tooltip(
+          message: 'Minimize this form to continue later.',
+          child: IconButton(
+            onPressed: () => context.read<ActivityFormProvider>().minimizeForm(),
+            icon: const Icon(Icons.remove_rounded, color: Colors.white),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              padding: const EdgeInsets.all(12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: 'Discard changes and close this dialog.',
+          child: IconButton(
             onPressed: handleClose,
             icon: const Icon(Icons.close_rounded, color: Colors.white),
-            tooltip: isEdited ? 'Discard' : 'Close',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Quick Info Bar ───────────────────────────────────────────────────
-  Widget buildMenuBar() {
-    return Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: modernGreen,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline_rounded, size: 16, color: Colors.white.withValues(alpha: 0.9)),
-          const SizedBox(width: 8),
-          Text(
-            'Please fill out the form naturally. Fields scale to fit content.',
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              padding: const EdgeInsets.all(12),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section Header (accent bar + bold text) ──────────────────
-  Widget buildSectionHeader(String col, String title) {
-    rowIndex = 0; // reset row counter per section
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        border: Border(
-          left: BorderSide(color: modernGreen, width: 4),
-          bottom: const BorderSide(color: border),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            alignment: Alignment.center,
-            child: Text(
-              col,
-              style: GoogleFonts.inter(
-                color: modernGreen,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                title,
-                style: GoogleFonts.inter(
-                  color: modernDark,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
-  // ── Modern Row View ───────────────────────────────────────────────────────────────
-  Widget xlRow(String rowLabel, String fieldLabel, Widget cell) {
-    final bg = nextRowColor;
-    final bool isMobile = ResponsiveUtils.isMobile(context);
-
-    if (isMobile) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: bg,
-          border: const Border(bottom: BorderSide(color: border, width: 0.8)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: modernGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    rowLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: modernGreen,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    fieldLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: textMain,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            cell,
-          ],
-        ),
-      );
-    }
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        border: const Border(bottom: BorderSide(color: border, width: 0.8)),
-      ),
-      child: IntrinsicHeight(
+  Widget buildStep1() => Column(
+    children: [
+      const GridSectionHeader(label: '0', title: 'Quick Templates'),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Row identifier
-            Container(
-              width: 42,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: labelBg,
-                border: Border(right: BorderSide(color: border, width: 0.8)),
-              ),
-              child: Text(
-                rowLabel,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: labelText.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            // Label
-            Container(
-              width: 180,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: const BoxDecoration(
-                color: labelBg,
-                border: Border(right: BorderSide(color: border, width: 0.8)),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                fieldLabel,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: textMain,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            // Input widget
+            const Icon(Icons.auto_awesome, color: modernGreen, size: 18),
+            const SizedBox(width: 12),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: cell,
+              child: GridDropdown<ActivityTemplate?>(
+                value: null,
+                hint: 'Select a program template to auto-fill...',
+                options: [null, ...ActivityTemplates.templates],
+                labelBuilder: (t) => t?.name ?? 'Select Template',
+                tooltip: 'Select a program template to automatically fill the form fields.',
+                onChanged: (val) {
+                  if (val != null) _loadTemplate(val);
+                },
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  // ── Cell builders ───────────────────────────────────────────────────────────
-  InputDecoration cellDec([String? hint]) => InputDecoration(
-    hintText: hint,
-    hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.black26),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: modernGreen, width: 1.5),
-    ),
-    errorStyle: const TextStyle(height: 0),
-  );
-
-  InputDecoration compactDec([String? hint]) => InputDecoration(
-    hintText: hint,
-    hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.black26),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: modernGreen, width: 1.5),
-    ),
-    errorStyle: const TextStyle(height: 0),
-  );
-
-  InputDecorationTheme cellTheme() => InputDecorationTheme(
-    hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.black26),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: modernGreen, width: 1.5),
-    ),
-    errorStyle: const TextStyle(height: 0),
-  );
-
-  InputDecorationTheme compactTheme() => InputDecorationTheme(
-    hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.black26),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: modernGreen, width: 1.5),
-    ),
-    errorStyle: const TextStyle(height: 0),
-  );
-
-  Widget textCell(
-    TextEditingController ctl, {
-    int maxLines = 1,
-    String? hint,
-  }) => TextFormField(
-    controller: ctl,
-    maxLines: maxLines,
-    style: GoogleFonts.inter(
-      fontSize: 14,
-      color: textMain,
-      fontWeight: FontWeight.w500,
-    ),
-    decoration: cellDec(
-      hint ?? (maxLines > 1 ? 'Enter text details...' : null),
-    ),
-  );
-
-  Widget barcodeCell(TextEditingController ctl) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        textCell(ctl),
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: ctl,
-          builder: (context, value, child) {
-            final data = value.text.trim();
-            if (data.isEmpty) return const SizedBox.shrink();
-            return Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-              decoration: BoxDecoration(
-                border: Border.all(color: border),
-                borderRadius: BorderRadius.circular(6),
-                color: Colors.white,
-              ),
-              child: BarcodeWidget(
-                barcode: Barcode.code128(),
-                data: data,
-                height: 60,
-                errorBuilder: (context, error) => const Center(
-                  child: Text(
-                    'Invalid barcode data',
-                    style: TextStyle(color: Colors.red, fontSize: 12),
-                  ),
-                ),
-              ),
-            );
+      const GridSectionHeader(label: 'A', title: 'Classification & Assignment'),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.business_center_outlined, size: 18, color: modernGreen),
+        fieldLabel1: 'Section / Unit',
+        helpText1: 'The administrative unit or section proposing this activity.',
+        child1: GridDropdown<String>(
+          value: sector,
+          options: [...AppConstants.sectors, 'Other'],
+          tooltip: 'The administrative unit or section proposing this activity.',
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                sector = val;
+                subSector = null;
+                unitHeadCtl.text = filteredSectionHead;
+              });
+            }
           },
         ),
-      ],
-    );
-  }
-
-  Widget supplierCell(
-    TextEditingController ctl, {
-    bool allowsMultiple = false,
-  }) {
-    return DropdownMenu<String>(
-      initialSelection: ctl.text.isEmpty || !availableSuppliers.contains(ctl.text)
-          ? ''
-          : ctl.text,
-      controller: ctl,
-      enableSearch: true,
-      enableFilter: true,
-      menuHeight: 250,
-      expandedInsets: EdgeInsets.zero,
-      hintText: 'Select or type supplier...',
-      textStyle: const TextStyle(fontSize: 13, color: textMain, fontWeight: FontWeight.w500),
-      inputDecorationTheme: cellTheme(),
-      menuStyle: MenuStyle(
-        backgroundColor: WidgetStateProperty.all(Colors.white),
-        elevation: WidgetStateProperty.all(8),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        fieldLabel2: 'Program',
+        helpText2: 'The specific agricultural program or project category.',
+        child2: GridDropdown<String?>(
+          value: subSector,
+          options: [null, ...filteredSubSectors, 'Other'],
+          tooltip: 'The specific agricultural program or project category.',
+          onChanged: (val) => setState(() => subSector = val),
         ),
       ),
-      dropdownMenuEntries: [
-        const DropdownMenuEntry(value: '', label: 'Choose a supplier'),
-        ...availableSuppliers.map((s) => DropdownMenuEntry(value: s, label: s)),
-      ],
-      onSelected: (val) {
-        if (val != null && val.isNotEmpty) {
-          if (allowsMultiple) {
-            // If it already contains the value, don't add it again
-            if (!ctl.text.contains(val)) {
-              if (ctl.text.isEmpty) {
-                ctl.text = val;
-              } else {
-                ctl.text = "${ctl.text.trim()}, $val";
-              }
-            }
-          } else {
-            ctl.text = val;
-          }
-        }
-      },
-    );
-  }
-
-  Widget numberCell(TextEditingController ctl) => TextFormField(
-    controller: ctl,
-    keyboardType: TextInputType.number,
-    style: const TextStyle(
-      fontSize: 13,
-      color: textMain,
-      fontWeight: FontWeight.w600,
-    ),
-    decoration: cellDec('0'),
-  );
-
-  Widget currencyCell(
-    TextEditingController ctl, {
-    bool readOnly = false,
-    String? hint,
-    bool isPO = false,
-  }) =>
-      TextFormField(
-        controller: ctl,
-        readOnly: readOnly,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [CurrencyInputFormatter()],
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          color: isPO ? const Color(0xFF1565C0) : (readOnly ? Colors.grey[700] : modernDark),
-          fontWeight: FontWeight.bold,
+      if (sector == 'Other' || subSector == 'Other')
+        GridDualRow(
+          label: '',
+          fieldLabel1: 'Custom Section',
+          child1: GridTextField(controller: customSectorCtl, readOnly: sector != 'Other'),
+          fieldLabel2: 'Custom Program',
+          child2: GridTextField(controller: customSubSectorCtl, readOnly: subSector != 'Other'),
         ),
-        decoration: cellDec(hint ?? '0.00').copyWith(
-          filled: true,
-          fillColor: readOnly ? Colors.grey[100] : Colors.white,
-          prefixText: 'PHP ',
-          prefixStyle: const TextStyle(
-            color: modernGreen,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-          prefixIcon: isPO
-              ? const Icon(
-                  Icons.shopping_cart_outlined,
-                  size: 14,
-                  color: Color(0xFF1565C0),
-                )
-              : null,
-        ),
-        onTapOutside: (_) {
-          if (ctl.text.isNotEmpty) {
-            ctl.text = CurrencyInputFormatter.formatDouble(
-              CurrencyInputFormatter.parse(ctl.text),
-            );
-          }
-        },
-        onFieldSubmitted: (val) {
-          if (val.isNotEmpty) {
-            ctl.text = CurrencyInputFormatter.formatDouble(
-              CurrencyInputFormatter.parse(val),
-            );
-          }
-        },
-      );
-
-  Widget dateCell(TextEditingController ctl, {bool isCompact = false}) => TextFormField(
-    controller: ctl,
-    readOnly: true,
-    style: GoogleFonts.inter(
-      fontSize: isCompact ? 11 : 12,
-      color: textMain,
-      fontWeight: isCompact ? FontWeight.w500 : FontWeight.normal,
-    ),
-    decoration: (isCompact ? compactDec('Date...') : cellDec('Select Date')).copyWith(
-      suffixIcon: Icon(Icons.calendar_today, size: isCompact ? 12 : 14),
-    ),
-    onTap: () async {
-      final currentText = ctl.text;
-      final initialDate = AppDateFormatter.parse(currentText) ?? DateTime.now();
-      final date = await showDatePicker(
-        context: context,
-        initialDate: initialDate,
-        firstDate: DateTime(2000),
-        lastDate: DateTime(2100),
-      );
-      if (date != null) {
-        ctl.text = AppDateFormatter.format(date);
-      }
-    },
-  );
-  Widget dropdownCell<T>({
-    required T? value,
-    required List<T> options,
-    required ValueChanged<T?> onChanged,
-    String? hint,
-  }) {
-    return DropdownMenu<T>(
-      initialSelection: value,
-      enableSearch: true,
-      enableFilter: true,
-      menuHeight: 250,
-      expandedInsets: EdgeInsets.zero,
-      hintText: hint,
-      textStyle: const TextStyle(fontSize: 14, color: textMain, fontWeight: FontWeight.w500),
-      inputDecorationTheme: cellTheme(),
-      menuStyle: MenuStyle(
-        backgroundColor: WidgetStateProperty.all(Colors.white),
-        elevation: WidgetStateProperty.all(8),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.account_tree_outlined, size: 18, color: modernGreen),
+        fieldLabel: 'Account Code',
+        helpText: 'Official COA account code for this expense (e.g. 5-02-02-010 for Training).',
+        child: GridAccountCodePicker(
+          controller: accountCodeCtl,
+          hint: 'Search account code...',
+          tooltip: 'Official COA account code for this expense (e.g. 5-02-02-010 for Training).',
         ),
       ),
-      dropdownMenuEntries: options.map((opt) {
-        return DropdownMenuEntry<T>(
-          value: opt,
-          label: opt.toString(),
-        );
-      }).toList(),
-      onSelected: onChanged,
-    );
-  }
-
-  Widget buildSectorCell() {
-    return dropdownCell<String>(
-      value: sector,
-      options: [
-        ...AppConstants.sectors,
-        'Other',
-      ],
-      onChanged: (val) {
-        if (val != null) {
-          setState(() {
-            sector = val;
-            subSector = null;
-            // Update default OE for existing fund sources
-            for (var e in fundSourceEntries) {
-              if (e.fundingSource == 'Agri MOOE') {
-                final specificApprop = '$sector Appropriation';
-                if (AppConstants.objectsOfExpenditure.contains(
-                  specificApprop,
-                )) {
-                  e.objectOfExpenditure = specificApprop;
-                } else {
-                  e.objectOfExpenditure = 'Other-MOE Expenses';
-                }
-              }
-            }
-          });
-        }
-      },
-    );
-  }
-
-  Widget buildSubSectorCell() {
-    return dropdownCell<String?>(
-      value: subSector,
-      options: [
-        null,
-        ...AppConstants.subSectors,
-      ],
-      onChanged: (val) => setState(() {
-        subSector = val;
-
-        // Update fund sources objectsOfExpenditure for the newly selected sub-sector
-        for (var e in fundSourceEntries) {
-          if (sector == 'Crop Section') {
-            final specificApprop = val != null && val != 'Other'
-                ? '$val Appropriation'
-                : '$sector Appropriation';
-            if (AppConstants.objectsOfExpenditure.contains(specificApprop)) {
-              e.objectOfExpenditure = specificApprop;
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.edit_note_rounded, size: 18, color: modernGreen),
+        fieldLabel: 'PPA / Activity Name',
+        child: GridTextField(
+          controller: activityNameCtl,
+          hint: 'e.g. Rice Technology Demonstration',
+          tooltip: 'Enter the full name of the activity or project.',
+        ),
+      ),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.person_pin_circle_outlined, size: 18, color: modernGreen),
+        fieldLabel1: 'Section Head',
+        child1: GridTextField(
+          controller: unitHeadCtl,
+          tooltip: 'The head of the section or unit responsible for the activity.',
+        ),
+        fieldLabel2: 'Responsible',
+        child2: GridDropdown<String>(
+          value: availableStaff.contains(responsiblePerson) ? responsiblePerson : null,
+          options: [...availableStaff, 'Other'],
+          tooltip: 'The person directly in charge of coordinating this activity.',
+          onChanged: (v) => setState(() => responsiblePerson = v!),
+        ),
+      ),
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.calendar_month_outlined, size: 18, color: modernGreen),
+        fieldLabel: 'Implementation Months',
+        child: GridMonthGrid(
+          selectedMonths: selectedMonths,
+          onToggle: (m) => setState(() {
+            if (selectedMonths.contains(m)) {
+              if (selectedMonths.length > 1) selectedMonths.remove(m);
             } else {
-              e.objectOfExpenditure = 'Other-MOE Expenses';
+              selectedMonths.add(m);
             }
-          }
-        }
-      }),
-    );
-  }
+          }),
+        ),
+      ),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.map_outlined, size: 18, color: modernGreen),
+        fieldLabel1: 'Location',
+        child1: GridTextField(
+          controller: locationCtl,
+          tooltip: 'Where the activity will take place.',
+        ),
+        fieldLabel2: 'Remarks',
+        child2: GridTextField(
+          controller: remarksCtl,
+          tooltip: 'Additional notes or details about the activity.',
+        ),
+      ),
+    ],
+  );
 
-  void addFundSourceEntry() {
-    setState(() {
-      final e = FundSourceEntry();
-      e.amountCtl.addListener(updateTotalBudget);
-      e.customFundingSourceCtl.addListener(() => setState(() {}));
-      e.customObjectOfExpenditureCtl.addListener(() => setState(() {}));
-      fundSourceEntries.add(e);
-      updateTotalBudget();
-    });
+  Widget buildStep2() => Column(
+    children: [
+      const GridSectionHeader(label: 'B', title: 'Budgeting & Targets'),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.trending_up_rounded, size: 18, color: modernGreen),
+        fieldLabel1: 'Target No.',
+        child1: GridTextField(
+          controller: targetNoCtl,
+          keyboardType: TextInputType.number,
+          tooltip: 'Number of sessions, items, or sites targeted.',
+        ),
+        fieldLabel2: 'Target Participants',
+        child2: GridTextField(
+          controller: targetParticipantsCtl,
+          tooltip: 'Expected number of beneficiaries or participants.',
+        ),
+      ),
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.track_changes_outlined, size: 18, color: modernGreen),
+        fieldLabel: 'Performance Indicator',
+        child: GridTextField(
+          controller: performanceIndicatorCtl,
+          tooltip: 'How the success of this activity will be measured.',
+        ),
+      ),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.payments_outlined, size: 18, color: modernGreen),
+        fieldLabel1: 'Approved Budget (Ref)',
+        child1: GridCurrencyField(controller: budgetCtl, readOnly: true),
+        fieldLabel2: 'PPMP Amount',
+        child2: GridCurrencyField(
+          controller: ppmpAmountCtl,
+          tooltip: 'Total amount allocated in the Project Procurement Management Plan.',
+        ),
+      ),
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.input_rounded, size: 18, color: modernGreen),
+        fieldLabel: 'Inputted Amount (Approved Budget Override)',
+        helpText: 'Use this to manually set the budget if the calculated amount is incorrect.',
+        child: GridCurrencyField(
+          controller: inputtedAmountCtl,
+          tooltip: 'Manually override the approved budget if necessary.',
+        ),
+      ),
+      GridRow(
+        label: '',
+        icon: const Icon(Icons.account_balance_outlined, size: 18, color: modernGreen),
+        fieldLabel: 'PPMP Balance (Auto)',
+        helpText: 'Remaining balance for this activity/account code after deducting PRs.',
+        child: GridCurrencyField(
+          controller: ppmpCtl,
+          readOnly: true,
+          tooltip: 'Remaining balance for this activity/account code after deducting PRs.',
+        ),
+      ),
+      const GridSectionHeader(label: 'E', title: 'Fund Sources'),
+      buildFundSourcesSection(),
+      const GridSectionHeader(label: 'F', title: 'Detailed Breakdown'),
+      buildBreakdownsSection(),
+    ],
+  );
+
+  Widget buildStep3() => Column(
+    children: [
+      const GridSectionHeader(label: 'C', title: 'Procurement Tracking (PR/PO List)'),
+      if (hasBudgetWarning)
+        Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: GridFormTheme.warningBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: GridFormTheme.warningRed),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: GridFormTheme.warningRed, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Procurement exceeds allocated budget',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: GridFormTheme.warningRed),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ...prLogs.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final log = entry.value;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2))],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('PR #${idx + 1}', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: modernGreen)),
+                  Tooltip(
+                    message: 'Delete this PR log.',
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () => setState(() {
+                        prLogs.removeAt(idx);
+                        _updateTotalProcurement();
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              GridDualRow(
+                label: '',
+                fieldLabel1: 'PR Number',
+                child1: GridTextField(
+                  initialValue: log.prNumber,
+                  onChanged: (v) => log.prNumber = v,
+                ),
+                fieldLabel2: 'PR Amount',
+                child2: GridCurrencyField(
+                  initialValue: log.prAmount,
+                  onChanged: (v) {
+                    log.prAmount = v;
+                    _updateTotalProcurement();
+                  },
+                ),
+              ),
+              GridDualRow(
+                label: '',
+                fieldLabel1: 'Status',
+                child1: GridDropdown<String>(
+                  value: log.status,
+                  options: AppConstants.prStatuses,
+                  onChanged: (v) => setState(() => log.status = v!),
+                ),
+                fieldLabel2: 'Status Date',
+                child2: GridDateField(
+                  initialValue: log.statusDate,
+                  onChanged: (v) => log.statusDate = v,
+                ),
+              ),
+              GridDualRow(
+                label: '',
+                fieldLabel1: 'PO Number',
+                child1: GridTextField(
+                  initialValue: log.poNumber,
+                  onChanged: (v) => log.poNumber = v,
+                ),
+                fieldLabel2: 'PO Amount',
+                child2: GridCurrencyField(
+                  initialValue: log.poAmount,
+                  onChanged: (v) {
+                    log.poAmount = v;
+                    _updateTotalProcurement();
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: EnhancedButton(
+          onPressed: () => setState(() {
+            prLogs.add(PRLog(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              activityId: '',
+              prNumber: '',
+              prAmount: 0,
+              status: AppConstants.statusPRStage,
+              statusDate: DateTime.now().toString().split(' ').first,
+              timestamp: DateTime.now(),
+            ));
+          }),
+          icon: const Icon(Icons.add_shopping_cart_rounded),
+          label: 'Add Purchase Request (PR)',
+          variant: ButtonVariant.secondary,
+          tooltip: 'Add a new Purchase Request log to track procurement progress.',
+        ),
+      ),
+      const SizedBox(height: 24),
+      GridDualRow(
+        label: '',
+        icon: const Icon(Icons.summarize_outlined, size: 18, color: modernGreen),
+        fieldLabel1: 'Total PR Amount',
+        child1: GridCurrencyField(controller: prAmountCtl, readOnly: true),
+        fieldLabel2: 'Year',
+        child2: GridDropdown<String>(value: selectedYear, options: AppConstants.years, onChanged: (v) => setState(() => selectedYear = v!)),
+      ),
+    ],
+  );
+
+  void _updateTotalProcurement() {
+    double totalPR = 0;
+    for (var log in prLogs) {
+      totalPR += log.prAmount;
+    }
+    prAmountCtl.text = CurrencyInputFormatter.formatDouble(totalPR);
+    // You might also want a PO amount controller or summary field
+    updatePPMPBalance();
   }
 
   Widget buildFundSourcesSection() {
@@ -1286,1018 +888,298 @@ class AddActivityDialogState extends State<AddActivityDialog> {
       children: [
         ...fundSourceEntries.asMap().entries.map((entry) {
           final idx = entry.key;
-          final e = entry.value;
-          final bg = idx.isEven ? rowOdd : rowEven;
-
+          final fe = entry.value;
           return Container(
-            decoration: BoxDecoration(
-              color: bg,
-              border: const Border(
-                bottom: BorderSide(color: border, width: 0.8),
-              ),
-            ),
-            child: Column(
+            color: idx.isEven ? Colors.white : GridFormTheme.rowEven,
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 50,
-                      alignment: Alignment.center,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          '${idx + 1}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: labelText,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
+                SizedBox(
+                  width: 30,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${idx + 1}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: GridFormTheme.accentGreen),
                     ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: buildSourceDropdownForFundSource(e),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 2,
-                                  child: currencyCell(
-                                    e.amountCtl,
-                                    hint: '0.00',
-                                    readOnly: e.breakdownItems.isNotEmpty,
-                                  ),
-                                ),
-                                if (fundSourceEntries.length > 1)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.remove_circle_outline,
-                                      color: Colors.red,
-                                      size: 20,
-                                    ),
-                                    onPressed: () => setState(() {
-                                      final removed =
-                                          fundSourceEntries.removeAt(idx);
-                                      removed.dispose();
-                                      updateTotalBudget();
-                                    }),
-                                  ),
-                              ],
-                            ),
-                            if (e.fundingSource == 'Other')
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: textCell(
-                                  e.customFundingSourceCtl,
-                                  hint: 'Custom Funding Source Name',
-                                ),
-                              ),
-                            if (e.fundingSource == 'Agri MOOE') ...[
-                              const Padding(
-                                padding: EdgeInsets.only(top: 10, bottom: 4),
-                                child: Row(
-                                  children: [
-                                    SizedBox(width: 2),
-                                    Icon(
-                                      Icons.subdirectory_arrow_right,
-                                      size: 12,
-                                      color: Color(0xFF4CAF50),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'OBJECT OF EXPENDITURE',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF4CAF50),
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                    SizedBox(width: 6),
-                                    Expanded(
-                                      child: Divider(
-                                        height: 1,
-                                        thickness: 1,
-                                        color: Color(0xFFB2DFDB),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              buildObjOfExpenditureDropdownForFundSource(e),
-                            ],
-                            if (e.fundingSource == 'Agri MOOE' &&
-                                (e.objectOfExpenditure == 'Other' ||
-                                    e.objectOfExpenditure ==
-                                        'Other-MOE Expenses'))
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: textCell(
-                                  e.customObjectOfExpenditureCtl,
-                                  hint: 'Custom Object of Expenditure',
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                  ),
+                ),
+                const VerticalDivider(width: 1, color: GridFormTheme.border),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: [
+                      buildSourceDropdownForFundSource(fe),
+                      if (fe.fundingSource == 'Agri MOOE') buildObjOfExpenditureDropdownForFundSource(fe)
+                    ],
+                  ),
+                ),
+                const VerticalDivider(width: 1, color: GridFormTheme.border),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    alignment: Alignment.center,
+                    child: GridCurrencyField(
+                      controller: fe.amountCtl,
+                      isCompact: true,
+                      readOnly: fe.breakdownItems.isNotEmpty,
+                      onSubmitted: (v) => updateTotalBudget(),
                     ),
-                  ],
+                  ),
+                ),
+                Tooltip(
+                  message: 'Remove this fund source.',
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                    onPressed: () => setState(() {
+                      fundSourceEntries.removeAt(idx).dispose();
+                      updateTotalBudget();
+                    }),
+                  ),
                 ),
               ],
             ),
           );
         }),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: OutlinedButton.icon(
-            onPressed: addFundSourceEntry,
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text(
-              'Add Funding Source',
-              style: TextStyle(fontSize: 12),
-            ),
-          ),
+        EnhancedButton(
+          onPressed: () => setState(() {
+            final e = FundSourceEntry();
+            e.amountCtl.addListener(updateTotalBudget);
+            fundSourceEntries.add(e);
+          }),
+          icon: const Icon(Icons.add_rounded),
+          label: 'Add Source',
+          variant: ButtonVariant.tertiary,
+          tooltip: 'Add another funding source for this activity.',
         ),
       ],
     );
   }
 
-  Widget buildBreakdownsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: fundSourceEntries.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final fe = entry.value;
-        // Resolve the display name for this funding source
-        final fsLabel = fe.fundingSource == 'Other'
-            ? (fe.customFundingSourceCtl.text.trim().isNotEmpty
-                  ? fe.customFundingSourceCtl.text.trim()
-                  : 'Other')
-            : fe.fundingSource;
+  Widget buildBreakdownsSection() => Column(children: fundSourceEntries.map((fe) => buildNestedBreakdown(fe)).toList());
 
-        final resolvedOE =
-            (fe.objectOfExpenditure == 'Other' ||
-                fe.objectOfExpenditure == 'Other-MOE Expenses')
-            ? (fe.customObjectOfExpenditureCtl.text.trim().isNotEmpty
-                  ? fe.customObjectOfExpenditureCtl.text.trim()
-                  : fe.objectOfExpenditure)
-            : fe.objectOfExpenditure;
-
-        final oeLabel =
-            (fsLabel == 'Agri MOOE' &&
-                resolvedOE != null &&
-                resolvedOE.isNotEmpty)
-            ? ' — $resolvedOE'
-            : '';
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Always-visible funding source divider header
-            Container(
-              decoration: BoxDecoration(
-                color: modernGreen.withValues(alpha: 0.08),
-                border: Border(left: BorderSide(color: modernGreen, width: 3)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 13,
-                    color: modernGreen,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      fundSourceEntries.length > 1
-                          ? 'Source ${idx + 1}: $fsLabel$oeLabel'
-                          : '$fsLabel$oeLabel',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: modernGreen,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            buildNestedBreakdown(fe),
-          ],
-        );
-      }).toList(),
-    );
-  }
-
-  Widget buildSourceDropdownForFundSource(FundSourceEntry e) {
-    return breakdownDropdown<String>(
-      value: e.fundingSource,
-      options: AppConstants.fundingSources,
-      onChanged: (val) {
-        setState(() {
-          e.fundingSource = val!;
-          if (e.fundingSource == 'Agri MOOE') {
-            final specificApprop =
-                (sector == 'Crop Section' &&
-                    subSector != null &&
-                    subSector != 'Other')
-                ? '$subSector Appropriation'
-                : '$sector Appropriation';
-            if (AppConstants.objectsOfExpenditure.contains(specificApprop)) {
-              e.objectOfExpenditure = specificApprop;
-            } else {
-              e.objectOfExpenditure = 'Other-MOE Expenses';
-            }
-          } else {
-            e.objectOfExpenditure = null;
-          }
-        });
-      },
-    );
-  }
-
-  Widget buildObjOfExpenditureDropdownForFundSource(FundSourceEntry e) {
-    return breakdownDropdown<String>(
-      value: e.objectOfExpenditure,
-      options: AppConstants.getFilteredObjectsOfExpenditure(
-        sector,
-        subSector: subSector,
-        fundingSource: e.fundingSource,
-      ),
-      onChanged: (val) => setState(() => e.objectOfExpenditure = val),
-    );
-  }
-
-  Widget buildResponsiblePersonCell() {
-    if (availableStaff.isEmpty) {
-      return Row(
-        children: const [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: modernGreen,
-            ),
-          ),
-          SizedBox(width: 8),
-          Text(
-            'Loading staff...',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
-      );
-    }
-    return dropdownCell<String>(
-      value: (availableStaff.contains(responsiblePerson) ||
-              responsiblePerson == 'Other')
-          ? responsiblePerson
-          : null,
-      options: [
-        ...availableStaff,
-        'Other',
-      ],
-      onChanged: (val) => setState(() => responsiblePerson = val!),
-    );
-  }
-
-  Widget buildMonthCell() => dropdownCell<String>(
-    value: selectedMonth,
-    options: months,
-    onChanged: (val) => setState(() => selectedMonth = val!),
-  );
-
-  Widget buildToMonthCell() => dropdownCell<String?>(
-    value: selectedToMonth,
-    options: [
-      null,
-      ...months,
-    ],
-    onChanged: (val) => setState(() => selectedToMonth = val),
-  );
-
-  Widget buildYearCell() => dropdownCell<String>(
-    value: selectedYear,
-    options: years,
-    onChanged: (val) => setState(() => selectedYear = val!),
-  );
-  // ── Breakdown Table ─────────────────────────────────────────────────────────
   Widget buildNestedBreakdown(FundSourceEntry fe) {
-    final width = MediaQuery.of(context).size.width;
-    final bool isMobile = width < 600;
-
+    final bool isMobile = ResponsiveUtils.isMobile(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          color: modernGreen.withValues(alpha: 0.05),
-          child: Row(
-            children: [
-              const Icon(Icons.list_alt_rounded, size: 16, color: modernDark),
-              const SizedBox(width: 8),
-              Text(
-                'EXPENDITURE BREAKDOWN',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: modernDark,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Column headers - Only for Desktop
-        if (fe.breakdownItems.isNotEmpty && !isMobile)
+        Container(padding: const EdgeInsets.all(8), color: GridFormTheme.highlightGreen, child: Row(children: [const Icon(Icons.list_alt, size: 14), const SizedBox(width: 8), Text(fe.fundingSource, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))])),
+        if (!isMobile && fe.breakdownItems.isNotEmpty)
           Container(
-            color: const Color(0xFFF0F4EF),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            child: Row(
-              children: const [
-                SizedBox(width: 20), // item badge
-                SizedBox(width: 6),
-                Expanded(
-                  flex: 3,
-                  child: Text('Description', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Unit', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Q1', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Q2', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Q3', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Q4', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 1,
-                  child: Text('Total Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 2,
-                  child: Text('Price', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 2,
-                  child: Text('Amount', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: modernGreen)),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  flex: 3,
-                  child: Text('Supplier', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: labelText)),
-                ),
-                SizedBox(width: 24), // delete button space
+            height: 28,
+            color: GridFormTheme.labelBg,
+            child: const Row(
+              children: [
+                SizedBox(width: 30),
+                Expanded(flex: 3, child: HeaderCell(label: 'DESCRIPTION')),
+                Expanded(flex: 1, child: HeaderCell(label: 'UNIT')),
+                Expanded(flex: 1, child: HeaderCell(label: 'Q1')),
+                Expanded(flex: 1, child: HeaderCell(label: 'Q2')),
+                Expanded(flex: 1, child: HeaderCell(label: 'Q3')),
+                Expanded(flex: 1, child: HeaderCell(label: 'Q4')),
+                Expanded(flex: 1, child: HeaderCell(label: 'QTY')),
+                Expanded(flex: 2, child: HeaderCell(label: 'PRICE')),
+                Expanded(flex: 2, child: HeaderCell(label: 'AMOUNT')),
+                Expanded(flex: 2, child: HeaderCell(label: 'ACCT CODE')),
+                Expanded(flex: 3, child: HeaderCell(label: 'SUPPLIER')),
+                SizedBox(width: 40),
               ],
             ),
           ),
-
         ...fe.breakdownItems.asMap().entries.map((entry) {
-          final bIdx = entry.key;
           final be = entry.value;
-          final bg = bIdx.isEven ? Colors.white : const Color(0xFFF8FAF7);
-
-          if (isMobile) {
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: border),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    color: modernGreen.withValues(alpha: 0.08),
-                    child: Row(
-                      children: [
-                        Text('${bIdx + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                        const SizedBox(width: 8),
-                        const Expanded(child: Text('Item Details', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                          onPressed: () => setState(() {
-                            fe.breakdownItems.removeAt(bIdx).dispose();
-                            updateTotalBudget();
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      children: [
-                        mobileBreakdownField('Description', TextFormField(controller: be.nameCtl, decoration: compactDec('Item name...'), style: const TextStyle(fontSize: 12))),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: mobileBreakdownField('Unit', TextFormField(controller: be.unitCtl, decoration: compactDec('Unit'), style: const TextStyle(fontSize: 12)))),
-                            const SizedBox(width: 4),
-                            Expanded(child: mobileBreakdownField('Total Qty', TextFormField(controller: be.quantityCtl, readOnly: true, decoration: compactDec('0'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: mobileBreakdownField('Q1', TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
-                            const SizedBox(width: 4),
-                            Expanded(child: mobileBreakdownField('Q2', TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: mobileBreakdownField('Q3', TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
-                            const SizedBox(width: 4),
-                            Expanded(child: mobileBreakdownField('Q4', TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, decoration: compactDec('0'), style: const TextStyle(fontSize: 12), onChanged: (v) => updateBreakdownAmount(be)))),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: mobileBreakdownField('Price', TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12), onChanged: (v) {
-                              final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
-                              if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
-                              updateBreakdownAmount(be);
-                            }))),
-                            const SizedBox(width: 4),
-                            Expanded(child: mobileBreakdownField('Amount', TextFormField(controller: be.amountCtl, readOnly: true, decoration: compactDec('0.00'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        mobileBreakdownField('Supplier', TextFormField(controller: be.supplierCtl, decoration: compactDec('Supplier...'), style: const TextStyle(fontSize: 12))),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
           return Container(
-            color: bg,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            color: entry.key.isEven ? Colors.white : GridFormTheme.rowEven,
             child: Row(
               children: [
-                SizedBox(width: 20, child: Text('${bIdx + 1}', style: const TextStyle(fontSize: 9, color: modernGreen, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 6),
-                Expanded(flex: 3, child: TextFormField(controller: be.nameCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Description...'))),
-                const SizedBox(width: 4),
-                Expanded(flex: 1, child: TextFormField(controller: be.unitCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('unit'))),
-                const SizedBox(width: 4),
-                // Q1
-                Expanded(flex: 1, child: TextFormField(controller: be.q1QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
-                const SizedBox(width: 4),
-                // Q2
-                Expanded(flex: 1, child: TextFormField(controller: be.q2QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
-                const SizedBox(width: 4),
-                // Q3
-                Expanded(flex: 1, child: TextFormField(controller: be.q3QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
-                const SizedBox(width: 4),
-                // Q4
-                Expanded(flex: 1, child: TextFormField(controller: be.q4QtyCtl, keyboardType: TextInputType.number, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), decoration: compactDec('0'), onChanged: (v) => updateBreakdownAmount(be))),
-                const SizedBox(width: 4),
-                // Total Qty
-                Expanded(flex: 1, child: TextFormField(controller: be.quantityCtl, readOnly: true, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0'))),
-                const SizedBox(width: 4),
-                Expanded(flex: 2, child: TextFormField(controller: be.priceCtl, keyboardType: TextInputType.number, style: const TextStyle(fontSize: 10), decoration: compactDec('0.00'), onChanged: (v) {
-                  final f = CurrencyInputFormatter.formatDouble(CurrencyInputFormatter.parse(v));
-                  if (be.priceCtl.text != f) be.priceCtl.value = TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
-                  updateBreakdownAmount(be);
-                })),
-                const SizedBox(width: 4),
-                Expanded(flex: 2, child: TextFormField(controller: be.amountCtl, readOnly: true, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold), decoration: compactDec('0.00'))),
-                const SizedBox(width: 4),
-                Expanded(flex: 3, child: TextFormField(controller: be.supplierCtl, style: const TextStyle(fontSize: 10), decoration: compactDec('Supplier...'))),
-                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 16), onPressed: () => setState(() {
-                  fe.breakdownItems.removeAt(bIdx).dispose();
-                  updateTotalBudget();
-                })),
+                SizedBox(width: 30, child: Center(child: Text('${entry.key + 1}', style: const TextStyle(fontSize: 9)))),
+                Expanded(flex: 3, child: GridTextField(controller: be.nameCtl, isCompact: true, tooltip: 'Description of the item or service.')),
+                Expanded(flex: 1, child: GridAutocompleteField(controller: be.unitCtl, options: AppConstants.commonUnits, hint: 'unit', isCompact: true, tooltip: 'Unit of measurement (e.g., pcs, units, sets).')),
+                Expanded(flex: 1, child: GridTextField(controller: be.q1QtyCtl, isCompact: true, onSubmitted: (v) => updateBreakdownAmount(be), tooltip: 'Quantity required for Quarter 1.')),
+                Expanded(flex: 1, child: GridTextField(controller: be.q2QtyCtl, isCompact: true, onSubmitted: (v) => updateBreakdownAmount(be), tooltip: 'Quantity required for Quarter 2.')),
+                Expanded(flex: 1, child: GridTextField(controller: be.q3QtyCtl, isCompact: true, onSubmitted: (v) => updateBreakdownAmount(be), tooltip: 'Quantity required for Quarter 3.')),
+                Expanded(flex: 1, child: GridTextField(controller: be.q4QtyCtl, isCompact: true, onSubmitted: (v) => updateBreakdownAmount(be), tooltip: 'Quantity required for Quarter 4.')),
+                Expanded(flex: 1, child: GridTextField(controller: be.quantityCtl, readOnly: true, isCompact: true, tooltip: 'Automatically calculated total quantity (Q1+Q2+Q3+Q4).')),
+                Expanded(flex: 2, child: GridCurrencyField(controller: be.priceCtl, isCompact: true, onSubmitted: (v) => updateBreakdownAmount(be), tooltip: 'Unit price for this item.')),
+                Expanded(flex: 2, child: GridCurrencyField(controller: be.amountCtl, readOnly: true, isCompact: true, tooltip: 'Automatically calculated total amount (Price x Total Quantity).')),
+                Expanded(flex: 2, child: GridAccountCodePicker(controller: be.accountCodeCtl, isCompact: true, hint: 'code', tooltip: 'Select the appropriate accounting classification code.')),
+                Expanded(flex: 3, child: GridTextField(controller: be.supplierCtl, isCompact: true, tooltip: 'Specify the vendor or supplier for this item.')),
+                Tooltip(
+                  message: 'Delete this breakdown item.',
+                  child: IconButton(
+                    icon: const Icon(Icons.delete, size: 16),
+                    onPressed: () => setState(() {
+                      fe.breakdownItems.removeAt(entry.key).dispose();
+                      updateTotalBudget();
+                    }),
+                  ),
+                ),
               ],
             ),
           );
-        }).toList(),
-
-        if (fe.breakdownItems.isNotEmpty)
-          Container(
-            color: headerBg.withValues(alpha: 0.3),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-            child: Row(
-              children: [
-                const SizedBox(width: 20),
-                const SizedBox(width: 6),
-                const Expanded(flex: 3, child: Text('QUARTERLY TOTALS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: modernDark))),
-                const SizedBox(width: 4),
-                const Expanded(flex: 1, child: SizedBox()), // Unit
-                const SizedBox(width: 4),
-                // Q1 Total
-                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q1QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 4),
-                // Q2 Total
-                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q2QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 4),
-                // Q3 Total
-                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q3QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 4),
-                // Q4 Total
-                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.q4QtyCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 4),
-                // Total Qty
-                Expanded(flex: 1, child: Text(fe.breakdownItems.fold<double>(0, (total, b) => total + (double.tryParse(b.quantityCtl.text) ?? 0)).toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: modernGreen))),
-                const SizedBox(width: 4),
-                const Expanded(flex: 2, child: SizedBox()), // Price
-                const SizedBox(width: 4),
-                Expanded(flex: 2, child: Text(CurrencyInputFormatter.formatDouble(fe.breakdownItems.fold<double>(0, (total, b) => total + CurrencyInputFormatter.parse(b.amountCtl.text))), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: modernGreen))),
-                const SizedBox(width: 4),
-                const Expanded(flex: 3, child: SizedBox()), // Supplier
-                const SizedBox(width: 40), // Delete button space
-              ],
-            ),
-          ),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-          child: InkWell(
-            onTap: () => setState(() {
-              final last = fe.breakdownItems.isNotEmpty ? fe.breakdownItems.last : null;
-              final nb = BreakdownEntry(name: '', supplier: last?.supplierCtl.text);
-              nb.amountCtl.addListener(updateTotalBudget);
-              fe.breakdownItems.add(nb);
-              updateTotalBudget();
-            }),
-            child: Row(
-              children: const [
-                Icon(Icons.add_circle_outline, size: 13, color: modernGreen),
-                SizedBox(width: 4),
-                Text('Add Item', style: TextStyle(fontSize: 11, color: modernGreen, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
+        }),
+        EnhancedButton(
+          onPressed: () => setState(() {
+            final nb = BreakdownEntry();
+            nb.amountCtl.addListener(updateTotalBudget);
+            fe.breakdownItems.add(nb);
+          }),
+          icon: const Icon(Icons.add_rounded),
+          label: 'Add Item',
+          variant: ButtonVariant.tertiary,
+          tooltip: 'Add a new line item to this fund source breakdown.',
         ),
       ],
     );
   }
 
   void updateBreakdownAmount(BreakdownEntry be) {
-    final q1 = double.tryParse(be.q1QtyCtl.text) ?? 0.0;
-    final q2 = double.tryParse(be.q2QtyCtl.text) ?? 0.0;
-    final q3 = double.tryParse(be.q3QtyCtl.text) ?? 0.0;
-    final q4 = double.tryParse(be.q4QtyCtl.text) ?? 0.0;
-    final totalQty = q1 + q2 + q3 + q4;
-    
-    be.quantityCtl.text = totalQty > 0 ? totalQty.toString() : '';
-
-    final p = CurrencyInputFormatter.parse(be.priceCtl.text);
-    final amt = totalQty * p;
-    final f = CurrencyInputFormatter.formatDouble(amt);
-    if (be.amountCtl.text != f) {
-      setState(() {
-        be.amountCtl.text = f;
-        updateTotalBudget();
-      });
-    }
+    final q1 = double.tryParse(be.q1QtyCtl.text) ?? 0;
+    final q2 = double.tryParse(be.q2QtyCtl.text) ?? 0;
+    final q3 = double.tryParse(be.q3QtyCtl.text) ?? 0;
+    final q4 = double.tryParse(be.q4QtyCtl.text) ?? 0;
+    final total = q1 + q2 + q3 + q4;
+    be.quantityCtl.text = total.toString();
+    final price = CurrencyInputFormatter.parse(be.priceCtl.text);
+    be.amountCtl.text = CurrencyInputFormatter.formatDouble(total * price);
+    updateTotalBudget();
   }
 
-  Widget mobileBreakdownField(String label, Widget child) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            color: Colors.grey[600],
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        child,
-      ],
-    );
-  }
+  Widget buildSourceDropdownForFundSource(FundSourceEntry e) => GridDropdown<String>(
+        value: e.fundingSource,
+        options: AppConstants.fundingSources,
+        onChanged: (v) => setState(() {
+          e.fundingSource = v!;
+          if (v == 'Agri MOOE') {
+            e.objectOfExpenditure = '$sector Appropriation';
+          } else {
+            e.objectOfExpenditure = null;
+          }
+        }),
+      );
+  Widget buildObjOfExpenditureDropdownForFundSource(FundSourceEntry e) => GridDropdown<String>(value: e.objectOfExpenditure, options: AppConstants.getFilteredObjectsOfExpenditure(sector, fundingSource: e.fundingSource), onChanged: (v) => setState(() => e.objectOfExpenditure = v));
 
-  Widget breakdownDropdown<T>({
-    required T? value,
-    required List<T> options,
-    required ValueChanged<T?> onChanged,
-    bool useCompact = false,
-  }) => DropdownMenu<T>(
-    initialSelection: value,
-    enableSearch: true,
-    enableFilter: true,
-    menuHeight: 250,
-    expandedInsets: EdgeInsets.zero,
-    textStyle: const TextStyle(fontSize: 14, color: textMain, fontWeight: FontWeight.w500),
-    inputDecorationTheme: useCompact ? compactTheme() : cellTheme(),
-    menuStyle: MenuStyle(
-      backgroundColor: WidgetStateProperty.all(Colors.white),
-      elevation: WidgetStateProperty.all(8),
-      shape: WidgetStateProperty.all(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+  Widget buildFooter() => Container(
+    height: 90,
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      border: Border(top: BorderSide(color: border)),
     ),
-    dropdownMenuEntries: options.map((opt) {
-        return DropdownMenuEntry<T>(
-          value: opt,
-          label: opt.toString(),
-        );
-      }).toList(),
-    onSelected: onChanged,
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: Row(
+      children: [
+        if (currentStep > 0)
+          EnhancedButton(
+            onPressed: () => setState(() => currentStep--),
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: 'Back',
+            variant: ButtonVariant.secondary,
+            tooltip: 'Go back to the previous step.',
+          ),
+        const Spacer(),
+        EnhancedButton(
+          onPressed: handleClose,
+          label: 'Cancel',
+          variant: ButtonVariant.tertiary,
+          tooltip: 'Discard all changes and exit.',
+        ),
+        const SizedBox(width: 16),
+        if (currentStep < steps.length - 1)
+          EnhancedButton(
+            onPressed: () => setState(() => currentStep++),
+            icon: const Icon(Icons.arrow_forward_rounded),
+            label: 'Next Step',
+            variant: ButtonVariant.primary,
+            tooltip: 'Proceed to the next part of the form.',
+          )
+        else
+          EnhancedButton(
+            onPressed: isSaveDisabled ? null : () => onSave(false),
+            icon: const Icon(Icons.save_rounded),
+            label: 'Complete & Save',
+            variant: ButtonVariant.primary,
+            tooltip: 'Validate all information and save this activity to the database.',
+          ),
+      ],
+    ),
   );
 
-  // ── Footer ──────────────────────────────────────────────────────────────────
-  Widget buildFooter() {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: border.withValues(alpha: 0.5))),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -4),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: modernGreen.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.description_outlined, size: 16, color: modernGreen),
-                const SizedBox(width: 8),
-                Text(
-                  'Activity Details',
-                  style: GoogleFonts.inter(
-                    color: modernGreen,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: handleClose,
-            style: TextButton.styleFrom(
-              foregroundColor: labelText,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-          ),
-          const SizedBox(width: 12),
-          saving
-              ? const SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: modernGreen,
-                  ),
-                )
-              : Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => onSave(true),
-                      icon: const Icon(Icons.drafts_outlined, size: 18),
-                      label: Text(
-                        'Save as Draft',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: modernGreen,
-                        side: const BorderSide(color: modernGreen, width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1B5E20).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () => onSave(false),
-                        icon: const Icon(Icons.save_rounded, size: 18),
-                        label: Text(
-                          'Save Activity',
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          shadowColor: Colors.transparent,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-        ],
-      ),
-    );
-  }
-
-  // ── Save ────────────────────────────────────────────────────────────────────
   void onSave(bool asDraft) async {
     if (saving) return;
-    final authService = context.read<AuthService>();
-    final userName = authService.currentUser?.name ?? 'Admin';
-
-    // For drafts, we can skip full validation if we want, but let's at least keep the form key state
-    if (!asDraft && !formKey.currentState!.validate()) return;
-
-    formKey.currentState!.save();
-    // Force re-calculation before saving to ensure controllers are in sync
-    updateTotalBudget();
-    setState(() => saving = true);
-
-    try {
-      final resolvedSector = (sector == 'Other' ? customSectorCtl.text : sector)
-          .trim();
-      final resolvedSubSector =
-          (subSector == 'Other'
-                  ? customSubSectorCtl.text
-                  : (subSector ?? ''))
-              .trim();
+    if (!asDraft) {
+      if (!formKey.currentState!.validate()) return;
       
-      final activityName = activityNameCtl.text.trim();
-      final targetDateStr = selectedToMonth != null
-          ? '$selectedMonth - $selectedToMonth $selectedYear'
-          : '$selectedMonth $selectedYear';
-
-      // Check for duplicates
-      final isDuplicate = await widget.fbService.checkDuplicateActivity(
-        activityName,
-        resolvedSector,
-        targetDateStr,
-      );
-
-      if (isDuplicate) {
-        if (mounted) {
+      // Mandate PR Log fields
+      for (int i = 0; i < prLogs.length; i++) {
+        final log = prLogs[i];
+        if (log.prNumber.isEmpty || log.prAmount <= 0 || log.status.isEmpty || log.statusDate == null || log.statusDate!.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('An activity with this name, sector, and target date already exists.'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Please complete all fields for PR #${i + 1} (Number, Amount, Status, and Date)')),
           );
-          setState(() => saving = false);
+          return;
         }
-        return;
       }
-      final budget = CurrencyInputFormatter.parse(budgetCtl.text);
-      final month = selectedMonth;
+    }
+    setState(() => saving = true);
+    try {
+      final monthList = selectedMonths.toList()..sort((a, b) => AppConstants.months.indexOf(a).compareTo(AppConstants.months.indexOf(b)));
+      final dateRange = monthList.length > 1 ? '${monthList.first} - ${monthList.last} $selectedYear' : '${monthList.first} $selectedYear';
 
-      final fundSources = fundSourceEntries
-          .map(
-            (e) => FundSourceItem(
-              fundingSource:
-                  (e.fundingSource == 'Other'
-                          ? e.customFundingSourceCtl.text
-                          : e.fundingSource)
-                      .trim(),
-              objectOfExpenditure: (e.objectOfExpenditure == 'Other'
-                  ? e.customObjectOfExpenditureCtl.text
-                  : e.objectOfExpenditure),
-              amount: CurrencyInputFormatter.parse(e.amountCtl.text),
-            ),
-          )
-          .where((e) => e.fundingSource.isNotEmpty && e.amount > 0)
-          .toList();
-
-      final breakdownList = fundSourceEntries
-          .expand((fe) {
-            final fSource =
-                (fe.fundingSource == 'Other'
-                        ? fe.customFundingSourceCtl.text
-                        : fe.fundingSource)
-                    .trim();
-            final oExp = (fe.objectOfExpenditure == 'Other'
-                ? fe.customObjectOfExpenditureCtl.text
-                : fe.objectOfExpenditure);
-
-            return fe.breakdownItems.map(
-              (be) => BreakdownItem(
-                name: be.nameCtl.text.trim(),
-                amount: CurrencyInputFormatter.parse(be.amountCtl.text),
-                unit: be.unitCtl.text.trim(),
-                quantity: double.tryParse(be.quantityCtl.text) ?? 0.0,
-                price: CurrencyInputFormatter.parse(be.priceCtl.text),
-                q1Qty: double.tryParse(be.q1QtyCtl.text) ?? 0.0,
-                q2Qty: double.tryParse(be.q2QtyCtl.text) ?? 0.0,
-                q3Qty: double.tryParse(be.q3QtyCtl.text) ?? 0.0,
-                q4Qty: double.tryParse(be.q4QtyCtl.text) ?? 0.0,
-                fundingSource: fSource,
-                objectOfExpenditure: oExp,
-                supplier: be.supplierCtl.text.trim().isNotEmpty
-                    ? be.supplierCtl.text.trim()
-                    : '',
-                status: be.statusCtl.text.trim().isNotEmpty
-                    ? be.statusCtl.text.trim()
-                    : '',
-                statusDate: be.statusDateCtl.text.trim().isNotEmpty
-                    ? be.statusDateCtl.text.trim()
-                    : '',
-              ),
-            );
-          })
-          .where((e) => e.name.isNotEmpty || e.amount > 0)
-          .toList();
-
-      final totalPOAmount =
-          breakdownList.fold<double>(0, (total, item) => total + item.amount);
-
-      final newActivity = Activity(
+      final activity = Activity(
         id: '',
-        sector: resolvedSector,
-        subSector: resolvedSubSector,
-        activityName: activityNameCtl.text.trim(),
-        unitHead: unitHeadCtl.text.trim(),
-        performanceIndicator: performanceIndicatorCtl.text.trim(),
+        sector: sector,
+        subSector: subSector,
+        activityName: activityNameCtl.text,
+        performanceIndicator: performanceIndicatorCtl.text,
         targetNo: int.tryParse(targetNoCtl.text) ?? 0,
-        fundingSource: fundSources.isNotEmpty
-            ? fundSources.first.fundingSource
-            : 'Agri MOOE',
-        objectOfExpenditure: fundSources.isNotEmpty
-            ? fundSources.first.objectOfExpenditure
-            : 'Other-MOE Expenses',
-        q1Budget: (month == 'January' || month == 'February' || month == 'March' || 
-                    (selectedToMonth != null && ['January', 'February', 'March'].any((m) => 
-                      months.indexOf(m) >= months.indexOf(selectedMonth) && 
-                      months.indexOf(m) <= months.indexOf(selectedToMonth!))))
-            ? budget / (selectedToMonth == null ? 1 : calculateQuartersInRange())
-            : 0,
-        q2Budget: (month == 'April' || month == 'May' || month == 'June' ||
-                    (selectedToMonth != null && ['April', 'May', 'June'].any((m) => 
-                      months.indexOf(m) >= months.indexOf(selectedMonth) && 
-                      months.indexOf(m) <= months.indexOf(selectedToMonth!))))
-            ? budget / (selectedToMonth == null ? 1 : calculateQuartersInRange())
-            : 0,
-        q3Budget: (month == 'July' || month == 'August' || month == 'September' ||
-                    (selectedToMonth != null && ['July', 'August', 'September'].any((m) => 
-                      months.indexOf(m) >= months.indexOf(selectedMonth) && 
-                      months.indexOf(m) <= months.indexOf(selectedToMonth!))))
-            ? budget / (selectedToMonth == null ? 1 : calculateQuartersInRange())
-            : 0,
-        q4Budget: (month == 'October' || month == 'November' || month == 'December' ||
-                    (selectedToMonth != null && ['October', 'November', 'December'].any((m) => 
-                      months.indexOf(m) >= months.indexOf(selectedMonth) && 
-                      months.indexOf(m) <= months.indexOf(selectedToMonth!))))
-            ? budget / (selectedToMonth == null ? 1 : calculateQuartersInRange())
-            : 0,
-        actualExpenditure: totalPOAmount,
-        ppmpAmount: CurrencyInputFormatter.parse(ppmpAmountCtl.text),
-        ppmpBalance: CurrencyInputFormatter.parse(ppmpCtl.text),
-        prAmount: CurrencyInputFormatter.parse(prAmountCtl.text),
-        prBalance: CurrencyInputFormatter.parse(prBalanceCtl.text),
-        prNumber: prNumberCtl.text.trim(),
-        supplierApprop: supplierAppropCtl.text.trim(),
-        barcodeApprop: barcodeAppropCtl.text.trim(),
-        statusApprop: '',
-        statusAppropDate: '',
-        responsiblePerson:
-            (responsiblePerson == 'Other'
-                    ? customResponsiblePersonCtl.text
-                    : responsiblePerson)
-                .trim(),
-        status: 'Planned',
-        statusDate: '',
-        targetDate: selectedToMonth != null
-            ? '$selectedMonth - $selectedToMonth $selectedYear'
-            : '$selectedMonth $selectedYear',
-        targetParticipants: targetParticipantsCtl.text.trim(),
-        location: locationCtl.text.trim(),
-        fundingInputtedBy: userName.trim(),
-        statusInputtedBy: userName.trim(),
-        otherMoeSuppliers: otherMoeSuppliersCtl.text.trim(),
-        remarks: remarksCtl.text.trim(),
+        fundingSource: fundSourceEntries.first.fundingSource,
+        objectOfExpenditure: fundSourceEntries.first.objectOfExpenditure,
+        responsiblePerson: responsiblePerson,
+        status: activityStatus,
+        targetDate: dateRange,
+        location: locationCtl.text,
+        unitHead: unitHeadCtl.text,
+        remarks: remarksCtl.text,
+        accountCode: accountCodeCtl.text,
         isDraft: asDraft,
-        breakdown: breakdownList,
-        fundSources: fundSources,
+        inputtedAmount: CurrencyInputFormatter.parse(inputtedAmountCtl.text),
+        prLogs: prLogs,
+        fundSources: fundSourceEntries.map((e) => FundSourceItem(fundingSource: e.fundingSource, amount: CurrencyInputFormatter.parse(e.amountCtl.text), objectOfExpenditure: e.objectOfExpenditure)).toList(),
+        breakdown: fundSourceEntries.expand((fe) => fe.breakdownItems.map((be) => BreakdownItem(
+          name: be.nameCtl.text,
+          amount: CurrencyInputFormatter.parse(be.amountCtl.text),
+          unit: be.unitCtl.text,
+          quantity: double.tryParse(be.quantityCtl.text),
+          price: CurrencyInputFormatter.parse(be.priceCtl.text),
+          q1Qty: double.tryParse(be.q1QtyCtl.text),
+          q2Qty: double.tryParse(be.q2QtyCtl.text),
+          q3Qty: double.tryParse(be.q3QtyCtl.text),
+          q4Qty: double.tryParse(be.q4QtyCtl.text),
+          fundingSource: fe.fundingSource,
+          objectOfExpenditure: fe.objectOfExpenditure,
+          supplier: be.supplierCtl.text,
+          accountCode: be.accountCodeCtl.text,
+        ))).toList(),
       );
-
-      final newId = await widget.fbService.addActivity(newActivity);
-
-      // Create initial PR log if PR info exists
-      if (newActivity.prNumber.isNotEmpty ||
-          newActivity.prAmount > 0) {
-        await widget.fbService.addPRLog(
-          PRLog(
-            id: '',
-            activityId: newId,
-            status: 'Pending',
-            prNumber: newActivity.prNumber,
-            amount: newActivity.prAmount,
-            remarks: 'Activity created with initial PR details.',
-            timestamp: DateTime.now(),
-            updatedBy: userName,
-          ),
-        );
-      }
-      if (mounted) {
-        final formProvider = context.read<ActivityFormProvider>();
-        
-        // Persist dropdown values for the next "Add Activity" action
-        formProvider.sector = sector;
-        formProvider.subSector = subSector;
-        formProvider.selectedMonth = selectedMonth;
-        formProvider.selectedToMonth = selectedToMonth;
-        formProvider.selectedYear = selectedYear;
-        formProvider.responsiblePerson = responsiblePerson;
-        
-        if (fundSourceEntries.isNotEmpty) {
-          formProvider.lastFundingSource = fundSourceEntries.first.fundingSource;
-          formProvider.lastObjectOfExpenditure = fundSourceEntries.first.objectOfExpenditure;
-        }
-        
-        formProvider.supplierAppropCtl.text = supplierAppropCtl.text;
-
-        formProvider.closeForm();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              asDraft ? 'Saved as Draft' : 'Activity Saved Successfully',
-            ),
-          ),
-        );
-      }
+      await widget.fbService.addActivity(activity);
+      if (mounted) context.read<ActivityFormProvider>().closeForm();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => saving = false);
     }
+  }
+}
+
+class HeaderCell extends StatelessWidget {
+  final String label;
+  const HeaderCell({super.key, required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.centerLeft,
+      child: Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: GridFormTheme.labelText)),
+    );
   }
 }

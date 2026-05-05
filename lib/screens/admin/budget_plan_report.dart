@@ -158,7 +158,7 @@ class BudgetPlanReport extends StatelessWidget {
             final isSubSub = row.label.startsWith('    ');
             final total2025 = row.items.fold(0.0, (sum, a) => sum + (a.targetDate != '2026' ? a.approvedBudget : 0));
             final totalProposed = row.items.fold(0.0, (sum, a) => sum + (a.targetDate == '2026' ? a.approvedBudget : 0));
-            final totalActual = row.items.fold(0.0, (sum, a) => sum + a.actualExpenditure);
+            final totalActual = row.items.fold(0.0, (sum, a) => sum + a.effectivePOAmount);
 
             return DataRow(
               cells: [

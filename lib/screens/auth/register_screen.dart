@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/agri_ui.dart';
+import '../../core/app_colors.dart';
+import '../../widgets/skeleton_loading.dart';
 
 class RegisterScreen extends StatefulWidget {
   final VoidCallback onLoginTap;
@@ -17,12 +19,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtl = TextEditingController();
   final _nameCtl = TextEditingController();
   final _adminCodeCtl = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passFocus = FocusNode();
+  final _adminCodeFocus = FocusNode();
   String _selectedRole = 'staff';
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureAdminCode = true;
 
   final String _secretAdminCode = 'AGRI-ADMIN-2026';
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _emailCtl.dispose();
+    _passCtl.dispose();
+    _nameCtl.dispose();
+    _adminCodeCtl.dispose();
+    _emailFocus.dispose();
+    _passFocus.dispose();
+    _adminCodeFocus.dispose();
+    super.dispose();
+  }
 
   void _register() async {
     if (_emailCtl.text.isEmpty ||
@@ -57,398 +79,173 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/agri.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(color: Colors.green.shade800),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/agri.png'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.1),
+              BlendMode.darken,
             ),
           ),
-          Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 50,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 50,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                          ),
-                        ],
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Card(
+                elevation: 8,
+                shadowColor: Colors.black.withValues(alpha: 0.08),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Hero(
+                        tag: 'app_logo',
+                        child: Image.asset('assets/AgriLogo.png', height: 50),
                       ),
-                      padding: const EdgeInsets.fromLTRB(28, 52, 28, 28),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      const SizedBox(height: 16),
+                      Text(
+                        'Join AWFPS',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      TextField(
+                        controller: _nameCtl,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocus),
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      TextField(
+                        controller: _emailCtl,
+                        focusNode: _emailFocus,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_passFocus),
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      TextField(
+                        controller: _passCtl,
+                        focusNode: _passFocus,
+                        obscureText: _obscurePassword,
+                        textInputAction: _selectedRole == 'admin' ? TextInputAction.next : TextInputAction.done,
+                        onSubmitted: (_) {
+                          if (_selectedRole == 'admin') {
+                            FocusScope.of(context).requestFocus(_adminCodeFocus);
+                          } else if (!_loading) {
+                            _register();
+                          }
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedRole,
+                        decoration: InputDecoration(
+                          labelText: 'Account Type',
+                          prefixIcon: const Icon(Icons.badge_outlined),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'staff', child: Text('Office Staff')),
+                          DropdownMenuItem(value: 'admin', child: Text('System Administrator')),
+                        ],
+                        onChanged: (val) => setState(() => _selectedRole = val!),
+                      ),
+                      
+                      if (_selectedRole == 'admin') ...[
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _adminCodeCtl,
+                          focusNode: _adminCodeFocus,
+                          obscureText: _obscureAdminCode,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _loading ? null : _register(),
+                          decoration: InputDecoration(
+                            labelText: 'Admin Verification Code',
+                            prefixIcon: const Icon(Icons.security),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureAdminCode ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _obscureAdminCode = !_obscureAdminCode),
+                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 32),
+                      
+                      if (_loading)
+                        const SkeletonLoading(height: 50, borderRadius: 12)
+                      else
+                        ElevatedButton(
+                          onPressed: _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                          ),
+                          child: const Text('CREATE ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.8,
-                              color: Color(0xFF1B5E20),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'AgriWork & Financial Planning System (AWFPS)',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.black45,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          TextField(
-                            controller: _nameCtl,
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 15,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Full Name',
-                              labelStyle: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.person_rounded,
-                                color: Color(0xFF2E7D32),
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF8F9FA),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF2E7D32),
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _emailCtl,
-                            keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 15,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Email Address',
-                              labelStyle: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.email_rounded,
-                                color: Color(0xFF2E7D32),
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF8F9FA),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF2E7D32),
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _passCtl,
-                            obscureText: _obscurePassword,
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 15,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              labelStyle: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.lock_rounded,
-                                color: Color(0xFF2E7D32),
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF8F9FA),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF2E7D32),
-                                  width: 1.5,
-                                ),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_rounded
-                                      : Icons.visibility_rounded,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownMenu<String>(
-                            initialSelection: _selectedRole,
-                            enableSearch: true,
-                            enableFilter: true,
-                            menuHeight: 250,
-                            expandedInsets: EdgeInsets.zero,
-                            label: const Text('Account Type'),
-                            dropdownMenuEntries: const [
-                              DropdownMenuEntry(value: 'staff', label: 'Office Staff'),
-                              DropdownMenuEntry(value: 'admin', label: 'System Admin'),
-                            ],
-                            onSelected: (val) => setState(() => _selectedRole = val!),
-                          ),
-                          if (_selectedRole == 'admin') ...[
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _adminCodeCtl,
-                              obscureText: _obscureAdminCode,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Admin Verification Code',
-                                hintText: 'Enter secret code',
-                                labelStyle: const TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 14,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.security_rounded,
-                                  color: Color(0xFF2E7D32),
-                                  size: 20,
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFFF8F9FA),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF2E7D32),
-                                    width: 1.5,
-                                  ),
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureAdminCode
-                                        ? Icons.visibility_off_rounded
-                                        : Icons.visibility_rounded,
-                                    color: Colors.grey,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureAdminCode = !_obscureAdminCode;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 32),
-                          if (_loading)
-                            const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF4CAF50),
-                                ),
-                              ),
-                            )
-                          else
-                            _buildRegisterButton(),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Already have an account?",
-                                style: TextStyle(color: Colors.black54),
-                              ),
-                              TextButton(
-                                onPressed: widget.onLoginTap,
-                                child: const Text(
-                                  'Login Here',
-                                  style: TextStyle(
-                                    color: Color(0xFF2E7D32),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          const Text("Already have an account?", style: TextStyle(color: Colors.grey)),
+                          TextButton(
+                            onPressed: widget.onLoginTap,
+                            child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
-                    ),
-                    Positioned(
-                      top: -50,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Hero(
-                          tag: 'app_logo',
-                          child: Image.asset('assets/AgriLogo.png', height: 84),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRegisterButton() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF388E3C), Color(0xFF1B5E20)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _register,
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: const Text(
-          'Register',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 0.5,
           ),
         ),
       ),
     );
   }
 }
+

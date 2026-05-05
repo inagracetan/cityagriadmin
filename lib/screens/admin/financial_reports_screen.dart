@@ -13,6 +13,7 @@ import '../../core/localization.dart';
 import '../../widgets/agri_ui.dart';
 import '../../core/constants.dart';
 import '../../core/app_colors.dart';
+import '../../core/design_system.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/export_service.dart';
@@ -30,7 +31,10 @@ class FinancialReportsScreen extends StatefulWidget {
 }
 
 class _FinancialReportsScreenState extends State<FinancialReportsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late TabController _tabController;
   final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
 
@@ -60,12 +64,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       actions: [
         IconButton(
           icon: const Icon(Icons.download, color: Color(0xFFD4AF37)),
-          tooltip: l10n.translate('export_data'),
+          tooltip: 'Export reports to Excel, PDF, or CSV.',
           onPressed: () => _showExportOptions(),
         ),
         IconButton(
           icon: const Icon(Icons.sort, color: Color(0xFFD4AF37)),
-          tooltip: l10n.translate('sort_breakdown'),
+          tooltip: 'Sort and filter report lists.',
           onPressed: () => _showSortOptions(),
         ),
       ],
@@ -175,10 +179,16 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     }
   }
 
+  Stream<List<UserModel>>? _usersStream;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    final fbService = context.read<FirebaseService>();
+    _activitiesStream = fbService.streamActivities();
+    _usersStream = fbService.streamUsers();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.isActive) _updateNav();
@@ -260,9 +270,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final fbService = context.read<FirebaseService>();
-    _activitiesStream ??= fbService.streamActivities();
-
+    super.build(context);
+    final theme = Theme.of(context);
     final l10n = context.watch<SettingsProvider>().l10n;
     return Column(
       children: [
@@ -273,44 +282,33 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
-              child: TextField(
-                onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText:
-                      'Search reports by activity, PR, supplier, or any details (abbreviations allowed)...',
-                  hintStyle: const TextStyle(
-                    color: Slate.shade400,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Icon(
-                      Icons.search_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 22,
+              child: GlassCard(
+                padding: EdgeInsets.zero,
+                child: Tooltip(
+                  message: 'Type to filter reports by activity name, PR number, or supplier.',
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: AppDesignSystem.bodyMedium.copyWith(color: theme.colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: 'Search reports by activity, PR, supplier...',
+                      hintStyle: AppDesignSystem.bodyMedium.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: AppColors.emeraldPrimary,
+                          size: 22,
+                        ),
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 20),
                     ),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E293B)
-                      : Slate.shade50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Slate.shade100),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2.0,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 20),
                 ),
               ),
             ),
@@ -319,61 +317,35 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         Container(
           margin: ResponsiveUtils.screenPadding(
             context,
-          ).copyWith(top: 8, bottom: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-            border: Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+          ).copyWith(top: 16, bottom: 16),
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.center,
-              labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Slate.shade500,
-              overlayColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.hovered)) {
-                  return Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.04);
-                }
-                return null;
-              }),
-              labelStyle: GoogleFonts.inter(
+              labelColor: AppColors.emeraldPrimary,
+              unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              labelStyle: AppDesignSystem.labelMedium.copyWith(
                 fontWeight: FontWeight.w800,
-                fontSize: 13,
                 letterSpacing: -0.2,
               ),
-              unselectedLabelStyle: GoogleFonts.inter(
+              unselectedLabelStyle: AppDesignSystem.labelMedium.copyWith(
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
+                color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border(
+                border: const Border(
                   bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: AppColors.emeraldPrimary,
                     width: 3,
                   ),
                 ),
               ),
               dividerColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               labelPadding: const EdgeInsets.symmetric(horizontal: 20),
               tabs: [
                 Tab(
@@ -407,7 +379,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           child: StreamBuilder<List<Activity>>(
             stream: _activitiesStream!,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: AgriUI.tableShimmer(),
@@ -432,8 +404,11 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 return matchesSearch;
               }).toList();
               return StreamBuilder<List<UserModel>>(
-                stream: fbService.streamUsers(),
+                stream: _usersStream,
                 builder: (context, userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting && !userSnapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
                   final users = userSnapshot.data ?? [];
                   final staffIdMap = {for (var u in users) u.name: u.staffId};
 
@@ -446,7 +421,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       _buildExpenditureTab(activities),
                       BudgetPlanReport(
                         activities: activities,
-                        isDark: Theme.of(context).brightness == Brightness.dark,
+                        isDark: theme.brightness == Brightness.dark,
                       ),
                     ],
                   );
@@ -464,7 +439,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     final overallTotalB = activities.fold(0.0, (s, a) => s + a.approvedBudget);
     final overallTotalS = activities.fold(
       0.0,
-      (s, a) => s + a.actualExpenditure,
+      (s, a) => s + a.effectivePOAmount,
     );
     final overallTotalBalance = overallTotalB - overallTotalS;
     final overallUtilizationRate = overallTotalB > 0
@@ -474,7 +449,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     final overallPPMP = activities.fold(0.0, (s, a) => s + a.ppmpBalance);
     final overallPR = activities.fold(0.0, (s, a) => s + a.prBalance);
     final overallPRTotal = activities.fold(0.0, (s, a) => s + a.prAmount);
-    final overallPO = activities.fold(0.0, (s, a) => s + 0.0);
+    final overallPO = activities.fold(0.0, (s, a) => s + a.effectivePOAmount);
     final overallCategories = _getCategoryTotals(activities);
 
     final stalePRs = activities
@@ -482,7 +457,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           (a) =>
               a.status == AppConstants.statusPRPrepared &&
               a.statusDate != null &&
-              AppDateFormatter.parse(a.statusDate!)?.isBefore(
+              DateFormatter.parse(a.statusDate!)?.isBefore(
                     DateTime.now().subtract(const Duration(days: 5)),
                   ) ==
                   true,
@@ -608,7 +583,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     Map<String, List<Activity>> groupMap,
     AppLocalization l10n,
     Color themeColor, {
-    bool isStatus = false,
     Map<String, String?>? staffIdMap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -624,12 +598,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             child: _buildDetailedTotalSummaryCard(
               title: l10n.translate('overall_wfp_total'),
               budget: allActs.fold(0.0, (s, a) => s + a.approvedBudget),
-              spent: allActs.fold(0.0, (s, a) => s + a.actualExpenditure),
+              spent: allActs.fold(0.0, (s, a) => s + a.effectivePOAmount),
               categories: _getCategoryTotals(allActs),
               ppmp: allActs.fold(0.0, (s, a) => s + a.ppmpBalance),
               pr: allActs.fold(0.0, (s, a) => s + a.prBalance),
               prTotal: allActs.fold(0.0, (s, a) => s + a.prAmount),
-              po: allActs.fold(0.0, (s, a) => s + 0.0),
+              po: allActs.fold(0.0, (s, a) => s + a.effectivePOAmount),
               count: allActs.length,
               l10n: l10n,
               color: themeColor,
@@ -640,7 +614,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         final key = keys[i];
         final acts = groupMap[key]!;
         final totalB = acts.fold(0.0, (s, a) => s + a.approvedBudget);
-        final totalS = acts.fold(0.0, (s, a) => s + a.actualExpenditure);
+        final totalS = acts.fold(0.0, (s, a) => s + a.effectivePOAmount);
         final rate = totalB > 0 ? totalS / totalB : 0.0;
 
         String displayName = key;
@@ -764,7 +738,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                         ppmp: acts.fold(0.0, (s, a) => s + a.ppmpBalance),
                         pr: acts.fold(0.0, (s, a) => s + a.prBalance),
                         prTotal: acts.fold(0.0, (s, a) => s + a.prAmount),
-                        po: acts.fold(0.0, (s, a) => s + 0.0),
+                        po: acts.fold(0.0, (s, a) => s + a.effectivePOAmount),
                         l10n: l10n,
                       ),
                       const SizedBox(height: 20),
@@ -835,7 +809,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           );
           final spentA = listA.fold(
             0.0,
-            (sum, item) => sum + item.actualExpenditure,
+            (sum, item) => sum + item.effectivePOAmount,
           );
           final budgetB = listB.fold(
             0.0,
@@ -843,7 +817,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           );
           final spentB = listB.fold(
             0.0,
-            (sum, item) => sum + item.actualExpenditure,
+            (sum, item) => sum + item.effectivePOAmount,
           );
           final utilA = budgetA > 0 ? spentA / budgetA : 0.0;
           final utilB = budgetB > 0 ? spentB / budgetB : 0.0;
@@ -852,60 +826,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       }
       return asc ? result : -result;
     });
-  }
-
-  Widget _statusChip(String label, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color, color.withValues(alpha: 0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Text(
-              '$count',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              label.toUpperCase(),
-              style: GoogleFonts.inter(
-                color: color.withValues(alpha: 0.9),
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _alertCard(IconData icon, String message, Color color) {
@@ -1020,23 +940,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     final isWarning = rate > 0.9;
     final effectiveColor = isWarning ? Colors.red : color;
 
-    return Container(
-      width: double.infinity,
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1050,10 +956,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
+                      style: AppDesignSystem.headingSmall.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -1068,11 +972,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       ),
                       child: Text(
                         '$count ${l10n.translate('activities').toUpperCase()}',
-                        style: TextStyle(
+                        style: AppDesignSystem.labelSmall.copyWith(
                           color: effectiveColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -1088,17 +989,13 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     children: [
                       Text(
                         (rate * 100).toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
+                        style: AppDesignSystem.headingMedium.copyWith(
                           color: effectiveColor,
                         ),
                       ),
                       Text(
                         '%',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                        style: AppDesignSystem.labelSmall.copyWith(
                           color: effectiveColor.withValues(alpha: 0.5),
                         ),
                       ),
@@ -1106,11 +1003,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   ),
                   Text(
                     'UTILIZATION',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: Slate.shade400,
-                      letterSpacing: 1,
+                    style: AppDesignSystem.labelSmall.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -1185,7 +1079,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   Map<String, double> _getTotalsForActivity(Activity a) {
     final Map<String, double> totals = {};
 
-    // Use actualExpenditure logic from Activity model but for categorical breakdown
+    // Use effectivePOAmount logic from Activity model but for categorical breakdown
     if (a.breakdown.isNotEmpty) {
       // If we have breakdown items, they are the source of truth for categories
       for (var item in a.breakdown) {
@@ -1197,7 +1091,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       }
     } else {
       // Fallback to legacy fields ONLY if breakdown is empty,
-      // matching Activity.actualExpenditure logic to avoid double counting.
+      // matching Activity.effectivePOAmount logic to avoid double counting.
       if (a.trainingSeminarAmount > 0) {
         totals['Trainings and Seminar Expenses'] = a.trainingSeminarAmount;
       }
@@ -1226,24 +1120,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     int count,
     AppLocalization l10n,
   ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF064E3B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B5E20).withValues(alpha: 0.25),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
+    final theme = Theme.of(context);
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1255,10 +1134,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 children: [
                   Text(
                     l10n.translate('overall_utilization').toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                    style: AppDesignSystem.labelSmall.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -1269,20 +1146,17 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     children: [
                       Text(
                         (rate * 100).toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: AppDesignSystem.headingLarge.copyWith(
+                          color: AppColors.emeraldPrimary,
                           fontSize: 48,
-                          fontWeight: FontWeight.w900,
                           letterSpacing: -1,
                         ),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '%',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
+                        style: AppDesignSystem.headingSmall.copyWith(
+                          color: AppColors.emeraldPrimary.withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -1295,29 +1169,24 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: AppColors.emeraldPrimary.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(
                   children: [
                     Text(
                       count.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
+                      style: AppDesignSystem.headingMedium.copyWith(
+                        color: AppColors.emeraldPrimary,
                       ),
                     ),
                     Text(
                       l10n.translate('activities').toUpperCase(),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1,
+                      style: AppDesignSystem.labelSmall.copyWith(
+                        color: AppColors.emeraldPrimary.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -1330,9 +1199,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: theme.colorScheme.surface.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1342,22 +1211,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                        color: AppColors.goldAccent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.analytics_rounded,
-                        color: Color(0xFFD4AF37),
+                        color: AppColors.goldAccent,
                         size: 16,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'FINANCIAL OVERVIEW',
-                      style: TextStyle(
-                        color: Color(0xFFD4AF37),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
+                      style: AppDesignSystem.labelSmall.copyWith(
+                        color: AppColors.goldAccent,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -1415,7 +1282,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
             ),
             child: Row(
@@ -1430,7 +1297,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Container(
                   width: 1,
                   height: 40,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
                 Expanded(
                   child: _buildSecondaryMetric(
@@ -1442,7 +1309,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Container(
                   width: 1,
                   height: 40,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
                 Expanded(
                   child: _buildSecondaryMetric(
@@ -1465,6 +1332,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     IconData icon,
     double width,
   ) {
+    final theme = Theme.of(context);
     return SizedBox(
       width: width,
       child: Row(
@@ -1472,10 +1340,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: AppColors.emeraldPrimary, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1484,11 +1352,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
+                  style: AppDesignSystem.labelSmall.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1497,11 +1362,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   alignment: Alignment.centerLeft,
                   child: Text(
                     formatCurrency.format(value),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: AppDesignSystem.headingSmall.copyWith(
+                      color: theme.colorScheme.onSurface,
                       fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
                     ),
                   ),
                 ),
@@ -1514,28 +1377,26 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   }
 
   Widget _buildSecondaryMetric(String label, double value, IconData icon) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.emeraldPrimary,
             size: 18,
           ),
         ),
         const SizedBox(height: 12),
         Text(
           label.toUpperCase(),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
+          style: AppDesignSystem.labelSmall.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
         const SizedBox(height: 6),
@@ -1543,10 +1404,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           fit: BoxFit.scaleDown,
           child: Text(
             formatCurrency.format(value),
-            style: const TextStyle(
-              color: Colors.white,
+            style: AppDesignSystem.headingSmall.copyWith(
+              color: theme.colorScheme.onSurface,
               fontSize: 16,
-              fontWeight: FontWeight.w900,
             ),
           ),
         ),
@@ -1561,18 +1421,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     double ppmp,
     double po,
   ) {
-    return Container(
-      width: double.infinity,
+    final theme = Theme.of(context);
+    return GlassCard(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Slate.shade900.withValues(alpha: 0.3)
-            : Slate.shade50,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1581,24 +1432,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.summarize_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: AppColors.emeraldPrimary,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 14),
               Text(
                 l10n.translate('summary_details'),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
+                style: AppDesignSystem.headingSmall.copyWith(
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -1663,20 +1510,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     IconData icon, {
     double? width,
   }) {
+    final theme = Theme.of(context);
     return Container(
       width: width ?? 150,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.colorScheme.surface.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1695,11 +1536,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: AppDesignSystem.labelSmall.copyWith(
                     color: color,
                     fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
                   ),
                 ),
               ),
@@ -1710,10 +1549,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             fit: BoxFit.scaleDown,
             child: Text(
               formatCurrency.format(value),
-              style: const TextStyle(
+              style: AppDesignSystem.headingSmall.copyWith(
+                color: theme.colorScheme.onSurface,
                 fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
               ),
             ),
           ),
@@ -1810,27 +1648,6 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     );
   }
 
-  TableRow _buildSummaryRow(String label, String value) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
 
   // ── TAB 5: BY EXPENDITURE TYPE ─────────────────────────────────────────────
   Widget _buildExpenditureTab(List<Activity> activities) {
@@ -1874,7 +1691,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           final totalB = activities.fold(0.0, (s, a) => s + a.approvedBudget);
           final totalS = activities.fold(
             0.0,
-            (s, a) => s + a.actualExpenditure,
+            (s, a) => s + a.effectivePOAmount,
           );
 
           return Padding(
@@ -1927,20 +1744,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     ? item.amount / totalBreakdown
                     : 0.0;
                 totalB += item.amount;
-                totalS += a.actualExpenditure * ratio;
+                totalS += a.effectivePOAmount * ratio;
                 totalPP += a.ppmpBalance * ratio;
                 totalPR += a.prBalance * ratio;
                 totalPRT += a.prAmount * ratio;
-                totalPO += 0.0;
+                totalPO += a.effectivePOAmount * ratio;
               }
             }
           } else {
             totalB += a.approvedBudget;
-            totalS += a.actualExpenditure;
+            totalS += a.effectivePOAmount;
             totalPP += a.ppmpBalance;
             totalPR += a.prBalance;
             totalPRT += a.prAmount;
-            totalPO += 0.0;
+            totalPO += a.effectivePOAmount;
           }
         }
 
@@ -1972,17 +1789,15 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             ),
             child: ExpansionTile(
               tilePadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 8,
+                horizontal: 24,
+                vertical: 16,
               ),
-              iconColor: AppColors.primary,
-              collapsedIconColor: Colors.grey,
+              iconColor: AppColors.emeraldPrimary,
+              collapsedIconColor: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               title: Text(
                 type,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: isDark ? Colors.white : Slate.shade800,
+                style: AppDesignSystem.headingSmall.copyWith(
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               subtitle: Column(
@@ -1996,23 +1811,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                           borderRadius: BorderRadius.circular(10),
                           child: LinearProgressIndicator(
                             value: rate.clamp(0.0, 1.0),
-                            backgroundColor: isDark
-                                ? Colors.white10
-                                : Colors.grey.shade100,
+                            backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              rate > 0.9 ? Colors.red : AppColors.primary,
+                              rate > 0.9 ? Colors.red : AppColors.emeraldPrimary,
                             ),
                             minHeight: 8,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 16),
                       Text(
                         '${(rate * 100).toStringAsFixed(1)}%',
-                        style: GoogleFonts.inter(
+                        style: AppDesignSystem.labelMedium.copyWith(
+                          color: rate > 0.9 ? Colors.red : AppColors.emeraldPrimary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: rate > 0.9 ? Colors.red : AppColors.primary,
                         ),
                       ),
                     ],
@@ -2101,74 +1913,50 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   }
 
   Widget _buildActivityBreakdownRow(Activity a) {
+    final theme = Theme.of(context);
     final l10n = context.watch<SettingsProvider>().l10n;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            final fbService = context.read<FirebaseService>();
-            _showActivityDetails(context, a, fbService);
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.03)
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.grey.shade200,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        onTap: () {
+          final fbService = context.read<FirebaseService>();
+          _showActivityDetails(context, a, fbService);
+        },
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              a.activityName,
+              style: AppDesignSystem.headingSmall.copyWith(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+            Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        a.activityName,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isDark ? Colors.white : Slate.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
+                _breakdownStatModern(
+                  l10n.translate('budget'),
+                  formatCurrency.format(a.approvedBudget),
+                  Icons.account_balance_wallet_outlined,
+                  isDark,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _breakdownStatModern(
-                      l10n.translate('budget'),
-                      formatCurrency.format(a.approvedBudget),
-                      Icons.account_balance_wallet_outlined,
-                      isDark,
-                    ),
-                    const SizedBox(width: 12),
-                    _breakdownStatModern(
-                      'UNEXPENDED',
-                      formatCurrency.format(a.unexpendedPPMP),
-                      Icons.savings_outlined,
-                      isDark,
-                      textColor: a.unexpendedPPMP < 0
-                          ? Colors.red
-                          : Colors.green,
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                _breakdownStatModern(
+                  'UNEXPENDED',
+                  formatCurrency.format(a.unexpendedPPMP),
+                  Icons.savings_outlined,
+                  isDark,
+                  textColor: a.unexpendedPPMP < 0
+                      ? Colors.red
+                      : AppColors.emeraldPrimary,
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -2180,6 +1968,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     IconData icon,
     bool isDark,
   ) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2188,16 +1977,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             Icon(
               icon,
               size: 14,
-              color: isDark ? Colors.white38 : Slate.shade300,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(width: 4),
             Text(
               label.toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                color: isDark ? Colors.white38 : Slate.shade400,
+              style: AppDesignSystem.labelSmall.copyWith(
+                fontSize: 9,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           ],
@@ -2205,10 +1992,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 14,
+          style: AppDesignSystem.bodyMedium.copyWith(
             fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Slate.shade700,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],
@@ -2222,34 +2008,43 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     bool isDark, {
     Color? textColor,
   }) {
+    final theme = Theme.of(context);
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.02) : Slate.shade50,
-          borderRadius: BorderRadius.circular(8),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white38 : Slate.shade400,
-              ),
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 12,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label.toUpperCase(),
+                  style: AppDesignSystem.labelSmall.copyWith(
+                    fontSize: 8,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: AppDesignSystem.bodySmall.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: textColor ?? (isDark ? Colors.white : Slate.shade700),
+                  color: textColor ?? theme.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -2363,7 +2158,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       sectorBudgets[a.sector] =
           (sectorBudgets[a.sector] ?? 0) + a.approvedBudget;
       sectorSpent[a.sector] =
-          (sectorSpent[a.sector] ?? 0) + a.actualExpenditure;
+          (sectorSpent[a.sector] ?? 0) + a.effectivePOAmount;
     }
 
     final sectors = sectorBudgets.keys.toList()..sort();

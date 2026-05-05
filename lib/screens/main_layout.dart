@@ -6,18 +6,29 @@ import '../services/settings_provider.dart';
 import '../widgets/responsive_scaffold.dart';
 import '../core/responsive_utils.dart';
 
-import 'admin/admin_dashboard.dart';
+import 'admin/ppmp_dashboard.dart';
 import 'staff/staff_dashboard.dart';
 import 'admin/sector_overview.dart';
 import 'admin/user_management_screen.dart';
+import 'admin/activity_management_screen.dart';
 import 'admin/financial_reports_screen.dart';
 import 'settings_screen.dart';
 import 'admin/add_activity_dialog.dart';
 import 'admin/edit_activity_dialog.dart';
+import 'admin/budget_management_screen.dart';
+import 'expenditure_tracker_screen.dart';
 import 'package:cityagriadmin/main.dart';
 import '../services/activity_form_provider.dart';
 import '../services/firebase_service.dart';
-import '../widgets/chat_widget.dart';
+import '../widgets/connection_status_badge.dart';
+import '../widgets/skeleton_loading.dart';
+import 'admin/projects_screen.dart';
+import 'admin/approvals_screen.dart';
+import '../widgets/user_guide_dialog.dart';
+import '../widgets/notification_center.dart';
+import '../widgets/user_profile_badge.dart';
+import '../models/notification_model.dart';
+
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -27,7 +38,6 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> with RouteAware {
-  int selectedIndex = 0;
   bool isCurrent = true;
 
   @override
@@ -55,7 +65,8 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
   }
 
   void onPageChanged(int index) {
-    if (selectedIndex == index) {
+    final navProvider = context.read<NavigationProvider>();
+    if (navProvider.selectedIndex == index) {
       try {
         if (Scaffold.of(context).isDrawerOpen) {
           Navigator.pop(context);
@@ -66,7 +77,6 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
 
     // Reset the nav provider immediately so the new page's defaultTitle
     // is shown right away instead of the previous page's stale title.
-    final navProvider = context.read<NavigationProvider>();
     final l10n = context.read<SettingsProvider>().l10n;
 
     String newTitle;
@@ -75,25 +85,37 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
         newTitle = l10n.translate('dashboard');
         break;
       case 1:
-        newTitle = l10n.translate('section_unit_allocation');
+        newTitle = 'Activity Management';
         break;
       case 2:
-        newTitle = l10n.translate('financial_reports');
+        newTitle = 'Budget Management';
         break;
       case 3:
-        newTitle = l10n.translate('settings');
+        newTitle = 'Expenditure Tracker';
         break;
       case 4:
+        newTitle = l10n.translate('section_unit_allocation');
+        break;
+      case 5:
+        newTitle = l10n.translate('financial_reports');
+        break;
+      case 6:
+        newTitle = l10n.translate('settings');
+        break;
+      case 7:
         newTitle = l10n.translate('user_management');
+        break;
+      case 8:
+        newTitle = 'Projects (PPMP)';
+        break;
+      case 9:
+        newTitle = 'Approvals';
         break;
       default:
         newTitle = 'AWFPS';
     }
-    navProvider.updateLayout(title: newTitle, actions: [], fab: null);
+    navProvider.updateLayout(title: newTitle, actions: [], fab: null, selectedIndex: index);
 
-    setState(() {
-      selectedIndex = index;
-    });
     try {
       if (Scaffold.of(context).isDrawerOpen) {
         Navigator.pop(context);
@@ -106,10 +128,11 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
     final authService = context.watch<AuthService>();
     final navProvider = context.watch<NavigationProvider>();
     final l10n = context.watch<SettingsProvider>().l10n;
+    final selectedIndex = navProvider.selectedIndex;
     final user = authService.currentUser;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: SkeletonDashboard());
     }
 
     // Determine default title based on index
@@ -119,36 +142,60 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
         defaultTitle = l10n.translate('dashboard');
         break;
       case 1:
-        defaultTitle = l10n.translate('section_unit_allocation');
+        defaultTitle = 'Activity Management';
         break;
       case 2:
-        defaultTitle = l10n.translate('financial_reports');
+        defaultTitle = 'Budget Management';
         break;
       case 3:
-        defaultTitle = l10n.translate('settings');
+        defaultTitle = 'Expenditure Tracker';
         break;
       case 4:
+        defaultTitle = l10n.translate('section_unit_allocation');
+        break;
+      case 5:
+        defaultTitle = l10n.translate('financial_reports');
+        break;
+      case 6:
+        defaultTitle = l10n.translate('settings');
+        break;
+      case 7:
         defaultTitle = l10n.translate('user_management');
+        break;
+      case 8:
+        defaultTitle = 'Projects (PPMP)';
+        break;
+      case 9:
+        defaultTitle = 'Approvals';
         break;
       default:
         defaultTitle = 'AWFPS';
     }
-
     final List<Widget> pages = [
       // Index 0: Dashboard
       user.role == 'admin'
-          ? AdminDashboard(isActive: selectedIndex == 0)
+          ? PPMPDashboard(isActive: selectedIndex == 0)
           : StaffDashboard(staffName: user.name, isActive: selectedIndex == 0),
-      // Index 1: Section/Unit overview
-      SectionUnitOverviewScreen(isActive: selectedIndex == 1),
-      // Index 2: Financial Reports
-      FinancialReportsScreen(isActive: selectedIndex == 2),
-      // Index 3: Settings
-      SettingsScreen(isActive: selectedIndex == 3),
-      // Index 4: User Management (Keep always in list but only accessible to admin)
+      // Index 1: Activity Management
+      ActivityManagementScreen(isActive: selectedIndex == 1),
+      // Index 2: Budget Management
+      BudgetManagementScreen(isActive: selectedIndex == 2),
+      // Index 3: Expenditure Tracker
+      ExpenditureTrackerScreen(isActive: selectedIndex == 3),
+      // Index 4: Section/Unit overview
+      SectionUnitOverviewScreen(isActive: selectedIndex == 4),
+      // Index 5: Financial Reports
+      FinancialReportsScreen(isActive: selectedIndex == 5),
+      // Index 6: Settings
+      SettingsScreen(isActive: selectedIndex == 6),
+      // Index 7: User Management
       user.role == 'admin'
-          ? UserManagementScreen(isActive: selectedIndex == 4)
+          ? UserManagementScreen(isActive: selectedIndex == 7)
           : const SizedBox.shrink(),
+      // Index 8: Projects (PPMP)
+      ProjectsScreen(isActive: selectedIndex == 8),
+      // Index 9: Approvals
+      ApprovalsScreen(isActive: selectedIndex == 9),
     ];
 
     return Consumer<ActivityFormProvider>(
@@ -163,20 +210,66 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
                   : navProvider.title,
               selectedIndex: selectedIndex,
               onPageChanged: onPageChanged,
-              actions: navProvider.actions,
-              // Hide the FAB only when the Add Activity form is open or a modal route is pushed
-              floatingActionButton: (!isCurrent || formProvider.isOpen)
+              actions: [
+                const ConnectionStatusBadge(),
+                IconButton(
+                  icon: const Icon(Icons.help_outline),
+                  tooltip: 'System Guide',
+                  onPressed: () => UserGuideDialog.show(context),
+                ),
+                StreamBuilder<List<SystemNotification>>(
+                  stream: context.read<FirebaseService>().streamNotifications(userId: user.uid),
+                  builder: (context, snapshot) {
+                    final unreadCount = snapshot.data?.where((n) => !n.isRead).length ?? 0;
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          tooltip: 'Notifications',
+                          onPressed: () => NotificationCenter.show(context),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                UserProfileBadge(
+                  user: user,
+                  onTap: () => onPageChanged(6), // Navigate to Settings
+                ),
+                ...?navProvider.actions,
+              ],
+              // Hide the FAB only when the Add Activity form is open and NOT minimized, or a modal route is pushed
+              floatingActionButton: (!isCurrent || (formProvider.isOpen && !formProvider.isMinimized))
                   ? null
                   : navProvider.fab,
               body: IndexedStack(index: selectedIndex, children: pages),
             ),
             if (formProvider.isOpen) buildOverlay(context, formProvider),
-            // Floating AI Chat Widget
-            const Positioned(
-              right: 16,
-              bottom: 16,
-              child: ChatWidget(),
-            ),
           ],
         );
       },

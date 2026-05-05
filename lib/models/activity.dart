@@ -1,3 +1,4 @@
+import '../models/pr_log.dart';
 import '../core/constants.dart';
 
 enum BudgetSource {
@@ -58,6 +59,7 @@ class BreakdownItem {
   final String? supplier;
   final String? status;
   final String? statusDate;
+  final String? accountCode; // Added for relational tracking
 
   BreakdownItem({
     required this.name,
@@ -75,6 +77,7 @@ class BreakdownItem {
     this.supplier,
     this.status,
     this.statusDate,
+    this.accountCode,
   });
 
   String get sourceText {
@@ -115,6 +118,7 @@ class BreakdownItem {
       'supplier': supplier ?? '',
       'status': status ?? '',
       'statusDate': statusDate ?? '',
+      'account_code': accountCode ?? '',
     };
   }
 
@@ -128,7 +132,7 @@ class BreakdownItem {
       return 0.0;
     }
 
-    String safeStr(dynamic v) => (v == null || v.toString().toLowerCase() == 'null') ? '' : v.toString();
+    String safeStr(dynamic v) => (v == null || v.toString().toLowerCase() == 'null') ? '' : v.toString().replaceAll('_', ' ');
     return BreakdownItem(
       name: safeStr(map['name']),
       amount: parseDouble(map['amount']),
@@ -145,8 +149,13 @@ class BreakdownItem {
       supplier: safeStr(map['supplier']),
       status: safeStr(map['status']),
       statusDate: safeStr(map['statusDate']),
+      accountCode: safeStr(map['account_code'] ?? map['accountCode']),
     );
   }
+
+  int get qty => (quantity ?? 0).toInt();
+
+  double get unitCost => price ?? 0.0;
 }
 
 class FundSourceItem {
@@ -178,7 +187,7 @@ class FundSourceItem {
       return 0.0;
     }
 
-    String safeStr(dynamic v) => (v == null || v.toString().toLowerCase() == 'null') ? '' : v.toString();
+    String safeStr(dynamic v) => (v == null || v.toString().toLowerCase() == 'null') ? '' : v.toString().replaceAll('_', ' ');
     return FundSourceItem(
       fundingSource: safeStr(map['fundingSource']).isEmpty ? 'Agri MOOE' : safeStr(map['fundingSource']),
       objectOfExpenditure: safeStr(map['objectOfExpenditure']),
@@ -222,6 +231,17 @@ class Activity {
   bool isDraft; // Whether this activity is a draft
   List<BreakdownItem> breakdown; // Added for breakdown
   List<FundSourceItem> fundSources; // Multiple funding & expenditures
+  List<double>? monthlyDistribution; // Jan through Dec unified array
+  String? accountCode; // Added for relational tracking
+  List<PRLog> prLogs; // Added for PR tracking history
+  double inputtedAmount; // Manual budget override
+  
+  // Cache fields for performance
+  String? _cachedSearchIndex;
+  String? _cachedQuarter;
+  double? _cachedTotalBreakdown;
+  double? _cachedEffectivePR;
+  double? _cachedEffectivePO;
 
   // ── Appropriations (Expenditure Summary) ──────────────────────────────
   double appropriation; // Total appropriation / budget allocated
@@ -237,7 +257,7 @@ class Activity {
   String statusApprop; // Status (appropriation)
   String? statusAppropDate; // Date for PR status
 
-  double get totalBudget => q1Budget + q2Budget + q3Budget + q4Budget;
+  double get totalBudget => approvedBudget;
 
   Activity({
     required this.id,
@@ -252,7 +272,7 @@ class Activity {
     this.q2Budget = 0.0,
     this.q3Budget = 0.0,
     this.q4Budget = 0.0,
-    this.actualExpenditure = 0.0,
+    double actualExpenditure = 0.0,
     this.ppmpAmount = 0.0,
     this.prAmount = 0.0,
     this.prBalance = 0.0,
@@ -286,34 +306,90 @@ class Activity {
     this.barcodeApprop = '',
     this.statusApprop = '',
     this.statusAppropDate,
-  });
+    this.accountCode,
+    this.monthlyDistribution,
+    this.prLogs = const [],
+    this.inputtedAmount = 0.0,
+    double? effectivePOAmount,
+  }) : actualExpenditure = effectivePOAmount ?? actualExpenditure {
+    _initCache();
+  }
 
-  double get approvedBudget => q1Budget + q2Budget + q3Budget + q4Budget;
+  void _initCache() {
+    _cachedTotalBreakdown = breakdown.isEmpty
+        ? 0.0
+        : breakdown.fold<double>(0, (sum, item) => sum + item.amount);
+    
+    _cachedEffectivePR = prLogs.isNotEmpty
+        ? prLogs.fold<double>(0, (sum, log) => sum + log.prAmount)
+        : prAmount;
+
+    if (prLogs.isNotEmpty) {
+      _cachedEffectivePO = prLogs.fold<double>(0, (sum, log) => sum + log.poAmount);
+    } else {
+      _cachedEffectivePO = (_cachedTotalBreakdown ?? 0) > 0 ? _cachedTotalBreakdown : actualExpenditure;
+    }
+
+    _cachedQuarter = _calculateQuarter();
+    _cachedSearchIndex = _calculateSearchIndex();
+  }
+
+  double get totalBreakdown => _cachedTotalBreakdown ?? 0;
+
+  double get approvedBudget => inputtedAmount > 0 ? inputtedAmount : (q1Budget + q2Budget + q3Budget + q4Budget);
 
   double get midYearBudget => q1Budget + q2Budget;
 
   double get wholeYearBudget => approvedBudget;
 
   /// Returns the sum of all breakdown item amounts.
-  double get totalBreakdownAmount {
-    if (breakdown.isEmpty) return 0.0;
-    return breakdown.fold<double>(0, (sum, item) => sum + item.amount);
-  }
+  double get totalBreakdownAmount => _cachedTotalBreakdown ?? 0.0;
 
-  /// The effective PO Amount: prefers the sum of breakdown items if positive,
-  /// otherwise falls back to the [actualExpenditure] field (cached total).
-  double get effectivePOAmount {
-    final sum = totalBreakdownAmount;
-    return sum > 0 ? sum : actualExpenditure;
-  }
+  /// Returns the sum of all PR amounts from logs, or the legacy [prAmount].
+  double get effectivePRAmount => _cachedEffectivePR ?? prAmount;
+
+  /// The effective PO Amount: prefers the sum of PR logs PO amounts if available,
+  /// then falls back to breakdown items sum if positive,
+  /// and finally falls back to the [actualExpenditure] field (cached total).
+  double get effectivePOAmount => _cachedEffectivePO ?? actualExpenditure;
 
   double get unexpendedBalance => approvedBudget - effectivePOAmount;
 
-  double get unexpendedPPMP => ppmpBalance;
+  // Balance Logic as per requirements:
+  // PPMP Balance = Approved Budget - PR Amount
+  // PR Balance = PR Amount - PO Amount
+  double get ppmpBalanceCalculated => approvedBudget - effectivePRAmount;
+  double get prBalanceCalculated => effectivePRAmount - effectivePOAmount;
 
-  double get unexpendedPR => approvedBudget - prAmount;
+  double get unexpendedPPMP => ppmpBalanceCalculated;
+
+  double get unexpendedPR => approvedBudget - effectivePRAmount;
 
   bool get isLowBalance => approvedBudget > 0 && unexpendedBalance < 1000;
+
+  bool get hasNoBudget => (accountCode == null || accountCode!.isEmpty) || status.toLowerCase() == 'no budget' || (appropriation <= 0 && totalBudget <= 0);
+
+  bool get isOverObligated => effectivePRAmount > approvedBudget && approvedBudget > 0;
+
+  bool get isTimelineVariance {
+    final q = quarter;
+    if (q == 'Q1') {
+      // If it's already past Q1 and status is still planned/prepared without being processed
+      final now = DateTime.now();
+      if (now.month > 3 || now.year > 2026) {
+        return status.toLowerCase() == 'planned' || status.toLowerCase() == 'pr prepared';
+      }
+    }
+    return false;
+  }
+
+  bool get isRodenticideWarning =>
+      (activityName.toLowerCase().contains('rodenticide') ||
+          activityName.toLowerCase().contains('insecticide') ||
+          activityName.toLowerCase().contains('fungicide')) &&
+      (subSector?.toLowerCase() == 'rice' || sector.toLowerCase().contains('crop'));
+
+  bool get isRecanvasWarning => status.toLowerCase() == 'recanvas';
 
   String get formattedSource {
     final s = fundingSource;
@@ -322,7 +398,9 @@ class Activity {
     return s;
   }
 
-  String get quarter {
+  String get quarter => _cachedQuarter ?? '';
+
+  String _calculateQuarter() {
     final lower = targetDate.toLowerCase();
     
     // 1. Try parsing as a structured date first (e.g. "04/28/2026" or "2026-04-28")
@@ -356,16 +434,16 @@ class Activity {
     if (lower.contains('jul') || lower.contains('aug') || lower.contains('sep')) return 'Q3';
     if (lower.contains('oct') || lower.contains('nov') || lower.contains('dec')) return 'Q4';
 
-    return 'N/A';
+    return '';
   }
 
   factory Activity.fromFirestore(Map<String, dynamic> data, String id) {
     // Safely coerce a Firestore value to String — handles List<dynamic> gracefully
     String safeString(dynamic value, [String fallback = '']) {
       if (value == null || value.toString().toLowerCase() == 'null') return fallback;
-      if (value is String) return value;
-      if (value is List) return value.join(', ');
-      return value.toString();
+      if (value is String) return value.replaceAll('_', ' ');
+      if (value is List) return value.join(', ').replaceAll('_', ' ');
+      return value.toString().replaceAll('_', ' ');
     }
 
     String rawStatus = safeString(data['status'], 'Planned');
@@ -376,8 +454,8 @@ class Activity {
       rawStatus = 'Planned';
       isDraft = true;
     }
-    if (rawStatus == 'Obre & Abstract Sig' || rawStatus == 'Obre & Abstract') {
-      rawStatus = 'Obre & Abstract Signature';
+    if (rawStatus == 'Obre & Abstract Signature' || rawStatus == 'Obre & Abstract') {
+      rawStatus = 'Obre & Abstract Sig';
     }
 
     final breakdown = (data['breakdown'] is List)
@@ -490,7 +568,40 @@ class Activity {
       barcodeApprop: safeString(data['approp_barcode']),
       statusApprop: safeString(data['approp_status']),
       statusAppropDate: data['approp_status_date'] as String?,
+      accountCode: data['account_code'] as String?,
+      monthlyDistribution: (data['monthly_distribution'] as List?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
+      prLogs: (data['pr_logs'] is List)
+          ? (data['pr_logs'] as List)
+              .map((e) => PRLog.fromFirestore(Map<String, dynamic>.from(e), ''))
+              .toList()
+          : [],
+      inputtedAmount: (data['inputted_amount'] ?? 0.0).toDouble(),
     );
+  }
+
+  String get selectedMonth {
+    final lower = targetDate.toLowerCase();
+    if (lower.contains('jan')) return 'January';
+    if (lower.contains('feb')) return 'February';
+    if (lower.contains('mar')) return 'March';
+    if (lower.contains('apr')) return 'April';
+    if (lower.contains('may')) return 'May';
+    if (lower.contains('jun')) return 'June';
+    if (lower.contains('jul')) return 'July';
+    if (lower.contains('aug')) return 'August';
+    if (lower.contains('sep')) return 'September';
+    if (lower.contains('oct')) return 'October';
+    if (lower.contains('nov')) return 'November';
+    if (lower.contains('dec')) return 'December';
+    return '';
+  }
+
+  String get selectedYear {
+    final match = RegExp(r'\d{4}').firstMatch(targetDate);
+    if (match != null) return match.group(0)!;
+    return DateTime.now().year.toString();
   }
 
   Map<String, dynamic> toFirestore() {
@@ -507,12 +618,16 @@ class Activity {
       'q3_budget': q3Budget,
       'q4_budget': q4Budget,
       'approved_budget': approvedBudget, // Storing for backward compatibility
-      'actual_expenditure': actualExpenditure,
+      'actual_expenditure': prLogs.isNotEmpty 
+          ? prLogs.fold<double>(0, (sum, log) => sum + log.poAmount) 
+          : actualExpenditure,
       'ppmp_amount': ppmpAmount,
-      'pr_amount': prAmount,
+      'pr_amount': prLogs.isNotEmpty 
+          ? prLogs.fold<double>(0, (sum, log) => sum + log.prAmount) 
+          : prAmount,
       'pr_balance': prBalance,
       'responsible_person': responsiblePerson,
-      'status': status,
+      'status': prLogs.isNotEmpty ? prLogs.last.status : status,
       'target_date': targetDate,
       'target_participants': targetParticipants,
       'actual_conduct': actualConduct,
@@ -524,8 +639,7 @@ class Activity {
       'unit': unit ?? '',
       'unit_head': unitHead ?? '',
       'remarks': remarks,
-      if (statusDate != null && statusDate!.isNotEmpty)
-        'status_date': statusDate,
+      'status_date': prLogs.isNotEmpty ? prLogs.last.statusDate : (statusDate ?? ''),
       'is_draft': isDraft,
       'breakdown': breakdown.map((e) => e.toMap()).toList(),
       'fund_sources': fundSources.map((e) => e.toMap()).toList(),
@@ -544,6 +658,12 @@ class Activity {
       if (statusApprop.isNotEmpty) 'approp_status': statusApprop,
       if (statusAppropDate != null && statusAppropDate!.isNotEmpty)
         'approp_status_date': statusAppropDate,
+      if (accountCode != null && accountCode!.isNotEmpty)
+        'account_code': accountCode,
+      if (monthlyDistribution != null)
+        'monthly_distribution': monthlyDistribution,
+      'pr_logs': prLogs.map((e) => e.toFirestore()).toList(),
+      'inputted_amount': inputtedAmount,
     };
   }
 
@@ -593,6 +713,11 @@ class Activity {
     String? barcodeApprop,
     String? statusApprop,
     String? statusAppropDate,
+    String? accountCode,
+    List<double>? monthlyDistribution,
+    List<PRLog>? prLogs,
+    double? inputtedAmount,
+    double? effectivePOAmount,
   }) {
     return Activity(
       id: id ?? this.id,
@@ -607,7 +732,7 @@ class Activity {
       q2Budget: q2Budget ?? this.q2Budget,
       q3Budget: q3Budget ?? this.q3Budget,
       q4Budget: q4Budget ?? this.q4Budget,
-      actualExpenditure: actualExpenditure ?? this.actualExpenditure,
+      actualExpenditure: effectivePOAmount ?? actualExpenditure ?? this.actualExpenditure,
       ppmpAmount: ppmpAmount ?? this.ppmpAmount,
       prAmount: prAmount ?? this.prAmount,
       prBalance: prBalance ?? this.prBalance,
@@ -641,61 +766,68 @@ class Activity {
       barcodeApprop: barcodeApprop ?? this.barcodeApprop,
       statusApprop: statusApprop ?? this.statusApprop,
       statusAppropDate: statusAppropDate ?? this.statusAppropDate,
+      accountCode: accountCode ?? this.accountCode,
+      monthlyDistribution: monthlyDistribution ?? this.monthlyDistribution,
+      prLogs: prLogs ?? this.prLogs,
+      inputtedAmount: inputtedAmount ?? this.inputtedAmount,
     );
+  }
+
+  String _calculateSearchIndex() {
+    String normalize(String? s) {
+      if (s == null) return '';
+      return s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    }
+
+    final buffer = StringBuffer();
+    buffer.write('${normalize(activityName)} ');
+    buffer.write('${normalize(responsiblePerson)} ');
+    buffer.write('${normalize(location)} ');
+    buffer.write('${normalize(subSector)} ');
+    buffer.write('${normalize(sector)} ');
+    buffer.write('${normalize(performanceIndicator)} ');
+    buffer.write('${normalize(targetParticipants)} ');
+    buffer.write('${normalize(actualConduct)} ');
+    buffer.write('${normalize(accommRemarks)} ');
+    buffer.write('${normalize(remarks)} ');
+    buffer.write('${normalize(prNumber)} ');
+    buffer.write('${normalize(supplierApprop)} ');
+    buffer.write('${normalize(barcodeApprop)} ');
+    buffer.write('${normalize(unit)} ');
+    buffer.write('${normalize(unitHead)} ');
+    buffer.write('${normalize(fundingSource)} ');
+    buffer.write('${normalize(objectOfExpenditure)} ');
+    buffer.write('${normalize(status)} ');
+    buffer.write('${normalize(statusApprop)} ');
+    buffer.write('${normalize(otherMoeSuppliers)} ');
+    buffer.write('${normalize(targetDate)} ');
+    buffer.write('${normalize(statusDate)} ');
+    buffer.write('${normalize(statusAppropDate)} ');
+
+    for (var fs in fundSources) {
+      buffer.write('${normalize(fs.fundingSource)} ');
+      buffer.write('${normalize(fs.objectOfExpenditure)} ');
+    }
+
+    for (var b in breakdown) {
+      buffer.write('${normalize(b.name)} ');
+      buffer.write('${normalize(b.supplier)} ');
+    }
+
+    return buffer.toString();
   }
 
   bool matchesSearch(String query) {
     if (query.isEmpty) return true;
     final q = query.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    
+    final index = _cachedSearchIndex ?? _calculateSearchIndex();
+    if (index.contains(q)) return true;
 
-    bool contains(String? source) {
-      if (source == null) return false;
-      final normalized =
-          source.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    // Check abbreviations for certain fields
+    if (AppConstants.abbreviate(activityName).toLowerCase().contains(q)) return true;
+    if (AppConstants.abbreviate(sector).toLowerCase().contains(q)) return true;
 
-      if (normalized.contains(q)) return true;
-
-      // Also check abbreviation
-      final abbr = AppConstants.abbreviate(source).toLowerCase();
-      if (abbr.contains(q)) return true;
-
-      return false;
-    }
-
-    return contains(activityName) ||
-        contains(responsiblePerson) ||
-        contains(location) ||
-        contains(subSector) ||
-        contains(sector) ||
-        contains(performanceIndicator) ||
-        contains(targetParticipants) ||
-        contains(actualConduct) ||
-        contains(accommRemarks) ||
-        contains(remarks) ||
-        contains(prNumber) ||
-        contains(supplierApprop) ||
-        contains(barcodeApprop) ||
-        contains(unit) ||
-        contains(unitHead) ||
-        contains(fundingSource) ||
-        contains(objectOfExpenditure) ||
-        contains(status) ||
-        contains(statusApprop) ||
-        contains(otherMoeSuppliers) ||
-        contains(targetDate) ||
-        contains(statusDate) ||
-        contains(statusAppropDate) ||
-        fundSources.any(
-          (fs) =>
-              contains(fs.fundingSource) || contains(fs.objectOfExpenditure),
-        ) ||
-        breakdown.any(
-          (item) =>
-              contains(item.name) ||
-              contains(item.supplier) ||
-              contains(item.fundingSource) ||
-              contains(item.objectOfExpenditure) ||
-              contains(item.status),
-        );
+    return false;
   }
 }

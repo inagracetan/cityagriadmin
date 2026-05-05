@@ -11,7 +11,7 @@ class CloseOutReport extends StatelessWidget {
   Widget build(BuildContext context) {
     final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
     final double utilizationRate = activity.approvedBudget > 0
-        ? (activity.actualExpenditure / activity.approvedBudget) * 100
+        ? (activity.effectivePOAmount / activity.approvedBudget) * 100
         : 0;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -136,7 +136,7 @@ class CloseOutReport extends StatelessWidget {
                       _infoRow(
                         context,
                         'Actual Disbursement',
-                        formatCurrency.format(activity.actualExpenditure),
+                        formatCurrency.format(activity.effectivePOAmount),
                       ),
                       _infoRow(
                         context,

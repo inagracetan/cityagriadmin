@@ -2,9 +2,130 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/activity.dart';
 import '../models/user_model.dart';
 import '../models/pr_log.dart';
+import '../models/budget_line.dart';
+import '../models/expenditure.dart';
+import '../models/program.dart';
+import '../models/procurement.dart';
+import '../models/notification_model.dart';
+
 
 class FirebaseService {
   final FirebaseFirestore db = FirebaseFirestore.instance;
+
+  // ── Budget Lines (Layer A) ──────────────────────────────────────────
+
+  Stream<List<BudgetLine>> streamBudgetLines() {
+    return db.collection('budget_lines').snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => BudgetLine.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<void> updateBudgetLine(BudgetLine line) async {
+    await db.collection('budget_lines').doc(line.id).set(line.toFirestore());
+  }
+
+  // ── Expenditures (Layer B) ───────────────────────────────────────────
+
+  Stream<List<Expenditure>> streamExpenditures({String? sector, String? prNumber}) {
+    Query<Map<String, dynamic>> query = db.collection('expenditures');
+    if (sector != null && sector.isNotEmpty) {
+      query = query.where('sector', isEqualTo: sector);
+    }
+    if (prNumber != null && prNumber.isNotEmpty) {
+      query = query.where('pr_number', isEqualTo: prNumber);
+    }
+    return query.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Expenditure.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<String> addExpenditure(Expenditure expenditure) async {
+    // 1. Add expenditure
+    final docRef = await db.collection('expenditures').add(expenditure.toFirestore());
+    
+    // 2. Update Budget Line balance (Deduct)
+    if (expenditure.fundSource != null && expenditure.objectOfExpenditure != null) {
+      await _adjustBudgetBalance(
+        expenditure.fundSource!,
+        expenditure.objectOfExpenditure!,
+        -expenditure.amount,
+      );
+    }
+    
+    return docRef.id;
+  }
+
+  Future<void> updateExpenditure(Expenditure expenditure, double oldAmount) async {
+    // 1. Update expenditure
+    await db.collection('expenditures').doc(expenditure.id).update(expenditure.toFirestore());
+    
+    // 2. Adjust Budget Line balance if amount changed
+    if (expenditure.amount != oldAmount) {
+      if (expenditure.fundSource != null && expenditure.objectOfExpenditure != null) {
+        await _adjustBudgetBalance(
+          expenditure.fundSource!,
+          expenditure.objectOfExpenditure!,
+          oldAmount - expenditure.amount,
+        );
+      }
+    }
+  }
+
+  Future<void> deleteExpenditure(Expenditure expenditure) async {
+    // 1. Delete expenditure
+    await db.collection('expenditures').doc(expenditure.id).delete();
+    
+    // 2. Restore Budget Line balance (Add back)
+    if (expenditure.fundSource != null && expenditure.objectOfExpenditure != null) {
+      await _adjustBudgetBalance(
+        expenditure.fundSource!,
+        expenditure.objectOfExpenditure!,
+        expenditure.amount,
+      );
+    }
+  }
+
+  Future<void> _adjustBudgetBalance(String fs, String oe, double adjustment) async {
+    final query = await db
+        .collection('budget_lines')
+        .where('fund_source', isEqualTo: fs)
+        .where('object_of_expenditure', isEqualTo: oe)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs.first;
+      final currentBalance = (doc.data()['current_balance'] ?? 0).toDouble();
+      await doc.reference.update({'current_balance': currentBalance + adjustment});
+    }
+  }
+
+  // ── CMO Budget (Layer C) ─────────────────────────────────────────────
+
+  Future<void> adjustCMOBudget(double adjustment, String remarks) async {
+    final query = await db.collection('budget_lines').where('is_cmo', isEqualTo: true).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs.first;
+      final currentBalance = (doc.data()['current_balance'] ?? 0).toDouble();
+      await doc.reference.update({'current_balance': currentBalance + adjustment});
+      
+      // Log adjustment? (Optional but good)
+      await db.collection('cmo_ledger').add({
+        'adjustment': adjustment,
+        'remarks': remarks,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  // ── Activities ──────────────────────────────────────────────────────
+  
+  // Cache for streams to prevent redundant subscriptions
+  final Map<String, Stream<List<Activity>>> _activityStreamsCache = {};
 
   // Stream all activities for Admin Master Table
   Stream<List<Activity>> streamActivities({
@@ -12,6 +133,12 @@ class FirebaseService {
     String? status,
     String? responsiblePerson,
   }) {
+    final cacheKey = 'activities_${sector ?? ''}_${status ?? ''}_${responsiblePerson ?? ''}';
+    
+    if (_activityStreamsCache.containsKey(cacheKey)) {
+      return _activityStreamsCache[cacheKey]!;
+    }
+
     Query<Map<String, dynamic>> query = db.collection('activities');
     if (sector != null && sector.isNotEmpty) {
       query = query.where('sector', isEqualTo: sector);
@@ -22,11 +149,15 @@ class FirebaseService {
     if (responsiblePerson != null && responsiblePerson.isNotEmpty) {
       query = query.where('responsible_person', isEqualTo: responsiblePerson);
     }
-    return query.snapshots().map(
+
+    final stream = query.snapshots().map(
       (snapshot) => snapshot.docs
           .map((doc) => Activity.fromFirestore(doc.data(), doc.id))
           .toList(),
-    );
+    ).asBroadcastStream(); // Use broadcast stream for multiple listeners
+
+    _activityStreamsCache[cacheKey] = stream;
+    return stream;
   }
 
   // Stream activities assigned to a specific staff
@@ -71,6 +202,25 @@ class FirebaseService {
     final docRef = await db
         .collection('activities')
         .add(activity.toFirestore());
+
+    // Trigger notification
+    await addNotification(SystemNotification(
+      id: '',
+      title: 'New Activity Created',
+      message: 'Activity "${activity.activityName}" has been added to the system.',
+      timestamp: DateTime.now(),
+      type: NotificationType.success,
+      relatedId: docRef.id,
+    ));
+
+    // Log the event
+    await logEvent(
+      type: 'activity',
+      action: 'create',
+      message: 'Created activity: ${activity.activityName}',
+      metadata: {'activity_id': docRef.id},
+    );
+
     return docRef.id;
   }
 
@@ -90,10 +240,50 @@ class FirebaseService {
 
   // Update an existing activity
   Future<void> updateActivity(Activity activity) async {
+    // Validation: Prevent over-obligation if it's a critical item
+    if (activity.isOverObligated && activity.isRodenticideWarning) {
+      throw Exception('Over-obligation blocked: No budget remaining for critical Rice Program items.');
+    }
+
     await db
         .collection('activities')
         .doc(activity.id)
         .update(activity.toFirestore());
+
+    // Trigger notification
+    await addNotification(SystemNotification(
+      id: '',
+      title: 'Activity Updated',
+      message: 'Activity "${activity.activityName}" has been updated.',
+      timestamp: DateTime.now(),
+      type: NotificationType.info,
+      relatedId: activity.id,
+    ));
+
+    // Log the event
+    await logEvent(
+      type: 'activity',
+      action: 'update',
+      message: 'Updated activity: ${activity.activityName}',
+      metadata: {'activity_id': activity.id},
+    );
+  }
+
+  // Update only the status of an activity
+  Future<void> updateActivityStatus(String activityId, String newStatus) async {
+    try {
+      await db.collection('activities').doc(activityId).update({'status': newStatus});
+      
+      // Log the event
+      await logEvent(
+        type: 'activity',
+        action: 'status_change',
+        message: 'Changed status of activity $activityId to $newStatus',
+        metadata: {'activity_id': activityId, 'new_status': newStatus},
+      );
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // Delete an activity + all its transactions sub-collection
@@ -151,4 +341,201 @@ class FirebaseService {
     }
     return query.docs.isNotEmpty;
   }
+
+  // ── Programs (WFP Entity) ───────────────────────────────────────────
+
+  Stream<List<Program>> streamPrograms() {
+    return db.collection('programs').snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Program.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<void> updateProgram(Program program) async {
+    await db.collection('programs').doc(program.id).set(program.toFirestore());
+  }
+
+  // ── Procurements (Procurement Entity) ────────────────────────────────
+
+  Stream<List<Procurement>> streamProcurements(String programId) {
+    return db
+        .collection('programs')
+        .doc(programId)
+        .collection('procurements')
+        .orderBy('created_at', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Procurement.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  // searchable data table utilize collectionGroup
+  Stream<List<Procurement>> streamAllProcurements() {
+    return db
+        .collectionGroup('procurements')
+        .orderBy('created_at', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Procurement.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<String> addProcurement(Procurement procurement) async {
+    // 1. Validate against Appropriation (Budget Ceiling)
+    await _validateAgainstAppropriation(
+      procurement.fundSource,
+      procurement.objectOfExpenditure,
+      procurement.prAmount,
+    );
+
+    // 2. Add procurement
+    final docRef = await db
+        .collection('programs')
+        .doc(procurement.programId)
+        .collection('procurements')
+        .add(procurement.toFirestore());
+
+    // 3. Deduct from Program Balance
+    await _adjustProgramBalance(procurement.programId, -procurement.prAmount);
+
+    return docRef.id;
+  }
+
+  Future<void> updateProcurement(Procurement procurement, double oldAmount) async {
+    // 1. Update procurement
+    await db
+        .collection('programs')
+        .doc(procurement.programId)
+        .collection('procurements')
+        .doc(procurement.id)
+        .update(procurement.toFirestore());
+
+    // 2. Adjust Program balance if amount changed
+    if (procurement.prAmount != oldAmount) {
+      await _adjustProgramBalance(procurement.programId, oldAmount - procurement.prAmount);
+    }
+  }
+
+  Future<void> deleteProcurement(Procurement procurement) async {
+    await db
+        .collection('programs')
+        .doc(procurement.programId)
+        .collection('procurements')
+        .doc(procurement.id)
+        .delete();
+
+    // Restore Program balance
+    await _adjustProgramBalance(procurement.programId, procurement.prAmount);
+  }
+
+  Future<void> _adjustProgramBalance(String programId, double adjustment) async {
+    final docRef = db.collection('programs').doc(programId);
+    await db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (snapshot.exists) {
+        final currentBalance = (snapshot.data()?['current_ppmp_balance'] ?? 0).toDouble();
+        transaction.update(docRef, {'current_ppmp_balance': currentBalance + adjustment});
+      }
+    });
+  }
+
+  Future<void> _validateAgainstAppropriation(String fs, String oe, double amount) async {
+    final query = await db
+        .collection('budget_lines') // Using budget_lines as appropriations
+        .where('fund_source', isEqualTo: fs)
+        .where('object_of_expenditure', isEqualTo: oe)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs.first;
+      final programmedAmount = (doc.data()['proposed_budget'] ?? doc.data()['proposed_amount'] ?? 0).toDouble();
+      final currentSpent = (doc.data()['pr_amount'] ?? 0).toDouble(); // Assume this tracks total spent
+      
+      if (currentSpent + amount > programmedAmount) {
+        throw Exception('Budget Exceeded: Remaining appropriation for "$oe" is ${programmedAmount - currentSpent}');
+      }
+    } else {
+      // Optional: allow if no appropriation found, or throw
+      // throw Exception('Appropriation not found for "$oe" under "$fs"');
+    }
+  }
+
+  // ── Notifications ───────────────────────────────────────────────────
+
+  Stream<List<SystemNotification>> streamNotifications({String? userId}) {
+    Query<Map<String, dynamic>> query = db.collection('notifications');
+    
+    // Show user-specific OR global notifications
+    if (userId != null) {
+      query = query.where(Filter.or(
+        Filter('user_id', isEqualTo: userId),
+        Filter('user_id', isNull: true),
+      ));
+    } else {
+      query = query.where('user_id', isNull: true);
+    }
+    
+    return query.orderBy('timestamp', descending: true).limit(50).snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SystemNotification.fromFirestore(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<void> addNotification(SystemNotification notification) async {
+    await db.collection('notifications').add(notification.toFirestore());
+  }
+
+  Future<void> markNotificationAsRead(String id) async {
+    await db.collection('notifications').doc(id).update({'is_read': true});
+  }
+
+  Future<void> markAllNotificationsAsRead(String? userId) async {
+    final query = await db.collection('notifications')
+        .where('user_id', isEqualTo: userId)
+        .where('is_read', isEqualTo: false)
+        .get();
+        
+    final batch = db.batch();
+    for (final doc in query.docs) {
+      batch.update(doc.reference, {'is_read': true});
+    }
+    await batch.commit();
+  }
+
+  // ── System Logs ─────────────────────────────────────────────────────
+
+  Future<void> logEvent({
+    required String type,
+    required String action,
+    required String message,
+    String? userId,
+    String? userName,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await db.collection('system_logs').add({
+      'type': type,
+      'action': action,
+      'message': message,
+      'user_id': userId,
+      'user_name': userName,
+      'timestamp': FieldValue.serverTimestamp(),
+      'metadata': metadata,
+    });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamSystemLogs() {
+    return db.collection('system_logs')
+        .orderBy('timestamp', descending: true)
+        .limit(100)
+        .snapshots();
+  }
 }
+
+

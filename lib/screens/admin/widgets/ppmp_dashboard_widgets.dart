@@ -38,100 +38,99 @@ class PPMPSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Colors.grey.shade50.withValues(alpha: 0.8),
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: activeColor.withValues(alpha: 0.03),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: activeColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Icon(icon ?? Icons.analytics_outlined, size: 18, color: activeColor),
               ),
-              if (icon != null)
+              if (percentage != null)
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: activeColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(icon, size: 16, color: activeColor),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Flexible(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-                if (trend != null) ...[
-                  const SizedBox(width: 8),
-                  trend!,
-                ],
-              ],
-            ),
-          ),
-          if (subtitle != null || percentage != null) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                if (percentage != null)
-                  Text(
+                  child: Text(
                     '${(percentage! * 100).toStringAsFixed(1)}%',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
                       color: activeColor,
                     ),
                   ),
-                if (percentage != null && subtitle != null)
-                  const SizedBox(width: 6),
-                if (subtitle != null)
-                  Expanded(
-                    child: Text(
-                      subtitle!,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+              letterSpacing: 0.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Colors.black.withValues(alpha: 0.9),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
@@ -178,11 +177,18 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
     });
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,9 +196,23 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Budget vs. Actual (M)',
-                style: AppDesignSystem.headingSmall,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Budget vs. Actual',
+                    style: AppDesignSystem.headingSmall.copyWith(letterSpacing: -0.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Values in Millions (₱)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
               ),
               _buildLegend(),
             ],
@@ -201,12 +221,37 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
           SizedBox(
             height: 250,
             child: activities.isEmpty 
-              ? const Center(child: Text('No data available'))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.shade200),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No data available',
+                        style: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                )
               : BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceAround,
                     maxY: (maxVal * 1.2).ceilToDouble(),
-                    barTouchData: BarTouchData(enabled: true),
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => Colors.blueGrey.shade900,
+                        tooltipPadding: const EdgeInsets.all(8),
+                        tooltipMargin: 8,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          return BarTooltipItem(
+                            '${rodIndex == 0 ? 'Budget' : 'Actual'}: ₱${rod.toY.toStringAsFixed(1)}M',
+                            GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                          );
+                        },
+                      ),
+                    ),
                     titlesData: FlTitlesData(
                       show: true,
                       bottomTitles: AxisTitles(
@@ -216,14 +261,23 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
                             final idx = value.toInt();
                             if (idx < 0 || idx >= topSectors.length) return const SizedBox();
                             final sector = topSectors[idx];
-                            // Abbreviate sector names if too long
                             String text = sector;
                             if (text.length > 8) {
                               text = text.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join();
                             }
                             return SideTitleWidget(
                               meta: meta, 
-                              child: Text(text, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 10))
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  text, 
+                                  style: GoogleFonts.inter(
+                                    color: Colors.grey.shade500, 
+                                    fontWeight: FontWeight.w700, 
+                                    fontSize: 10
+                                  )
+                                ),
+                              )
                             );
                           },
                         ),
@@ -233,9 +287,13 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
                           showTitles: true,
                           reservedSize: 40,
                           getTitlesWidget: (value, meta) {
+                            if (value == 0) return const SizedBox();
                             return SideTitleWidget(
                               meta: meta,
-                              child: Text('${value.toInt()}M', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                              child: Text(
+                                '${value.toInt()}M', 
+                                style: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w600, fontSize: 10)
+                              ),
                             );
                           },
                         ),
@@ -260,11 +318,29 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
 
   BarChartGroupData _makeGroupData(int x, double y1, double y2) {
     return BarChartGroupData(
-      barsSpace: 4,
+      barsSpace: 6,
       x: x,
       barRods: [
-        BarChartRodData(toY: y1, color: const Color(0xFF3B82F6), width: 12, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
-        BarChartRodData(toY: y2, color: const Color(0xFF10B981), width: 12, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
+        BarChartRodData(
+          toY: y1, 
+          gradient: const LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+          ), 
+          width: 14, 
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6))
+        ),
+        BarChartRodData(
+          toY: y2, 
+          gradient: const LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [Color(0xFF059669), Color(0xFF34D399)],
+          ), 
+          width: 14, 
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6))
+        ),
       ],
     );
   }
@@ -282,9 +358,23 @@ class PPMPBudgetVsActualChart extends StatelessWidget {
   Widget _legendItem(String label, Color color) {
     return Row(
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Container(
+          width: 8, 
+          height: 8, 
+          decoration: BoxDecoration(
+            color: color, 
+            shape: BoxShape.circle,
+          )
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label, 
+          style: GoogleFonts.inter(
+            fontSize: 11, 
+            fontWeight: FontWeight.w700, 
+            color: Colors.grey.shade600
+          )
+        ),
       ],
     );
   }
@@ -310,27 +400,42 @@ class PPMPAllocationSourceChart extends StatelessWidget {
       ..sort((a, b) => sourceTotals[b]!.compareTo(sourceTotals[a]!));
     
     final List<Color> colors = [
-      const Color(0xFF3B82F6),
-      const Color(0xFF10B981),
-      const Color(0xFFF59E0B),
-      const Color(0xFF8B5CF6),
-      const Color(0xFFEC4899),
+      const Color(0xFF2563EB),
+      const Color(0xFF059669),
+      const Color(0xFFD97706),
+      const Color(0xFF7C3AED),
+      const Color(0xFFDB2777),
     ];
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Budget Allocation by Source', style: AppDesignSystem.headingSmall),
+          Text(
+            'Budget by Source', 
+            style: AppDesignSystem.headingSmall.copyWith(letterSpacing: -0.5),
+          ),
           const SizedBox(height: 32),
           activities.isEmpty 
-            ? const SizedBox(height: 200, child: Center(child: Text('No data available')))
+            ? SizedBox(
+                height: 200, 
+                child: Center(
+                  child: Icon(Icons.donut_large_rounded, size: 48, color: Colors.grey.shade200),
+                ),
+              )
             : Row(
                 children: [
                   Expanded(
@@ -339,8 +444,8 @@ class PPMPAllocationSourceChart extends StatelessWidget {
                       height: 200,
                       child: PieChart(
                         PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
+                          sectionsSpace: 4,
+                          centerSpaceRadius: 50,
                           sections: List.generate(sortedSources.length, (index) {
                             final source = sortedSources[index];
                             final value = sourceTotals[source]!;
@@ -348,16 +453,19 @@ class PPMPAllocationSourceChart extends StatelessWidget {
                               color: colors[index % colors.length], 
                               value: value, 
                               title: '', 
-                              radius: 20
+                              radius: 18,
+                              badgeWidget: null,
                             );
                           }),
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 24),
                   Expanded(
                     flex: 1,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: List.generate(sortedSources.length, (index) {
                         final source = sortedSources[index];
                         final value = sourceTotals[source]!;
@@ -379,20 +487,38 @@ class PPMPAllocationSourceChart extends StatelessWidget {
 
   Widget _sourceLegendItem(String label, String value, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 8, 
+            height: 8, 
+            decoration: BoxDecoration(
+              color: color, 
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
+              style: GoogleFonts.inter(
+                fontSize: 12, 
+                fontWeight: FontWeight.w600, 
+                color: Colors.grey.shade600
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             value,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black),
+            style: GoogleFonts.outfit(
+              fontSize: 12, 
+              fontWeight: FontWeight.w800, 
+              color: Colors.black.withValues(alpha: 0.8)
+            ),
           ),
         ],
       ),
@@ -417,11 +543,18 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
     final filteredActivities = widget.activities.where((a) => a.matchesSearch(searchQuery)).toList();
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,53 +562,98 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.list_alt_rounded, color: Colors.blue, size: 20),
+                child: Icon(Icons.list_alt_rounded, color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: 16),
-              Expanded(child: Text('Project List & Line Items', style: AppDesignSystem.headingSmall, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Project List & Line Items', 
+                      style: AppDesignSystem.headingSmall.copyWith(letterSpacing: -0.5)
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Manage and track all procurement activities for the fiscal year.',
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => context.read<ActivityFormProvider>().openForm(),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add Project'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  elevation: 0,
+                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  textStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildFilters(),
           const SizedBox(height: 24),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: 24,
-              horizontalMargin: 0,
-              columns: const [
-                DataColumn(label: Text('PROJECT NAME / LINE ITEM')),
-                DataColumn(label: Text('BUDGET')),
-                DataColumn(label: Text('PR AMOUNT')),
-                DataColumn(label: Text('PO AMOUNT')),
-                DataColumn(label: Text('BALANCE')),
-                DataColumn(label: Text('STATUS')),
-                DataColumn(label: Text('ACTIONS')),
-              ],
-              rows: filteredActivities.map((activity) {
-                final balance = activity.unexpendedBalance;
-                Color statusColor = Colors.blue;
-                if (activity.status.toLowerCase() == 'completed') statusColor = Colors.green;
-                if (activity.status.toLowerCase() == 'planned') statusColor = Colors.grey;
-                if (activity.status.toLowerCase().contains('no budget')) statusColor = Colors.red;
+          Theme(
+            data: Theme.of(context).copyWith(
+              dividerTheme: const DividerThemeData(thickness: 1, color: Color(0xFFF1F5F9)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 32,
+                  horizontalMargin: 0,
+                  headingRowHeight: 56,
+                  dataRowMaxHeight: 72,
+                  headingTextStyle: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade500,
+                    letterSpacing: 0.5,
+                  ),
+                  columns: const [
+                    DataColumn(label: Text('PROJECT NAME / LINE ITEM')),
+                    DataColumn(label: Text('BUDGET')),
+                    DataColumn(label: Text('PR AMOUNT')),
+                    DataColumn(label: Text('PO AMOUNT')),
+                    DataColumn(label: Text('BALANCE')),
+                    DataColumn(label: Text('STATUS')),
+                    DataColumn(label: Text('')),
+                  ],
+                  rows: filteredActivities.map((activity) {
+                    final balance = activity.unexpendedBalance;
+                    Color statusColor = Colors.blue;
+                    if (activity.status.toLowerCase() == 'completed') statusColor = const Color(0xFF10B981);
+                    if (activity.status.toLowerCase() == 'planned') statusColor = Colors.grey.shade400;
+                    if (activity.status.toLowerCase().contains('no budget')) statusColor = const Color(0xFFEF4444);
 
-                return _buildRow(
-                  context,
-                  activity,
-                  activity.activityName,
-                  formatCurrency.format(activity.approvedBudget),
-                  formatCurrency.format(activity.effectivePRAmount),
-                  formatCurrency.format(activity.effectivePOAmount),
-                  formatCurrency.format(balance),
-                  activity.status,
-                  statusColor,
-                );
-              }).toList(),
+                    return _buildRow(
+                      context,
+                      activity,
+                      activity.activityName,
+                      formatCurrency.format(activity.approvedBudget),
+                      formatCurrency.format(activity.effectivePRAmount),
+                      formatCurrency.format(activity.effectivePOAmount),
+                      formatCurrency.format(balance),
+                      activity.status,
+                      statusColor,
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ],
@@ -484,21 +662,75 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
   }
 
   DataRow _buildRow(BuildContext context, Activity activity, String title, String budget, String pr, String po, String balance, String status, Color statusColor) {
-    return DataRow(cells: [
-      DataCell(SizedBox(width: 180, child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)))),
-      DataCell(Text(budget)),
-      DataCell(Text(pr)),
-      DataCell(Text(po)),
-      DataCell(Text(balance)),
-      DataCell(Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(100)),
-        child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11)),
-      )),
-      DataCell(IconButton(icon: const Icon(Icons.more_horiz), onPressed: () {
-        context.read<ActivityFormProvider>().openForm(activity: activity);
-      })),
-    ]);
+    return DataRow(
+      cells: [
+        DataCell(
+          SizedBox(
+            width: 220, 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title, 
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700, 
+                    color: Colors.black.withValues(alpha: 0.8),
+                    fontSize: 13,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  activity.sector,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            )
+          )
+        ),
+        DataCell(Text(budget, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13))),
+        DataCell(Text(pr, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12))),
+        DataCell(Text(po, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12))),
+        DataCell(
+          Text(
+            balance, 
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w700, 
+              fontSize: 13,
+              color: activity.unexpendedBalance < 0 ? Colors.red : AppColors.emeraldPrimary,
+            )
+          )
+        ),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1), 
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              status.toUpperCase(), 
+              style: GoogleFonts.inter(color: statusColor, fontWeight: FontWeight.w800, fontSize: 9, letterSpacing: 0.5)
+            ),
+          )
+        ),
+        DataCell(
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: Colors.grey), 
+            onPressed: () {
+              context.read<ActivityFormProvider>().openForm(activity: activity);
+            }
+          )
+        ),
+      ]
+    );
   }
 
   Widget _buildFilters() {
@@ -509,13 +741,13 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
               children: [
-                Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                Icon(Icons.search_rounded, size: 20, color: Colors.grey.shade400),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
@@ -526,9 +758,11 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Search projects or line items...',
-                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
+                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.w500),
                       border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     ),
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -538,19 +772,14 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
         const SizedBox(width: 16),
         _filterDropdown('All Departments'),
         const SizedBox(width: 12),
-        _filterDropdown('2025'),
-        const SizedBox(width: 12),
         _filterDropdown('Status'),
         const Spacer(),
-        ElevatedButton.icon(
-          onPressed: () => context.read<ActivityFormProvider>().openForm(),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add Project'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        Text(
+          'Showing ${widget.activities.length} Projects',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
           ),
         ),
       ],
@@ -559,17 +788,20 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
 
   Widget _filterDropdown(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black87)),
-          const SizedBox(width: 8),
-          const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+          Text(
+            label, 
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)
+          ),
+          const SizedBox(width: 10),
+          const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.grey),
         ],
       ),
     );
@@ -578,27 +810,117 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
 
 /// WFP Heatmap View
 class PPMPHeatmapView extends StatelessWidget {
-  const PPMPHeatmapView({super.key});
+  final List<Activity> activities;
+  const PPMPHeatmapView({super.key, required this.activities});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('WFP Heatmap View', style: AppDesignSystem.headingSmall),
-          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('WFP Heatmap View', style: AppDesignSystem.headingSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Monthly budget distribution for top line items.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              _buildHeatmapLegend(),
+            ],
+          ),
+          const SizedBox(height: 32),
           _buildHeatmapFilters(),
           const SizedBox(height: 24),
           _buildHeatmapGrid(),
-          const SizedBox(height: 16),
-          Text('All amounts in Philippine Peso (₱)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey)),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.shade100),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 14, color: Colors.amber.shade800),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'All amounts are shown in Philippine Peso (₱). Darker shades indicate higher budget allocations for that month.',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeatmapLegend() {
+    return Row(
+      children: [
+        _legendSquare('0', Colors.grey.shade100),
+        _legendSquare('<50k', const Color(0xFFD1FAE5)),
+        _legendSquare('<100k', const Color(0xFF6EE7B7)),
+        _legendSquare('<300k', const Color(0xFF10B981)),
+        _legendSquare('>300k', const Color(0xFF059669)),
+      ],
+    );
+  }
+
+  Widget _legendSquare(String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
         ],
       ),
     );
@@ -616,7 +938,8 @@ class PPMPHeatmapView extends StatelessWidget {
           icon: const Icon(Icons.download_rounded, size: 18),
           label: const Text('Export Data'),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.grey.shade700,
+            foregroundColor: AppColors.emeraldPrimary,
+            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
         ),
       ],
@@ -629,11 +952,18 @@ class PPMPHeatmapView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(width: 8),
           const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
         ],
@@ -643,31 +973,71 @@ class PPMPHeatmapView extends StatelessWidget {
 
   Widget _buildHeatmapGrid() {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    // Minimum width: 150 (title) + 60 (total) + 12*35 (month cols) = 630
-    const double minHeatmapWidth = 700;
+    
+    // Aggregate data from activities
+    final displayActivities = activities.take(10).toList(); // Show top 10 for readability
+    
+    final List<double> totals = List.generate(12, (_) => 0.0);
+    double grandTotal = 0;
+
+    for (var a in activities) {
+      if (a.monthlyDistribution != null && a.monthlyDistribution!.length == 12) {
+        for (int i = 0; i < 12; i++) {
+          totals[i] += a.monthlyDistribution![i];
+          grandTotal += a.monthlyDistribution![i];
+        }
+      } else {
+        // Fallback: distribute quarterly budget evenly across months
+        final qBudgets = [a.q1Budget, a.q2Budget, a.q3Budget, a.q4Budget];
+        for (int q = 0; q < 4; q++) {
+          final monthly = qBudgets[q] / 3;
+          for (int m = 0; m < 3; m++) {
+            totals[q * 3 + m] += monthly;
+            grandTotal += monthly;
+          }
+        }
+      }
+    }
+
+    final formatCurrency = NumberFormat.compactSimpleCurrency(name: '₱ ');
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: minHeatmapWidth),
-        child: Column(
-          children: [
-            // Header
-            Row(
-              children: [
-                const SizedBox(width: 150, child: Text('Project Title', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                const SizedBox(width: 60, child: Center(child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)))),
-                ...months.map((m) => SizedBox(width: 40, child: Center(child: Text(m, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildHeatmapRow('CAFC Quarterly Meeting', '₱ 67,010', [0, 20000, 0, 0, 20000, 0, 0, 20000, 0, 0, 7010, 0]),
-            _buildHeatmapRow('Procurement of Common Office Supplies', '₱ 250,000', [0, 50000, 50000, 50000, 50000, 50000, 0, 0, 0, 0, 0, 0]),
-            _buildHeatmapRow('Procurement of IT Equipment', '₱ 1,500,000', [0, 300000, 300000, 300000, 300000, 300000, 0, 0, 0, 0, 0, 0]),
-            _buildHeatmapRow('Conduct of Training - CHEDS', '₱ 120,000', [0, 0, 0, 60000, 0, 0, 60000, 0, 0, 0, 0, 0]),
-            const Divider(),
-            _buildHeatmapRow('Total', '₱ 1,937,010', [0, 370000, 350000, 410000, 370000, 350000, 60000, 20000, 0, 0, 7010, 0], isTotal: true),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              const SizedBox(width: 200, child: Text('Line Item', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))),
+              const SizedBox(width: 80, child: Center(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey)))),
+              ...months.map((m) => SizedBox(width: 50, child: Center(child: Text(m, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...displayActivities.map((a) {
+            final List<double> monthlyValues = List.generate(12, (_) => 0.0);
+            if (a.monthlyDistribution != null && a.monthlyDistribution!.length == 12) {
+              for (int i = 0; i < 12; i++) {
+                monthlyValues[i] = a.monthlyDistribution![i];
+              }
+            } else {
+              final qBudgets = [a.q1Budget, a.q2Budget, a.q3Budget, a.q4Budget];
+              for (int q = 0; q < 4; q++) {
+                final monthly = qBudgets[q] / 3;
+                for (int m = 0; m < 3; m++) {
+                  monthlyValues[q * 3 + m] = monthly;
+                }
+              }
+            }
+            return _buildHeatmapRow(a.activityName, formatCurrency.format(a.approvedBudget), monthlyValues.map((e) => e.toInt()).toList());
+          }),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(),
+          ),
+          _buildHeatmapRow('TOTAL', formatCurrency.format(grandTotal), totals.map((e) => e.toInt()).toList(), isTotal: true),
+        ],
       ),
     );
   }
@@ -677,21 +1047,55 @@ class PPMPHeatmapView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          SizedBox(width: 150, child: Text(title, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: isTotal ? FontWeight.bold : FontWeight.normal))),
-          SizedBox(width: 60, child: Center(child: Text(total, style: TextStyle(fontSize: 10, fontWeight: isTotal ? FontWeight.bold : FontWeight.w600)))),
+          SizedBox(
+            width: 200, 
+            child: Text(
+              title, 
+              overflow: TextOverflow.ellipsis, 
+              style: TextStyle(
+                fontSize: 11, 
+                fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
+                color: isTotal ? Colors.black : Colors.black87,
+              )
+            )
+          ),
+          SizedBox(
+            width: 80, 
+            child: Center(
+              child: Text(
+                total, 
+                style: TextStyle(
+                  fontSize: 10, 
+                  fontWeight: FontWeight.w800,
+                  color: isTotal ? AppColors.emeraldPrimary : Colors.black54,
+                )
+              )
+            )
+          ),
           ...values.map((v) => SizedBox(
-            width: 40,
+            width: 50,
             child: Container(
-              height: 30,
-              margin: const EdgeInsets.all(1),
+              height: 32,
+              margin: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: _getHeatmapColor(v, isTotal),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: v > 0 && !isTotal ? [
+                  BoxShadow(
+                    color: _getHeatmapColor(v, isTotal).withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ] : null,
               ),
               child: Center(
                 child: Text(
-                  v == 0 ? '0' : _formatValue(v),
-                  style: TextStyle(fontSize: 9, color: v > 100000 ? Colors.white : Colors.black87),
+                  v == 0 ? '-' : _formatValue(v),
+                  style: TextStyle(
+                    fontSize: 9, 
+                    fontWeight: FontWeight.w700,
+                    color: v > 100000 ? Colors.white : Colors.black87,
+                  ),
                 ),
               ),
             ),
@@ -702,13 +1106,14 @@ class PPMPHeatmapView extends StatelessWidget {
   }
 
   String _formatValue(int v) {
+    if (v >= 1000000) return '${(v/1000000).toStringAsFixed(1)}M';
     if (v >= 1000) return '${(v/1000).toStringAsFixed(0)}k';
     return v.toString();
   }
 
   Color _getHeatmapColor(int value, bool isTotal) {
-    if (value == 0) return Colors.grey.shade100;
-    if (isTotal) return Colors.grey.shade300;
+    if (value == 0) return Colors.grey.shade50;
+    if (isTotal) return AppColors.emeraldPrimary.withValues(alpha: 0.1);
     
     // Gradient based on value
     if (value < 50000) return const Color(0xFFD1FAE5);

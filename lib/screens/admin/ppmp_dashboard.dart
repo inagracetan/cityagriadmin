@@ -91,18 +91,31 @@ class _PPMPDashboardState extends State<PPMPDashboard> with AutomaticKeepAliveCl
                   balancePercentage: balancePercentage,
                 ),
                 const SizedBox(height: 32),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: PPMPBudgetVsActualChart(activities: activities)),
-                    const SizedBox(width: 24),
-                    Expanded(flex: 2, child: PPMPAllocationSourceChart(activities: activities)),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 1100) {
+                      return Column(
+                        children: [
+                          PPMPBudgetVsActualChart(activities: activities),
+                          const SizedBox(height: 24),
+                          PPMPAllocationSourceChart(activities: activities),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: PPMPBudgetVsActualChart(activities: activities)),
+                        const SizedBox(width: 24),
+                        Expanded(flex: 2, child: PPMPAllocationSourceChart(activities: activities)),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 32),
                 PPMPProjectListTable(activities: activities),
                 const SizedBox(height: 32),
-                const PPMPHeatmapView(),
+                PPMPHeatmapView(activities: activities),
                 const SizedBox(height: 32),
               ],
             ),

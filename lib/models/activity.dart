@@ -356,14 +356,14 @@ class Activity {
   double get unexpendedBalance => approvedBudget - effectivePOAmount;
 
   // Balance Logic as per requirements:
-  // PPMP Balance = Approved Budget - PR Amount
-  // PR Balance = PR Amount - PO Amount
-  double get ppmpBalanceCalculated => approvedBudget - effectivePRAmount;
-  double get prBalanceCalculated => effectivePRAmount - effectivePOAmount;
+  // PPMP Balance = Approved Budget - PPMP Planned Amount
+  // PR Balance = PPMP Planned Amount - PR Amount
+  double get ppmpBalanceCalculated => approvedBudget - ppmpAmount;
+  double get prBalanceCalculated => ppmpAmount - effectivePRAmount;
 
   double get unexpendedPPMP => ppmpBalanceCalculated;
 
-  double get unexpendedPR => approvedBudget - effectivePRAmount;
+  double get unexpendedPR => prBalanceCalculated;
 
   bool get isLowBalance => approvedBudget > 0 && unexpendedBalance < 1000;
 
@@ -376,7 +376,7 @@ class Activity {
     if (q == 'Q1') {
       // If it's already past Q1 and status is still planned/prepared without being processed
       final now = DateTime.now();
-      if (now.month > 3 || now.year > 2026) {
+      if (now.month > 3 || now.year > SystemConfig.nextFiscalYear) {
         return status.toLowerCase() == 'planned' || status.toLowerCase() == 'pr prepared';
       }
     }
@@ -404,6 +404,7 @@ class Activity {
     final lower = targetDate.toLowerCase();
     
     // 1. Try parsing as a structured date first (e.g. "04/28/2026" or "2026-04-28")
+    // Note: The system extracts the year dynamically from the string.
     try {
       DateTime? dt;
       if (targetDate.contains('/')) {
@@ -831,3 +832,4 @@ class Activity {
     return false;
   }
 }
+

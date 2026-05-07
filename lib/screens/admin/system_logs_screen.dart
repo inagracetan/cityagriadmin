@@ -31,7 +31,7 @@ class SystemLogsScreen extends StatelessWidget {
             Text(
               'Audit trail of all critical system activities and events.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
             const SizedBox(height: AppDesignSystem.spacing32),
@@ -57,13 +57,13 @@ class SystemLogsScreen extends StatelessWidget {
                           Icon(
                             Icons.history,
                             size: 64,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                            color: theme.colorScheme.primary.withOpacity(0.2),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No logs found yet',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                              color: theme.colorScheme.onSurface.withOpacity(0.4),
                             ),
                           ),
                         ],
@@ -149,3 +149,4 @@ class SystemLogsScreen extends StatelessWidget {
     }
   }
 }
+

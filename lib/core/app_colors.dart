@@ -43,8 +43,8 @@ class AppColors {
   );
 
   // Glassmorphism Base
-  static Color glassBase = Colors.white.withValues(alpha: 0.7);
-  static Color glassBorder = Colors.white.withValues(alpha: 0.3);
+  static Color glassBase = Colors.white.withOpacity(0.7);
+  static Color glassBorder = Colors.white.withOpacity(0.3);
 
   // Premium Dark Theme Colors
   static const Color premiumDarkBackground = Color(0xFF0F172A);
@@ -66,5 +66,6 @@ class Slate {
   static const Color shade900 = Color(0xFF0F172A);
   static const Color shade950 = Color(0xFF020617);
 }
+
 
 

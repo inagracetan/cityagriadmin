@@ -51,19 +51,24 @@ class SummaryCardsRow extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
+      child: Builder(
+        builder: (context) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isDesktop = ResponsiveUtils.isDesktop(context);
+          final sideBarWidth = isDesktop ? 260.0 : 0.0;
+          final horizontalPadding = isMobile ? 24.0 : 48.0;
+          final availableWidth = screenWidth - sideBarWidth - horizontalPadding;
+
           int crossAxisCount = ResponsiveUtils.valueByScreen(
             context,
             mobile: 1,
-            tablet: width < 800 ? 2 : 3,
-            desktop: width < 1400 ? 3 : 5,
+            tablet: screenWidth < 800 ? 2 : 3,
+            desktop: screenWidth < 1400 ? 3 : 5,
           );
 
           const double spacing = 16.0;
           final double cardWidth =
-              (width - (crossAxisCount - 1) * spacing) /
+              (availableWidth - (crossAxisCount - 1) * spacing) /
               crossAxisCount;
 
           return Wrap(
@@ -206,18 +211,78 @@ class _SummaryCard extends StatelessWidget {
       child: GlassCard(
         onTap: onTap,
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildIconBox(),
-                if (utilRate != null) _buildUtilizationCircle(),
-              ],
+            _buildIconBox(),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (helpText != null) ...[
+                        const SizedBox(width: 6),
+                        Tooltip(
+                          message: helpText!,
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatCurrency.format(amount),
+                      style: GoogleFonts.inter(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                      ),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: GoogleFonts.inter(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-            _buildTextContent(theme),
+            if (utilRate != null) ...[
+              const SizedBox(width: 16),
+              _buildUtilizationCircle(),
+            ],
           ],
         ),
       ),
@@ -266,60 +331,5 @@ class _SummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTextContent(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                title.toUpperCase(),
-                style: GoogleFonts.inter(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-            if (helpText != null)
-              Tooltip(
-                message: helpText!,
-                child: Icon(
-                  Icons.info_outline,
-                  size: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            formatCurrency.format(amount),
-            style: GoogleFonts.inter(
-              color: theme.colorScheme.onSurface,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1,
-            ),
-          ),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            style: GoogleFonts.inter(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
 }
+

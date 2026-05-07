@@ -40,9 +40,9 @@ class ResponsiveScaffold extends StatelessWidget {
     final displayStaffId = staffId ?? user?.staffId;
     final theme = Theme.of(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isWide = constraints.maxWidth >= ResponsiveUtils.tabletBreakpoint;
+    return Builder(
+      builder: (context) {
+        final bool isWide = MediaQuery.of(context).size.width >= ResponsiveUtils.tabletBreakpoint;
 
         final appBar = AppBar(
           title: Text(
@@ -54,7 +54,7 @@ class ResponsiveScaffold extends StatelessWidget {
           actions: [if (actions != null) ...actions!, const SizedBox(width: 16)],
           elevation: 0,
           scrolledUnderElevation: 0,
-          backgroundColor: theme.scaffoldBackgroundColor.withValues(alpha: 0.8),
+          backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.8),
           flexibleSpace: ClipRRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -81,7 +81,7 @@ class ResponsiveScaffold extends StatelessWidget {
                         : AppColors.secondary,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
+                        color: Colors.black.withOpacity(0.15),
                         blurRadius: 15,
                         offset: const Offset(5, 0),
                       ),
@@ -196,3 +196,4 @@ class ResponsiveScaffold extends StatelessWidget {
     );
   }
 }
+

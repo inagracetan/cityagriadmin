@@ -287,3 +287,4 @@ class AppLocalization {
         key.replaceAll('_', ' ');
   }
 }
+

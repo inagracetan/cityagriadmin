@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/firebase_service.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/app_colors.dart';
+import '../../core/design_system.dart';
+import '../../core/responsive_utils.dart';
+import '../../models/procurement.dart';
+import '../../models/program.dart';
+import '../../services/auth_service.dart';
+import '../../services/firebase_service.dart';
 import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../widgets/agri_ui.dart';
 import 'procurement_details_dialog.dart';
 import 'procurement_form_dialog.dart';
-import '../../core/responsive_utils.dart';
-import '../../core/app_colors.dart';
-import '../../models/program.dart';
-import '../../models/procurement.dart';
-import '../../services/auth_service.dart';
 
 class SectionUnitOverviewScreen extends StatefulWidget {
   final bool isActive;
@@ -165,8 +167,8 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             child: Icon(
                               Icons.search_rounded,
+                              size: AppDesignSystem.iconSizeSmall,
                               color: Color(0xFF1B5E20),
-                              size: 22,
                             ),
                           ),
                           filled: true,
@@ -200,8 +202,8 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                    margin: const EdgeInsets.fromLTRB(24, 0, 96, 0),
                   decoration: BoxDecoration(
                     color: theme.brightness == Brightness.dark 
-                      ? Colors.white.withValues(alpha: 0.05) 
-                      : Colors.black.withValues(alpha: 0.03),
+                      ? Colors.white.withOpacity(0.05) 
+                      : Colors.black.withOpacity(0.03),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TabBar(
@@ -297,7 +299,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1B5E20).withValues(alpha: 0.3),
+            color: const Color(0xFF1B5E20).withOpacity(0.3),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -312,7 +314,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
@@ -329,7 +331,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                     Text(
                       'PROGRAM UTILIZATION',
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
                         letterSpacing: 1.5,
@@ -339,7 +341,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                     Text(
                       '$programName · $activityCount Procurements',
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: Colors.white.withOpacity(0.5),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -382,7 +384,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                     Text(
                       'Spent out of ${formatCurrency.format(grandTotal)} Total Allocation',
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: Colors.white.withOpacity(0.6),
                         fontSize: isMobile ? 13 : 15,
                         fontWeight: FontWeight.w500,
                       ),
@@ -398,7 +400,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
               Container(
                 height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -413,7 +415,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                     borderRadius: BorderRadius.circular(6),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                        color: const Color(0xFFD4AF37).withOpacity(0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -438,11 +440,11 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
       child: Container(
         decoration: BoxDecoration(
           color: theme.brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.02)
-              : Slate.shade50.withValues(alpha: 0.5),
+              ? Colors.white.withOpacity(0.02)
+              : Slate.shade50.withOpacity(0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: theme.dividerColor.withValues(alpha: 0.03),
+            color: theme.dividerColor.withOpacity(0.03),
           ),
         ),
         child: InkWell(
@@ -478,7 +480,7 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: (hasPO ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                                  color: (hasPO ? Colors.green : Colors.orange).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -705,3 +707,4 @@ class _SectionUnitOverviewScreenState extends State<SectionUnitOverviewScreen> w
     );
   }
 }
+

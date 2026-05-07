@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/agri_ui.dart';
 import '../../core/app_colors.dart';
+import '../../core/constants.dart';
 import '../../widgets/skeleton_loading.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureAdminCode = true;
 
-  final String _secretAdminCode = 'AGRI-ADMIN-2026';
+  final String _secretAdminCode = 'AGRI-ADMIN-${SystemConfig.nextFiscalYearStr}';
 
   @override
   void initState() {
@@ -90,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             image: const AssetImage('assets/agri.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.1),
+              Colors.black.withOpacity(0.1),
               BlendMode.darken,
             ),
           ),
@@ -102,7 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: Card(
                 elevation: 8,
-                shadowColor: Colors.black.withValues(alpha: 0.08),
+                shadowColor: Colors.black.withOpacity(0.08),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -248,4 +249,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
 

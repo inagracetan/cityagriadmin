@@ -109,7 +109,7 @@ class _EnhancedButtonState extends State<EnhancedButton> {
                                       ? const Color(0xFF4CAF50)
                                       : const Color(0xFF2E7D32))
                                 : Colors.black)
-                            .withValues(alpha: 0.3),
+                            .withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -127,7 +127,7 @@ class _EnhancedButtonState extends State<EnhancedButton> {
                   : const Color(0xFF2E7D32),
               foregroundColor: Colors.white,
               disabledBackgroundColor: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
+                  ? Colors.white.withOpacity(0.1)
                   : const Color(0xFFE5E7EB),
               disabledForegroundColor: isDark
                   ? Colors.white30
@@ -160,7 +160,7 @@ class _EnhancedButtonState extends State<EnhancedButton> {
                           ? const Color(0xFF4CAF50)
                           : const Color(0xFF2E7D32))
                     : (isDark
-                          ? Colors.white.withValues(alpha: 0.2)
+                          ? Colors.white.withOpacity(0.2)
                           : const Color(0xFFE5E7EB)),
                 width: 2,
               ),
@@ -269,7 +269,7 @@ class EnhancedDialog extends StatelessWidget {
                       tooltip: 'Close',
                       style: IconButton.styleFrom(
                         backgroundColor: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
+                            ? Colors.white.withOpacity(0.1)
                             : const Color(0xFFF3F4F6),
                         foregroundColor: isDark
                             ? Colors.white70
@@ -346,7 +346,7 @@ class EnhancedSnackBar {
             Container(
               padding: const EdgeInsets.all(AppDesignSystem.spacing8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusSmall,
                 ),
@@ -388,7 +388,7 @@ class EnhancedSnackBar {
             Container(
               padding: const EdgeInsets.all(AppDesignSystem.spacing8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusSmall,
                 ),
@@ -426,7 +426,7 @@ class EnhancedSnackBar {
             Container(
               padding: const EdgeInsets.all(AppDesignSystem.spacing8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusSmall,
                 ),
@@ -456,3 +456,4 @@ class EnhancedSnackBar {
     );
   }
 }
+

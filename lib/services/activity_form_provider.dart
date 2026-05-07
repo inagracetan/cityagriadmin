@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/activity.dart';
+import '../models/pr_log.dart';
 import '../core/currency_formatter.dart';
 import '../core/activity_templates.dart';
+import 'firebase_service.dart';
+import 'package:provider/provider.dart';
+
 
 class BreakdownEntry {
   final TextEditingController nameCtl;
@@ -101,15 +105,184 @@ class ActivityFormProvider extends ChangeNotifier {
   bool isEditing = false;
   Activity? editingActivity;
   List<String>? initialResponsiblePersons;
+  List<PRLog> prLogs = [];
 
   // Form State
-  String sector = AppConstants.sectors.first;
+  String sector = 'Administrative Support Services Unit';
   String? subSector;
-  String selectedStatus = AppConstants.prStatuses.first;
-  String selectedMonth = AppConstants.months[DateTime.now().month - 1];
+  String selectedStatus = AppConstants.statusPRPreparation;
+  String selectedMonth = 'January';
   String? selectedToMonth;
-  String selectedYear = DateTime.now().year.toString();
+  String selectedYear = '2026';
   String responsiblePerson = '';
+
+  List<String> availableStaff = AppConstants.staffList;
+  List<String> availableSuppliers = [];
+
+
+  void setSector(String v) {
+    sector = v;
+    if (sector != 'Other') customSectorCtl.clear();
+    notifyListeners();
+  }
+
+  void setSubSector(String? v) {
+    subSector = v;
+    if (subSector != 'Other') customSubSectorCtl.clear();
+    notifyListeners();
+  }
+
+  void setStatus(String v) {
+    selectedStatus = v;
+    if (selectedStatus != 'Other') customStatusCtl.clear();
+    notifyListeners();
+  }
+
+  void setMonth(String v) {
+    selectedMonth = v;
+    notifyListeners();
+  }
+
+  void setToMonth(String? v) {
+    selectedToMonth = v;
+    notifyListeners();
+  }
+
+  void setYear(String v) {
+    selectedYear = v;
+    notifyListeners();
+  }
+
+  void setResponsiblePerson(String v) {
+    responsiblePerson = v;
+    if (responsiblePerson != 'Other') customResponsiblePersonCtl.clear();
+    notifyListeners();
+  }
+
+  void setFundingSource(FundSourceEntry entry, String v) {
+    entry.fundingSource = v;
+    if (v != 'Other') entry.customFundingSourceCtl.clear();
+    if (v == 'Agri MOOE') {
+      entry.objectOfExpenditure = '$sector Appropriation';
+    } else {
+      entry.objectOfExpenditure = null;
+    }
+    notifyListeners();
+  }
+
+  void setObjectOfExpenditure(FundSourceEntry entry, String? v) {
+    entry.objectOfExpenditure = v;
+    if (v != 'Other') entry.customObjectOfExpenditureCtl.clear();
+    notifyListeners();
+  }
+
+  bool isEdited(Activity original) {
+    if (activityNameCtl.text != original.activityName) return true;
+    if (sector != original.sector) return true;
+    if (subSector != original.subSector) return true;
+    if (targetDateString != original.targetDate) return true;
+    if (responsiblePerson != original.responsiblePerson) return true;
+    // Add other field comparisons as needed
+    return false;
+  }
+
+  bool isSaving = false;
+
+  String get targetDateString {
+    if (selectedToMonth != null) {
+      return '$selectedMonth-$selectedToMonth $selectedYear';
+    }
+    return '$selectedMonth $selectedYear';
+  }
+
+  bool get isSaveDisabled {
+    return activityNameCtl.text.trim().isEmpty || sector == 'Select Sector';
+  }
+
+
+  Future<void> loadStaffAndSuppliers(FirebaseService fbService) async {
+    try {
+      final staff = await fbService.getAvailableStaff();
+      availableStaff = staff.where((s) => s != 'Other').toList();
+      if (responsiblePerson.isNotEmpty && !availableStaff.contains(responsiblePerson)) {
+        availableStaff.insert(0, responsiblePerson);
+      }
+      
+      // Load suppliers from activities (simple cache/list)
+      // For now we just keep the default list if it's too expensive to query every time
+      availableSuppliers = AppConstants.commonSuppliers;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+    }
+  }
+
+  Future<bool> saveForm(BuildContext context, {String? activityId, bool isEdit = false}) async {
+    isSaving = true;
+    notifyListeners();
+    try {
+      final fbService = context.read<FirebaseService>();
+      
+      // Check for duplicates if adding
+      if (!isEdit) {
+        final isDuplicate = await fbService.checkDuplicateActivity(
+          activityNameCtl.text.trim(),
+          sector,
+          targetDateString,
+        );
+        if (isDuplicate && context.mounted) {
+          final proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Duplicate Activity'),
+              content: const Text('An activity with the same name, sector, and date already exists. Do you want to proceed anyway?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Proceed')),
+              ],
+            ),
+          );
+          if (proceed != true) return false;
+        }
+      }
+
+      final activity = toActivity(activityId);
+      if (isEdit && activityId != null) {
+        await fbService.updateActivity(activity);
+      } else {
+        await fbService.addActivity(activity);
+      }
+      closeForm();
+      return true;
+    } catch (e) {
+      debugPrint('Error saving form: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save error: $e')));
+      }
+      return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  void closeForm() {
+    isOpen = false;
+    isEditing = false;
+    editingActivity = null;
+    resetForm();
+    notifyListeners();
+  }
+
+  void minimizeForm() {
+    isMinimized = true;
+    notifyListeners();
+  }
+
+  void restoreForm() {
+    isMinimized = false;
+    notifyListeners();
+  }
 
   final activityNameCtl = TextEditingController();
   final unitHeadCtl = TextEditingController();
@@ -139,6 +312,11 @@ class ActivityFormProvider extends ChangeNotifier {
   final actualConductCtl = TextEditingController();
   final accommRemarksCtl = TextEditingController();
 
+  // Financial Oversight Fields
+  final inputtedAmountCtl = TextEditingController();
+  final totalProcurementCtl = TextEditingController();
+  final ppmpAmountCtl = TextEditingController();
+
   // Appropriations
   final appropCtl = TextEditingController();
   final trainingSeminarCtl = TextEditingController();
@@ -161,50 +339,155 @@ class ActivityFormProvider extends ChangeNotifier {
   String? lastObjectOfExpenditure;
 
   ActivityFormProvider() {
-    ppmpCtl.addListener(updatePRBalance);
-    prAmountCtl.addListener(updatePRBalance);
-    budgetCtl.addListener(syncPPMPWithBudget);
+    ppmpCtl.addListener(updateAllFinancials);
+    prAmountCtl.addListener(updateAllFinancials);
+    budgetCtl.addListener(updateAllFinancials);
+    inputtedAmountCtl.addListener(updateAllFinancials);
   }
 
-  void syncPPMPWithBudget() {
-    final budgetVal = budgetCtl.text;
-    if (ppmpCtl.text != budgetVal) {
-      ppmpCtl.text = budgetVal;
-    }
+  void _addBreakdownListeners(BreakdownEntry be) {
+    be.priceCtl.addListener(updateAllFinancials);
+    be.q1QtyCtl.addListener(updateAllFinancials);
+    be.q2QtyCtl.addListener(updateAllFinancials);
+    be.q3QtyCtl.addListener(updateAllFinancials);
+    be.q4QtyCtl.addListener(updateAllFinancials);
+    be.amountCtl.addListener(updateAllFinancials);
   }
 
-  void updatePRBalance() {
-    final double ppmp = CurrencyInputFormatter.parse(ppmpCtl.text);
-    final double prAmount = CurrencyInputFormatter.parse(prAmountCtl.text);
-    final double balance = ppmp - prAmount;
-    prBalanceCtl.text = CurrencyInputFormatter.formatDouble(balance);
-  }
+  void updateAllFinancials() {
+    double grandPlannedTotal = 0;
+    double q1Total = 0;
+    double q2Total = 0;
+    double q3Total = 0;
+    double q4Total = 0;
 
-  void updateTotalBudget() {
-    double grandTotal = 0;
-    bool hasAnyBreakdown = false;
+    // 1. Process Fund Sources and Breakdown Items
     for (var entry in fundSourceEntries) {
+      double fundSourceTotal = 0;
       if (entry.breakdownItems.isNotEmpty) {
-        hasAnyBreakdown = true;
-        double fundTotal = 0;
         for (var be in entry.breakdownItems) {
-          fundTotal += CurrencyInputFormatter.parse(be.amountCtl.text);
+          final double q1 = double.tryParse(be.q1QtyCtl.text) ?? 0;
+          final double q2 = double.tryParse(be.q2QtyCtl.text) ?? 0;
+          final double q3 = double.tryParse(be.q3QtyCtl.text) ?? 0;
+          final double q4 = double.tryParse(be.q4QtyCtl.text) ?? 0;
+          final double price = CurrencyInputFormatter.parse(be.priceCtl.text);
+          
+          final double totalQty = q1 + q2 + q3 + q4;
+          final double amount = totalQty * price;
+
+          // Sync internal controllers of the breakdown item
+          final totalQtyStr = totalQty.toString();
+          if (be.quantityCtl.text != totalQtyStr) {
+            be.quantityCtl.text = totalQtyStr;
+          }
+
+          final amountStr = CurrencyInputFormatter.formatDouble(amount);
+          if (be.amountCtl.text != amountStr) {
+            be.amountCtl.text = amountStr;
+          }
+
+          fundSourceTotal += amount;
+          q1Total += q1 * price;
+          q2Total += q2 * price;
+          q3Total += q3 * price;
+          q4Total += q4 * price;
         }
         
-        final fundTotalStr = CurrencyInputFormatter.formatDouble(fundTotal);
+        final fundTotalStr = CurrencyInputFormatter.formatDouble(fundSourceTotal);
         if (entry.amountCtl.text != fundTotalStr) {
           entry.amountCtl.text = fundTotalStr;
         }
-        grandTotal += fundTotal;
       } else {
-        grandTotal += CurrencyInputFormatter.parse(entry.amountCtl.text);
+        fundSourceTotal = CurrencyInputFormatter.parse(entry.amountCtl.text);
+      }
+      grandPlannedTotal += fundSourceTotal;
+    }
+
+    // 2. Determine Budget Allocation (The "Approved Budget")
+    final double inputted = CurrencyInputFormatter.parse(inputtedAmountCtl.text);
+    final double manual = CurrencyInputFormatter.parse(budgetCtl.text);
+    double budgetAllocation = inputted > 0 ? inputted : manual;
+    
+    // Sync Approved Budget field if override is set or if no budget is set yet
+    if (inputted > 0 || (budgetAllocation == 0 && grandPlannedTotal > 0)) {
+      if (inputted > 0) {
+        budgetAllocation = inputted;
+      } else if (budgetAllocation == 0) {
+        budgetAllocation = grandPlannedTotal;
+      }
+
+      final allocationStr = CurrencyInputFormatter.formatDouble(budgetAllocation);
+      if (budgetCtl.text != allocationStr) {
+        budgetCtl.text = allocationStr;
       }
     }
 
-    if (hasAnyBreakdown) {
-      budgetCtl.text = CurrencyInputFormatter.formatDouble(grandTotal);
+    // 3. Update Planned Amount (PPMP Amount)
+    final plannedStr = CurrencyInputFormatter.formatDouble(grandPlannedTotal);
+    if (ppmpAmountCtl.text != plannedStr) {
+      ppmpAmountCtl.text = plannedStr;
     }
-    updatePRBalance();
+
+    // 4. Update Quarterly Distributions
+    q1BudgetCtl.text = q1Total > 0 ? CurrencyInputFormatter.formatDouble(q1Total) : '';
+    q2BudgetCtl.text = q2Total > 0 ? CurrencyInputFormatter.formatDouble(q2Total) : '';
+    q3BudgetCtl.text = q3Total > 0 ? CurrencyInputFormatter.formatDouble(q3Total) : '';
+    q4BudgetCtl.text = q4Total > 0 ? CurrencyInputFormatter.formatDouble(q4Total) : '';
+
+    // 5. Calculate total procurement from PR logs
+    double totalPRs = 0;
+    for (var log in prLogs) {
+      totalPRs += log.prAmount;
+    }
+    final totalPRsStr = CurrencyInputFormatter.formatDouble(totalPRs);
+    if (totalProcurementCtl.text != totalPRsStr) {
+      totalProcurementCtl.text = totalPRsStr;
+    }
+    if (prAmountCtl.text != totalPRsStr) {
+      prAmountCtl.text = totalPRsStr;
+    }
+
+    // 6. Calculate Balances
+    // PPMP Balance = Budget Allocation - PPMP Amount (Planned)
+    final double ppmpBalance = budgetAllocation - grandPlannedTotal;
+    final ppmpBalanceStr = CurrencyInputFormatter.formatDouble(ppmpBalance);
+    if (ppmpBalanceCtl.text != ppmpBalanceStr) {
+      ppmpBalanceCtl.text = ppmpBalanceStr;
+    }
+    // Legacy support for ppmpCtl (which is often bound to balance in UI)
+    if (ppmpCtl.text != ppmpBalanceStr) {
+      ppmpCtl.text = ppmpBalanceStr;
+    }
+
+    // PR Balance = PPMP Amount (Planned) - Actual PRs
+    final double prBalance = grandPlannedTotal - totalPRs;
+    final prBalanceStr = CurrencyInputFormatter.formatDouble(prBalance);
+    if (prBalanceCtl.text != prBalanceStr) {
+      prBalanceCtl.text = prBalanceStr;
+    }
+
+    notifyListeners();
+  }
+
+  void addPRLog(String? activityId, String userName) {
+    prLogs.add(PRLog(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      activityId: activityId ?? '',
+      status: AppConstants.statusPRStage,
+      prNumber: '',
+      prAmount: 0,
+      statusDate: DateTime.now().toString().split(' ').first,
+      timestamp: DateTime.now(),
+      updatedBy: userName,
+    ));
+    updateAllFinancials();
+    notifyListeners();
+  }
+
+  void removePRLog(int index) {
+    prLogs.removeAt(index);
+    updateAllFinancials();
+    notifyListeners();
   }
 
 
@@ -212,16 +495,16 @@ class ActivityFormProvider extends ChangeNotifier {
 
   void addFundSource() {
     final entry = FundSourceEntry();
-    entry.amountCtl.addListener(updateTotalBudget);
+    entry.amountCtl.addListener(updateAllFinancials);
     fundSourceEntries.add(entry);
     notifyListeners();
   }
 
   void removeFundSource(FundSourceEntry entry) {
-    entry.amountCtl.removeListener(updateTotalBudget);
+    entry.amountCtl.removeListener(updateAllFinancials);
     entry.dispose();
     fundSourceEntries.remove(entry);
-    updateTotalBudget();
+    updateAllFinancials();
     notifyListeners();
   }
 
@@ -232,7 +515,7 @@ class ActivityFormProvider extends ChangeNotifier {
       status: lastEntry?.statusCtl.text,
       accountCode: lastEntry?.accountCodeCtl.text ?? accountCodeCtl.text,
     );
-    item.amountCtl.addListener(updateTotalBudget);
+    _addBreakdownListeners(item);
     fs.breakdownItems.add(item);
     notifyListeners();
   }
@@ -278,10 +561,10 @@ class ActivityFormProvider extends ChangeNotifier {
         totalQty * price,
       );
 
-      entry.amountCtl.addListener(updateTotalBudget);
+      _addBreakdownListeners(entry);
       fs.breakdownItems.add(entry);
     }
-    updateTotalBudget();
+    updateAllFinancials();
     notifyListeners();
   }
 
@@ -299,7 +582,7 @@ class ActivityFormProvider extends ChangeNotifier {
     final fs = FundSourceEntry();
     fs.fundingSource = 'Agri MOOE';
     fs.objectOfExpenditure = 'Trainings and Seminar Expenses';
-    fs.amountCtl.addListener(updateTotalBudget);
+    fs.amountCtl.addListener(updateAllFinancials);
 
     for (var item in template.items) {
       final entry = BreakdownEntry(
@@ -315,20 +598,20 @@ class ActivityFormProvider extends ChangeNotifier {
       final totalQty = item.q1 + item.q2 + item.q3 + item.q4;
       entry.quantityCtl.text = totalQty.toString();
       entry.amountCtl.text = CurrencyInputFormatter.formatDouble(totalQty * item.price);
-      entry.amountCtl.addListener(updateTotalBudget);
+      _addBreakdownListeners(entry);
       fs.breakdownItems.add(entry);
     }
 
     fundSourceEntries.add(fs);
-    updateTotalBudget();
+    updateAllFinancials();
     notifyListeners();
   }
 
   void removeBreakdownItem(FundSourceEntry fs, int bIndex) {
-    fs.breakdownItems[bIndex].amountCtl.removeListener(updateTotalBudget);
+    fs.breakdownItems[bIndex].amountCtl.removeListener(updateAllFinancials);
     fs.breakdownItems[bIndex].dispose();
     fs.breakdownItems.removeAt(bIndex);
-    updateTotalBudget();
+    updateAllFinancials();
     notifyListeners();
   }
 
@@ -407,33 +690,42 @@ class ActivityFormProvider extends ChangeNotifier {
     q4BudgetCtl.text = activity.q4Budget > 0
         ? CurrencyInputFormatter.formatDouble(activity.q4Budget)
         : '';
-    ppmpCtl.text = activity.ppmpAmount > 0
-        ? CurrencyInputFormatter.formatDouble(activity.ppmpAmount)
-        : '';
-    prAmountCtl.text = activity.prAmount > 0
-        ? CurrencyInputFormatter.formatDouble(activity.prAmount)
-        : '';
-    prBalanceCtl.text = activity.prBalance > 0
-        ? CurrencyInputFormatter.formatDouble(activity.prBalance)
-        : '';
     budgetCtl.text = activity.totalBudget > 0
         ? CurrencyInputFormatter.formatDouble(activity.totalBudget)
         : '';
+    
+    inputtedAmountCtl.text = activity.inputtedAmount > 0
+        ? CurrencyInputFormatter.formatDouble(activity.inputtedAmount)
+        : '';
+
+    double totalPRs = 0;
+    for (var log in activity.prLogs) {
+      totalPRs += log.prAmount;
+    }
+    totalProcurementCtl.text = CurrencyInputFormatter.formatDouble(totalPRs);
+
+    ppmpAmountCtl.text = activity.ppmpAmount > 0
+        ? CurrencyInputFormatter.formatDouble(activity.ppmpAmount)
+        : (activity.totalBudget > 0 ? CurrencyInputFormatter.formatDouble(activity.totalBudget) : '');
+
+    ppmpBalanceCtl.text = CurrencyInputFormatter.formatDouble(activity.ppmpBalanceCalculated);
+    ppmpCtl.text = CurrencyInputFormatter.formatDouble(activity.ppmpBalanceCalculated);
+    prBalanceCtl.text = CurrencyInputFormatter.formatDouble(activity.prBalanceCalculated);
+    
+    prLogs = List.from(activity.prLogs);
 
     // Accomplishment fields
     actualConductCtl.text = activity.actualConduct;
     accommRemarksCtl.text = activity.accommRemarks;
 
     // Appropriations
-    appropCtl.text = activity.appropriation.toString();
-    trainingSeminarCtl.text = activity.trainingSeminarAmount.toString();
-    meetingsCtl.text = activity.meetingsAmount.toString();
-    df20Ctl.text = activity.df20Amount.toString();
-    cpocCtl.text = activity.cpocAmount.toString();
-    gadCtl.text = activity.gadAmount.toString();
-    ppmpBalanceCtl.text = activity.ppmpBalance.toString();
+    appropCtl.text = CurrencyInputFormatter.formatDouble(activity.appropriation);
+    trainingSeminarCtl.text = CurrencyInputFormatter.formatDouble(activity.trainingSeminarAmount);
+    meetingsCtl.text = CurrencyInputFormatter.formatDouble(activity.meetingsAmount);
+    df20Ctl.text = CurrencyInputFormatter.formatDouble(activity.df20Amount);
+    cpocCtl.text = CurrencyInputFormatter.formatDouble(activity.cpocAmount);
+    gadCtl.text = CurrencyInputFormatter.formatDouble(activity.gadAmount);
     prNumberCtl.text = activity.prNumber;
-    prBalanceCtl.text = activity.prBalance.toString();
     supplierAppropCtl.text = activity.supplierApprop;
     barcodeAppropCtl.text = activity.barcodeApprop;
     statusAppropCtl.text = activity.statusApprop;
@@ -477,7 +769,7 @@ class ActivityFormProvider extends ChangeNotifier {
           }
         }
 
-        entry.amountCtl.addListener(updateTotalBudget);
+        entry.amountCtl.addListener(updateAllFinancials);
 
         if (activity.breakdown.isNotEmpty) {
           final items = activity.breakdown
@@ -505,7 +797,7 @@ class ActivityFormProvider extends ChangeNotifier {
               statusDate: item.statusDate,
               accountCode: item.accountCode,
             );
-            be.amountCtl.addListener(updateTotalBudget);
+            be.amountCtl.addListener(updateAllFinancials);
             entry.breakdownItems.add(be);
           }
         }
@@ -534,7 +826,7 @@ class ActivityFormProvider extends ChangeNotifier {
           entry.customObjectOfExpenditureCtl.text = oe;
         }
       }
-      entry.amountCtl.addListener(updateTotalBudget);
+      entry.amountCtl.addListener(updateAllFinancials);
 
       // Also check if any breakdown items belong to this legacy source
       if (activity.breakdown.isNotEmpty) {
@@ -555,7 +847,7 @@ class ActivityFormProvider extends ChangeNotifier {
             statusDate: item.statusDate,
             accountCode: item.accountCode,
           );
-          be.amountCtl.addListener(updateTotalBudget);
+          _addBreakdownListeners(be);
           entry.breakdownItems.add(be);
         }
       }
@@ -566,25 +858,80 @@ class ActivityFormProvider extends ChangeNotifier {
       addFundSource();
     }
 
-    updateTotalBudget();
+    updateAllFinancials();
   }
 
-  void minimizeForm() {
-    isMinimized = true;
-    notifyListeners();
+
+
+  Activity toActivity(String? id, {DateTime? createdAt}) {
+    return Activity(
+      id: id ?? '',
+      sector: sector == 'Other' ? customSectorCtl.text : sector,
+      subSector: subSector == 'Other' ? customSubSectorCtl.text : subSector,
+      activityName: activityNameCtl.text,
+      performanceIndicator: performanceIndicatorCtl.text,
+      targetNo: int.tryParse(targetNoCtl.text) ?? 0,
+      fundingSource: fundSourceEntries.isNotEmpty ? fundSourceEntries.first.fundingSource : 'Agri MOOE',
+      objectOfExpenditure: fundSourceEntries.isNotEmpty ? fundSourceEntries.first.objectOfExpenditure : 'Other-MOE Expenses',
+      q1Budget: CurrencyInputFormatter.parse(q1BudgetCtl.text),
+      q2Budget: CurrencyInputFormatter.parse(q2BudgetCtl.text),
+      q3Budget: CurrencyInputFormatter.parse(q3BudgetCtl.text),
+      q4Budget: CurrencyInputFormatter.parse(q4BudgetCtl.text),
+      ppmpAmount: CurrencyInputFormatter.parse(ppmpAmountCtl.text),
+      prAmount: CurrencyInputFormatter.parse(prAmountCtl.text),
+      prBalance: CurrencyInputFormatter.parse(prBalanceCtl.text),
+      responsiblePerson: responsiblePerson == 'Other' ? customResponsiblePersonCtl.text : responsiblePerson,
+      status: prLogs.isNotEmpty ? prLogs.last.status : (selectedStatus == 'Other' ? customStatusCtl.text : selectedStatus),
+      targetDate: '$selectedMonth ${selectedToMonth != null ? '- $selectedToMonth ' : ''}$selectedYear',
+      targetParticipants: targetParticipantsCtl.text,
+      actualConduct: actualConductCtl.text,
+      accommRemarks: accommRemarksCtl.text,
+      location: locationCtl.text,
+      otherMoeSuppliers: otherMoeSuppliersCtl.text,
+      unitHead: unitHeadCtl.text,
+      remarks: remarksCtl.text,
+      statusDate: prLogs.isNotEmpty ? prLogs.last.statusDate : (customStatusDateCtl.text.isNotEmpty ? customStatusDateCtl.text : null),
+      isDraft: false,
+      breakdown: fundSourceEntries.expand((fs) => fs.breakdownItems.map((bi) => BreakdownItem(
+        name: bi.nameCtl.text,
+        amount: CurrencyInputFormatter.parse(bi.amountCtl.text),
+        unit: bi.unitCtl.text,
+        quantity: double.tryParse(bi.quantityCtl.text) ?? 0,
+        price: CurrencyInputFormatter.parse(bi.priceCtl.text),
+        quarter: bi.quarter,
+        q1Qty: double.tryParse(bi.q1QtyCtl.text) ?? 0,
+        q2Qty: double.tryParse(bi.q2QtyCtl.text) ?? 0,
+        q3Qty: double.tryParse(bi.q3QtyCtl.text) ?? 0,
+        q4Qty: double.tryParse(bi.q4QtyCtl.text) ?? 0,
+        supplier: bi.supplierCtl.text,
+        status: bi.statusCtl.text,
+        statusDate: bi.statusDateCtl.text,
+        accountCode: bi.accountCodeCtl.text,
+      ))).toList(),
+      fundSources: fundSourceEntries.map((fs) => FundSourceItem(
+        fundingSource: fs.fundingSource == 'Other' ? fs.customFundingSourceCtl.text : fs.fundingSource,
+        objectOfExpenditure: fs.objectOfExpenditure == 'Other' ? fs.customObjectOfExpenditureCtl.text : fs.objectOfExpenditure,
+        amount: CurrencyInputFormatter.parse(fs.amountCtl.text),
+      )).toList(),
+      appropriation: CurrencyInputFormatter.parse(appropCtl.text),
+      trainingSeminarAmount: CurrencyInputFormatter.parse(trainingSeminarCtl.text),
+      meetingsAmount: CurrencyInputFormatter.parse(meetingsCtl.text),
+      df20Amount: CurrencyInputFormatter.parse(df20Ctl.text),
+      cpocAmount: CurrencyInputFormatter.parse(cpocCtl.text),
+      gadAmount: CurrencyInputFormatter.parse(gadCtl.text),
+      ppmpBalance: CurrencyInputFormatter.parse(ppmpBalanceCtl.text),
+      prNumber: prNumberCtl.text,
+      supplierApprop: supplierAppropCtl.text,
+      barcodeApprop: barcodeAppropCtl.text,
+      statusApprop: statusAppropCtl.text,
+      statusAppropDate: statusAppropDateCtl.text,
+      accountCode: accountCodeCtl.text,
+      prLogs: prLogs,
+      inputtedAmount: CurrencyInputFormatter.parse(inputtedAmountCtl.text),
+    );
   }
 
-  void restoreForm() {
-    isMinimized = false;
-    notifyListeners();
-  }
 
-  void closeForm() {
-    isOpen = false;
-    isMinimized = false;
-    resetForm();
-    notifyListeners();
-  }
 
   void resetForm() {
     // These fields are now persistent across "Add Activity" sessions
@@ -628,9 +975,13 @@ class ActivityFormProvider extends ChangeNotifier {
     barcodeAppropCtl.clear();
     statusAppropDateCtl.clear();
     accountCodeCtl.clear();
+    inputtedAmountCtl.clear();
+    totalProcurementCtl.clear();
+    ppmpAmountCtl.clear();
+    prLogs.clear();
 
     for (var fs in fundSourceEntries) {
-      fs.amountCtl.removeListener(updateTotalBudget);
+      fs.amountCtl.removeListener(updateAllFinancials);
       fs.dispose();
     }
     fundSourceEntries.clear();
@@ -676,9 +1027,13 @@ class ActivityFormProvider extends ChangeNotifier {
     statusAppropCtl.dispose();
     statusAppropDateCtl.dispose();
     accountCodeCtl.dispose();
+    inputtedAmountCtl.dispose();
+    totalProcurementCtl.dispose();
+    ppmpAmountCtl.dispose();
     for (var fs in fundSourceEntries) {
       fs.dispose();
     }
     super.dispose();
   }
 }
+

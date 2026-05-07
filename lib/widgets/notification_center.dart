@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/notification_model.dart';
-import '../services/firebase_service.dart';
-import '../services/auth_service.dart';
+
 import '../core/date_formatter.dart';
+import '../models/notification_model.dart';
+import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
+import '../services/navigation_provider.dart';
 
 class NotificationCenter extends StatelessWidget {
   const NotificationCenter({super.key});
+
 
   static void show(BuildContext context) {
     showDialog(
@@ -27,8 +30,8 @@ class NotificationCenter extends StatelessWidget {
       insetPadding: const EdgeInsets.fromLTRB(16, 64, 16, 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 400,
-        height: 600,
+        width: 280,
+        height: 380,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: theme.scaffoldBackgroundColor,
@@ -60,10 +63,20 @@ class NotificationCenter extends StatelessWidget {
                         notification: notification,
                         onTap: () {
                           fbService.markNotificationAsRead(notification.id);
-                          if (notification.relatedId != null) {
-                            Navigator.pop(context);
-                            // We could navigate to the specific activity here
-                            // For now, let's at least mark it read.
+                          Navigator.pop(context);
+                          
+                          final navProvider = context.read<NavigationProvider>();
+                          
+                          if (notification.type == NotificationType.budget) {
+                            navProvider.updateLayout(
+                              title: 'Expenditure Tracker',
+                              selectedIndex: 3,
+                            );
+                          } else if (notification.type == NotificationType.activity || notification.relatedId != null) {
+                            navProvider.updateLayout(
+                              title: 'Activity Management',
+                              selectedIndex: 1,
+                            );
                           }
                         },
                       );
@@ -81,7 +94,7 @@ class NotificationCenter extends StatelessWidget {
   Widget _buildHeader(BuildContext context, FirebaseService fbService, String? userId) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -91,14 +104,14 @@ class NotificationCenter extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.notifications, color: Colors.white),
-              SizedBox(width: 12),
+              Icon(Icons.notifications, color: Colors.white, size: 18),
+              SizedBox(width: 6),
               Text(
                 'Notifications',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 14,
                 ),
               ),
             ],
@@ -106,8 +119,8 @@ class NotificationCenter extends StatelessWidget {
           TextButton(
             onPressed: () => fbService.markAllNotificationsAsRead(userId),
             child: const Text(
-              'Mark all as read',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              'Clear',
+              style: TextStyle(color: Colors.white70, fontSize: 11),
             ),
           ),
         ],
@@ -152,13 +165,13 @@ class _NotificationItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         color: notification.isRead ? null : theme.colorScheme.primary.withValues(alpha: 0.05),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildIcon(theme),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,11 +179,15 @@ class _NotificationItem extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        notification.title,
-                        style: TextStyle(
-                          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       if (!notification.isRead)
@@ -184,20 +201,22 @@ class _NotificationItem extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     notification.message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                      fontSize: 13,
+                      fontSize: 11,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 3),
                   Text(
                     DateFormatter.formatTimestamp(notification.timestamp),
                     style: TextStyle(
                       color: theme.disabledColor,
-                      fontSize: 11,
+                      fontSize: 9,
                     ),
                   ),
                 ],
@@ -240,12 +259,13 @@ class _NotificationItem extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
-      child: Icon(iconData, color: color, size: 20),
+      child: Icon(iconData, color: color, size: 18),
     );
   }
 }
+

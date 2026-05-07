@@ -7,7 +7,7 @@ import '../../../core/design_system.dart';
 import '../../../core/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class ActivityTable extends StatelessWidget {
+class ActivityTable extends StatefulWidget {
   final List<Activity> activities;
   final FirebaseService fbService;
   final NumberFormat formatCurrency;
@@ -41,6 +41,19 @@ class ActivityTable extends StatelessWidget {
   });
 
   @override
+  State<ActivityTable> createState() => _ActivityTableState();
+}
+
+class _ActivityTableState extends State<ActivityTable> {
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -55,18 +68,18 @@ class ActivityTable extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.only(bottom: 100),
-            itemCount: activities.length,
+            itemCount: widget.activities.length,
             itemBuilder: (context, index) {
-              final activity = activities[index];
+              final activity = widget.activities[index];
               final isEven = index % 2 == 0;
               return Container(
                 decoration: BoxDecoration(
                   color: isEven
                       ? (isDark
-                            ? Colors.white.withValues(alpha: 0.02)
+                            ? Colors.white.withOpacity(0.02)
                             : Colors.transparent)
                       : (isDark
-                            ? Colors.white.withValues(alpha: 0.05)
+                            ? Colors.white.withOpacity(0.05)
                             : const Color(0xFFF9FAFB)),
                 ),
                 child: _buildRow(context, activity),
@@ -74,7 +87,7 @@ class ActivityTable extends StatelessWidget {
             },
             separatorBuilder: (context, index) => Divider(
               height: 1,
-              color: theme.dividerColor.withValues(alpha: 0.05),
+              color: theme.dividerColor.withOpacity(0.05),
             ),
           ),
         ),
@@ -89,7 +102,7 @@ class ActivityTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 30,
             offset: const Offset(0, 12),
           ),
@@ -101,22 +114,18 @@ class ActivityTable extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: shouldScroll
-          ? LayoutBuilder(
-              builder: (context, constraints) {
-                return Scrollbar(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: minTableWidth,
-                        minHeight: constraints.maxHeight,
-                        maxHeight: constraints.maxHeight,
-                      ),
-                      child: tableContent,
-                    ),
+          ? Scrollbar(
+              controller: _horizontalController,
+              child: SingleChildScrollView(
+                controller: _horizontalController,
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: minTableWidth,
                   ),
-                );
-              },
+                  child: tableContent,
+                ),
+              ),
             )
           : tableContent,
     );
@@ -126,7 +135,7 @@ class ActivityTable extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final totalPRBalance = totalPPMPBalance - totalPR;
+    final totalPRBalance = widget.totalPPMPBalance - widget.totalPR;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -156,7 +165,7 @@ class ActivityTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              formatCurrency.format(totalPPMPBalance),
+              widget.formatCurrency.format(widget.totalPPMPBalance),
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -169,7 +178,7 @@ class ActivityTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              formatCurrency.format(totalPR),
+              widget.formatCurrency.format(widget.totalPR),
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -182,7 +191,7 @@ class ActivityTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              formatCurrency.format(totalPRBalance),
+              widget.formatCurrency.format(totalPRBalance),
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.w900,
@@ -195,7 +204,7 @@ class ActivityTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              formatCurrency.format(totalPOAmount),
+              widget.formatCurrency.format(widget.totalPOAmount),
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -222,7 +231,7 @@ class ActivityTable extends StatelessWidget {
         color: isDark ? Slate.shade900 : Slate.shade800,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -233,8 +242,8 @@ class ActivityTable extends StatelessWidget {
           SizedBox(
             width: 48,
             child: Checkbox(
-              value: activities.isNotEmpty && selectedIds.length == activities.length,
-              onChanged: (val) => onSelectAll(val ?? false),
+              value: widget.activities.isNotEmpty && widget.selectedIds.length == widget.activities.length,
+              onChanged: (val) => widget.onSelectAll(val ?? false),
               activeColor: AppColors.primary,
               side: const BorderSide(color: Colors.white54, width: 2),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -328,13 +337,13 @@ class ActivityTable extends StatelessWidget {
     EdgeInsets? padding,
     bool isHeader = false,
   }) {
-    final isSorted = sortColumnIndex == sortIndex;
+    final isSorted = widget.sortColumnIndex == sortIndex;
 
     return Expanded(
       flex: flex,
       child: InkWell(
         onTap: sortIndex != null
-            ? () => onSort?.call(sortIndex, !sortAscending)
+            ? () => widget.onSort?.call(sortIndex, !widget.sortAscending)
             : null,
         child: Container(
           padding: padding,
@@ -366,7 +375,7 @@ class ActivityTable extends StatelessWidget {
                 if (isSorted) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                    widget.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
                     size: 14,
                     color: isHeader ? Colors.white : AppColors.primary,
                   ),
@@ -392,14 +401,14 @@ class ActivityTable extends StatelessWidget {
         activity.targetDate.contains(currentMonthStr);
 
     return InkWell(
-      onTap: () => onActionTap(activity),
+      onTap: () => widget.onActionTap(activity),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
         decoration: BoxDecoration(
           color: isLowBalance
-              ? Colors.red.withValues(alpha: 0.04)
+              ? Colors.red.withOpacity(0.04)
               : isDelayed
-              ? Colors.orange.withValues(alpha: 0.04)
+              ? Colors.orange.withOpacity(0.04)
               : Colors.transparent,
           border: Border(
             left: BorderSide(
@@ -415,8 +424,8 @@ class ActivityTable extends StatelessWidget {
             SizedBox(
               width: 48,
               child: Checkbox(
-                value: selectedIds.contains(activity.id),
-                onChanged: (val) => onSelectionChanged(activity.id, val ?? false),
+                value: widget.selectedIds.contains(activity.id),
+                onChanged: (val) => widget.onSelectionChanged(activity.id, val ?? false),
                 activeColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
@@ -431,7 +440,7 @@ class ActivityTable extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade50,
+                      color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade50,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: isDark ? Colors.white10 : Slate.shade200),
                     ),
@@ -505,7 +514,7 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.totalBudget),
+                widget.formatCurrency.format(activity.totalBudget),
                 textAlign: TextAlign.right,
                 style: GoogleFonts.robotoMono(
                   fontSize: 13,
@@ -518,7 +527,7 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.effectivePRAmount),
+                widget.formatCurrency.format(activity.effectivePRAmount),
                 textAlign: TextAlign.right,
                 style: GoogleFonts.robotoMono(
                   fontSize: 13,
@@ -531,7 +540,7 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.ppmpBalanceCalculated),
+                widget.formatCurrency.format(activity.ppmpBalanceCalculated),
                 textAlign: TextAlign.right,
                 style: GoogleFonts.robotoMono(
                   fontSize: 13,
@@ -544,7 +553,7 @@ class ActivityTable extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                formatCurrency.format(activity.effectivePOAmount),
+                widget.formatCurrency.format(activity.effectivePOAmount),
                 textAlign: TextAlign.right,
                 style: GoogleFonts.robotoMono(
                   fontSize: 13,
@@ -565,7 +574,7 @@ class ActivityTable extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.05),
+                          color: AppColors.primary.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -604,7 +613,7 @@ class ActivityTable extends StatelessWidget {
                 icon: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                    color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade100,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -613,7 +622,7 @@ class ActivityTable extends StatelessWidget {
                     color: isDark ? Colors.white54 : Slate.shade500,
                   ),
                 ),
-                onPressed: () => onActionTap(activity),
+                onPressed: () => widget.onActionTap(activity),
               ),
             ),
           ],
@@ -652,9 +661,9 @@ class ActivityTable extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
+        border: Border.all(color: color.withOpacity(0.2), width: 0.5),
       ),
       child: Text(
         label,
@@ -669,3 +678,4 @@ class ActivityTable extends StatelessWidget {
   }
 
 }
+

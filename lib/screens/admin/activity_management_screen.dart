@@ -15,7 +15,6 @@ import '../../services/settings_provider.dart';
 import '../../services/activity_form_provider.dart';
 import '../../models/activity.dart';
 import '../../widgets/agri_ui.dart';
-import '../../services/seed_data_loader.dart';
 import 'widgets/activity_filters_bar.dart';
 import 'widgets/activity_table.dart';
 import 'widgets/activity_card_list.dart';
@@ -80,7 +79,6 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
   }
 
   void _updateNav() {
-    final fbService = context.read<FirebaseService>();
     final authService = context.read<AuthService>();
     final navProvider = context.read<NavigationProvider>();
     final l10n = context.read<SettingsProvider>().l10n;
@@ -99,37 +97,12 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
           onPressed: () =>
               _showExportOptions(context, _activities, authService),
         ),
-        IconButton(
-          icon: const Icon(
-            Icons.data_exploration_outlined,
-            color: AppColors.emeraldPrimary,
-          ),
-          tooltip: 'Seed Data',
-          onPressed: () => _seedData(context, fbService),
-        ),
       ],
       fab: null,
     );
   }
 
-  void _seedData(BuildContext context, FirebaseService fbService) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Seeding data from seed_data.json...')),
-      );
-      await SeedDataLoader.load(fbService, force: true);
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Seed data loaded successfully!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('Seeding error: $e')));
-      }
-    }
-  }
+
 
   void _onFiltersChanged() {
     setState(() {
@@ -420,8 +393,8 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
+            child: Builder(
+              builder: (context) {
                 if (activities.isEmpty) {
                   if (isAnyFilterActive) {
                     return Padding(
@@ -456,7 +429,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
                 }
 
                 final isNarrow =
-                    constraints.maxWidth < ResponsiveUtils.tabletBreakpoint;
+                    MediaQuery.of(context).size.width < ResponsiveUtils.tabletBreakpoint;
 
                 if (isNarrow) {
                   return ActivityCardList(
@@ -807,4 +780,5 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
     );
   }
 }
+
 

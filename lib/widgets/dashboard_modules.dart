@@ -129,7 +129,7 @@ class _BudgetSectionUnitChartState extends State<BudgetSectionUnitChart> {
                     Text(
                       'Visual breakdown of total approved budget.',
                       style: AppDesignSystem.bodySmall.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -140,7 +140,7 @@ class _BudgetSectionUnitChartState extends State<BudgetSectionUnitChart> {
                     icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+                        color: AppColors.emeraldPrimary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -207,7 +207,7 @@ class _BudgetSectionUnitChartState extends State<BudgetSectionUnitChart> {
                                   Text(
                                     formatCurrency.format(sectorBudgets[sortedSectors[index]]!),
                                     style: AppDesignSystem.bodySmall.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       fontSize: 10,
                                     ),
                                   ),
@@ -232,3 +232,4 @@ class _BudgetSectionUnitChartState extends State<BudgetSectionUnitChart> {
     return list.fold(0, (sum, item) => sum + item.approvedBudget);
   }
 }
+

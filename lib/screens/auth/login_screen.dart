@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
             image: const AssetImage('assets/agri.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.1),
+              Colors.black.withOpacity(0.1),
               BlendMode.darken,
             ),
           ),
@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: Card(
                 elevation: 8,
-                shadowColor: Colors.black.withValues(alpha: 0.08),
+                shadowColor: Colors.black.withOpacity(0.08),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -243,4 +243,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
 

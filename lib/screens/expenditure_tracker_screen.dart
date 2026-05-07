@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/firebase_service.dart';
 import '../models/expenditure.dart';
 import 'package:intl/intl.dart';
-import '../services/seed_data_loader.dart';
 import '../core/constants.dart';
 import '../widgets/skeleton_loading.dart';
 
@@ -72,15 +71,6 @@ class _ExpenditureTrackerScreenState extends State<ExpenditureTrackerScreen>
                       Text(
                         'No procurement records found.',
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          final fbService = context.read<FirebaseService>();
-                          SeedDataLoader.load(fbService, force: true);
-                        },
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Seed Sample Data'),
                       ),
                     ],
                   ),
@@ -196,8 +186,8 @@ class _ExpenditureTrackerScreenState extends State<ExpenditureTrackerScreen>
                   final date = await showDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
-                    firstDate: DateTime(2025),
-                    lastDate: DateTime(2030),
+                    firstDate: DateTime(SystemConfig.currentFiscalYear),
+                    lastDate: DateTime(SystemConfig.currentFiscalYear + 5),
                   );
                   if (date != null) {
                     poDateCtl.text = DateFormat('MM/dd/yyyy').format(date);
@@ -247,3 +237,4 @@ class _ExpenditureTrackerScreenState extends State<ExpenditureTrackerScreen>
     );
   }
 }
+

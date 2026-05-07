@@ -67,10 +67,10 @@ class UserGuideDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppDesignSystem.spacing16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
               borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
               ),
             ),
             child: Row(
@@ -110,7 +110,7 @@ class UserGuideDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppDesignSystem.spacing8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
                 ),
                 child: Icon(icon, color: theme.colorScheme.primary, size: 20),
@@ -141,3 +141,4 @@ class UserGuideDialog extends StatelessWidget {
     );
   }
 }
+

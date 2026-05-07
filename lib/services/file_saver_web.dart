@@ -44,3 +44,4 @@ Future<String?> saveFileSafely(
   web.URL.revokeObjectURL(url);
   return 'downloaded';
 }
+

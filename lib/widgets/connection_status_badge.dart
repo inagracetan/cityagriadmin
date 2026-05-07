@@ -15,7 +15,7 @@ class ConnectionStatusBadge extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.1),
+            color: Colors.amber.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.amber.shade700, width: 1),
           ),
@@ -44,3 +44,4 @@ class ConnectionStatusBadge extends StatelessWidget {
     );
   }
 }
+

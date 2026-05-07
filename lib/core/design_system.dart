@@ -1,6 +1,8 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'app_colors.dart';
 
 /// Enhanced Design System for AWFPS
@@ -21,6 +23,10 @@ class AppDesignSystem {
   static const double spacing48 = 48.0;
   static const double spacing64 = 64.0;
 
+  // ICON SIZES
+  static const double iconSizeMini = 16.0;
+  static const double iconSizeSmall = 18.0;
+
   // BORDER RADIUS SCALE
   static const double radiusSmall = 8.0;
   static const double radiusMedium = 12.0;
@@ -37,7 +43,7 @@ class AppDesignSystem {
   // ELEVATION & SHADOWS
   static List<BoxShadow> get softShadow => [
         BoxShadow(
-          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+          color: const Color(0xFF0F172A).withOpacity(0.04),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -45,7 +51,7 @@ class AppDesignSystem {
 
   static List<BoxShadow> get mediumShadow => [
         BoxShadow(
-          color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+          color: const Color(0xFF0F172A).withOpacity(0.08),
           blurRadius: 24,
           offset: const Offset(0, 8),
         ),
@@ -53,7 +59,7 @@ class AppDesignSystem {
 
   static List<BoxShadow> get premiumShadow => [
         BoxShadow(
-          color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+          color: const Color(0xFF0F172A).withOpacity(0.12),
           blurRadius: 32,
           offset: const Offset(0, 16),
         ),
@@ -68,10 +74,10 @@ class AppDesignSystem {
     Border? border,
   }) {
     return BoxDecoration(
-      color: (color ?? Colors.white).withValues(alpha: opacity),
+      color: (color ?? Colors.white).withOpacity(opacity),
       borderRadius: BorderRadius.circular(borderRadius),
       border: border ?? Border.all(
-        color: Colors.white.withValues(alpha: 0.3),
+        color: Colors.white.withOpacity(0.3),
         width: 1.5,
       ),
     );
@@ -224,12 +230,12 @@ class AppDesignSystem {
 
   static ButtonStyle glassButton({required bool isDark}) {
     return ElevatedButton.styleFrom(
-      backgroundColor: Colors.white.withValues(alpha: 0.1),
+      backgroundColor: Colors.white.withOpacity(0.1),
       foregroundColor: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusMedium),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+        side: BorderSide(color: Colors.white.withOpacity(0.2)),
       ),
       elevation: 0,
     );
@@ -269,10 +275,10 @@ class GlassCard extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: opacity),
+              color: Colors.white.withOpacity(opacity),
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
-                color: Colors.white.withValues(alpha: opacity * 2),
+                color: Colors.white.withOpacity(opacity * 2),
                 width: 1.5,
               ),
             ),
@@ -347,13 +353,14 @@ class GlassIcon extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Icon(icon, color: color, size: size),
     );
   }
 }
+
 
 

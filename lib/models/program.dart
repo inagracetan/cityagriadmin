@@ -1,4 +1,6 @@
 
+import '../core/constants.dart';
+
 class Program {
   final String id;
   final String name;
@@ -29,7 +31,7 @@ class Program {
       name: data['program_name'] ?? '',
       totalAllocation: (data['total_allocation'] ?? 0).toDouble(),
       currentPpmpBalance: (data['current_ppmp_balance'] ?? 0).toDouble(),
-      fiscalYear: data['fiscal_year'] ?? '2026',
+      fiscalYear: data['fiscal_year'] ?? SystemConfig.nextFiscalYearStr,
     );
   }
 
@@ -49,3 +51,4 @@ class Program {
     );
   }
 }
+

@@ -14,7 +14,6 @@ import '../../services/settings_provider.dart';
 import '../../widgets/agri_ui.dart';
 import '../../core/app_colors.dart';
 import '../../services/activity_form_provider.dart';
-import '../../services/seed_data_loader.dart';
 import '../../widgets/skeleton_loading.dart';
 
 
@@ -79,11 +78,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
           tooltip: 'Export Data',
           onPressed: () =>
               _showExportOptions(context, _activities, authService),
-        ),
-        IconButton(
-          icon: const Icon(Icons.data_usage, color: Color(0xFFD4AF37)),
-          tooltip: 'Seed Data',
-          onPressed: () => _seedData(context, fbService),
         ),
       ],
       fab: null,
@@ -155,10 +149,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
           return true;
         }).toList();
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth > 1000;
-            final horizontalPadding = constraints.maxWidth > 1200 ? 40.0 : 24.0;
+        return Builder(
+          builder: (context) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isDesktop = screenWidth > 1000;
+            final horizontalPadding = screenWidth > 1200 ? 40.0 : 24.0;
 
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(vertical: 40, horizontal: horizontalPadding),
@@ -238,9 +233,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              color: AppColors.emeraldPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: AppColors.emeraldPrimary.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.emeraldPrimary.withOpacity(0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -267,7 +262,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           Text(
             'Manage your assigned activities and track budget utilization efficiently.',
             style: AppDesignSystem.bodyLarge.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -304,7 +299,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             child: Text(
               subtitle,
               style: AppDesignSystem.bodySmall.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
           ),
@@ -328,7 +323,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              color: AppColors.emeraldPrimary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.list_alt_rounded, color: AppColors.emeraldPrimary, size: 32),
@@ -342,7 +337,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           Text(
             'View and track all agricultural activities assigned to you.',
             style: AppDesignSystem.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 24),
@@ -378,9 +373,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 700;
+          Builder(
+            builder: (context) {
+              final isNarrow = MediaQuery.of(context).size.width < 700;
               if (isNarrow) {
                 return Column(
                   children: [
@@ -402,9 +397,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   Expanded(child: _summaryItem('Total Budget', myTotal, AppColors.emeraldPrimary, Icons.account_balance_wallet_rounded, theme)),
-                  Container(width: 1, height: 60, color: theme.dividerColor.withValues(alpha: 0.1)),
+                  Container(width: 1, height: 60, color: theme.dividerColor.withOpacity(0.1)),
                   Expanded(child: _summaryItem('Spent', mySpent, const Color(0xFFF59E0B), Icons.shopping_cart_rounded, theme)),
-                  Container(width: 1, height: 60, color: theme.dividerColor.withValues(alpha: 0.1)),
+                  Container(width: 1, height: 60, color: theme.dividerColor.withOpacity(0.1)),
                   Expanded(child: _summaryItem('Remaining', myRemaining, const Color(0xFF3B82F6), Icons.account_balance_rounded, theme)),
                 ],
               );
@@ -453,7 +448,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           Text(
             label,
             style: AppDesignSystem.labelSmall.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: 6),
@@ -482,7 +477,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 18),
@@ -491,7 +486,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             Text(
               label,
               style: AppDesignSystem.bodyMedium.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],
@@ -648,32 +643,5 @@ class _StaffDashboardState extends State<StaffDashboard> {
     }
   }
 
-  void _seedData(BuildContext context, FirebaseService fbService) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Starting data seed...')),
-      );
-
-      await SeedDataLoader.load(fbService, force: true);
-
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Seed data loaded successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Error loading seed data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }
+

@@ -23,13 +23,13 @@ class UserProfileBadge extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: isDark 
                 ? Colors.white.withValues(alpha: 0.05) 
@@ -112,3 +112,4 @@ class UserProfileBadge extends StatelessWidget {
     );
   }
 }
+

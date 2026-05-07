@@ -4,6 +4,7 @@ import 'package:cityagriadmin/models/budget_line.dart';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
+import '../core/constants.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../core/date_formatter.dart';
@@ -1005,7 +1006,7 @@ class ExportService {
     }
 
     final bytes = excel.save();
-    return await saveFile(bytes!, '2026 PROPOSED BUDGET ${DateFormat('MM-dd-yyyy').format(DateTime.now())}', 'xlsx');
+    return await saveFile(bytes!, '${SystemConfig.nextFiscalYearStr} PROPOSED BUDGET ${DateFormat('MM-dd-yyyy').format(DateTime.now())}', 'xlsx');
   }
 
   static Future<String?> exportToWfpAdmin(List<Activity> activities) async {
@@ -1087,12 +1088,12 @@ class ExportService {
     sheet.setColumnWidth(7, 20);
 
     final bytes = excel.save();
-    return await saveFile(bytes!, '2026 WFP ADMIN ${DateFormat('MM-dd-yyyy').format(DateTime.now())}', 'xlsx');
+    return await saveFile(bytes!, '${SystemConfig.nextFiscalYearStr} WFP ADMIN ${DateFormat('MM-dd-yyyy').format(DateTime.now())}', 'xlsx');
   }
 
   static Future<String?> exportRiceAndCornProgramReport(List<Activity> activities) async {
     var excel = Excel.createExcel();
-    Sheet sheet = excel['PPMP 2026'];
+    Sheet sheet = excel['PPMP ${SystemConfig.nextFiscalYearStr}'];
     excel.delete('Sheet1');
 
     // Filter for Rice and Corn programs
@@ -1124,7 +1125,7 @@ class ExportService {
     // Headers
     sheet.appendRow([TextCellValue('AGENCY: CITY AGRICULTURE OFFICE')]);
     sheet.appendRow([TextCellValue('PROGRAM: RICE & CORN PROGRAMS')]);
-    sheet.appendRow([TextCellValue('YEAR: 2026')]);
+    sheet.appendRow([TextCellValue('YEAR: ${SystemConfig.nextFiscalYearStr}')]);
     sheet.appendRow([]); // spacer
 
     List<CellValue> headers = [
@@ -1206,7 +1207,8 @@ class ExportService {
     sheet.setColumnWidth(11, 0); // Hide Barcode
 
     final bytes = excel.save();
-    return await saveFile(bytes!, 'AGRI_PPMP_RICE_CORN_2026', 'xlsx');
+    return await saveFile(bytes!, 'AGRI_PPMP_RICE_CORN_${SystemConfig.nextFiscalYearStr}', 'xlsx');
   }
 
 }
+

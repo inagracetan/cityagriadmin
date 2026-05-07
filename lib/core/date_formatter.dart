@@ -38,3 +38,4 @@ class DateFormatter {
 
 /// Legacy alias to maintain compatibility with existing code.
 typedef AppDateFormatter = DateFormatter;
+

@@ -64,7 +64,7 @@ class AgriUI {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
+                          ? Colors.white.withOpacity(0.05)
                           : const Color(0xFFF3F4F6),
                       shape: BoxShape.circle,
                     ),
@@ -93,7 +93,7 @@ class AgriUI {
                       fontSize: 14,
                       color: Theme.of(
                         context,
-                      ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                      ).textTheme.bodyMedium?.color?.withOpacity(0.6),
                     ),
                   ),
                   if (onAction != null && actionLabel != null) ...[
@@ -190,8 +190,8 @@ class _AgriHoverCardState extends State<AgriHoverCard> {
                   colors: [
                     theme.cardColor,
                     isDark
-                        ? Colors.white.withValues(alpha: 0.02)
-                        : theme.colorScheme.primary.withValues(alpha: 0.02),
+                        ? Colors.white.withOpacity(0.02)
+                        : theme.colorScheme.primary.withOpacity(0.02),
                   ],
                 )
               : null,
@@ -199,8 +199,7 @@ class _AgriHoverCardState extends State<AgriHoverCard> {
               widget.boxShadow ??
               [
                 BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: isDark
+                  color: Colors.black.withOpacity(isDark
                         ? (_isHovered ? 0.4 : 0.25)
                         : (_isHovered ? 0.08 : 0.04),
                   ),
@@ -213,8 +212,8 @@ class _AgriHoverCardState extends State<AgriHoverCard> {
               widget.border ??
               Border.all(
                 color: _isHovered
-                    ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                    : isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                    ? theme.colorScheme.primary.withOpacity(0.2)
+                    : isDark ? Colors.white.withOpacity(0.05) : Slate.shade100,
                 width: 1,
               ),
         ),
@@ -227,7 +226,7 @@ class _AgriHoverCardState extends State<AgriHoverCard> {
               if (mounted) setState(() => _isHovered = hovering);
             },
             borderRadius: BorderRadius.circular(widget.borderRadius),
-            splashColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+            splashColor: theme.colorScheme.primary.withOpacity(0.05),
             highlightColor: Colors.transparent,
             child: Padding(
               padding: widget.padding ?? EdgeInsets.zero,
@@ -239,3 +238,4 @@ class _AgriHoverCardState extends State<AgriHoverCard> {
     );
   }
 }
+

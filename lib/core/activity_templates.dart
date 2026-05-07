@@ -1,3 +1,4 @@
+import 'constants.dart';
 
 class ActivityTemplate {
   final String name;
@@ -37,7 +38,7 @@ class ActivityTemplates {
   static final List<ActivityTemplate> templates = [
     ActivityTemplate(
       name: 'Upland Hybrid Rice Techno Demo Establishment',
-      sector: 'Crop Section',
+      sector: AppConstants.sectorCrop,
       subSector: 'Rice',
       items: [
         TemplateItem(name: 'Hybrid Rice Seeds (15kg/bag)', unit: 'bag', q1: 1, price: 5000.00),
@@ -54,7 +55,7 @@ class ActivityTemplates {
     ),
     ActivityTemplate(
       name: 'FFS on Corn Production and Management',
-      sector: 'Crop Section',
+      sector: AppConstants.sectorCrop,
       subSector: 'Corn',
       items: [
         TemplateItem(name: 'Lime Fertilizer', unit: 'bags', q1: 20, price: 150.00),
@@ -69,7 +70,7 @@ class ActivityTemplates {
     ),
     ActivityTemplate(
       name: 'FFS on Coffee & Vegetable Production',
-      sector: 'Crop Section',
+      sector: AppConstants.sectorCrop,
       subSector: 'HVCDP',
       items: [
         TemplateItem(name: 'Meals', unit: 'cover', q2: 70, price: 200.00),
@@ -84,7 +85,7 @@ class ActivityTemplates {
     ),
     ActivityTemplate(
       name: 'Organic Agriculture Technology Demonstration',
-      sector: 'Crop Section',
+      sector: AppConstants.sectorCrop,
       subSector: 'Organic Program',
       items: [
         TemplateItem(name: 'Organic Fertilizer Vermicast', unit: 'bags', q1: 50, price: 350.00),
@@ -97,7 +98,7 @@ class ActivityTemplates {
     ),
     ActivityTemplate(
       name: 'Tilapia Processing and Value Adding Training',
-      sector: 'Inland Fisheries Section',
+      sector: AppConstants.sectorFisheries,
       items: [
         TemplateItem(name: 'Meals', unit: 'cover', q2: 50, price: 250.00),
         TemplateItem(name: 'Snacks', unit: 'cover', q2: 100, price: 80.00),
@@ -107,7 +108,7 @@ class ActivityTemplates {
     ),
     ActivityTemplate(
       name: 'Workshop on Sustainable Development Goals',
-      sector: 'Administrative Support Services Unit',
+      sector: AppConstants.sectorAdmin,
       items: [
         TemplateItem(name: 'Meals (3 days)', unit: 'cover', q3: 300, price: 250.00),
         TemplateItem(name: 'Snacks', unit: 'cover', q3: 600, price: 80.00),
@@ -118,3 +119,4 @@ class ActivityTemplates {
     ),
   ];
 }
+

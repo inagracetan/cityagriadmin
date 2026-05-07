@@ -141,7 +141,7 @@ class _EnhancedTextFormFieldState extends State<EnhancedTextFormField> {
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
           borderSide: BorderSide(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
+                ? Colors.white.withOpacity(0.1)
                 : const Color(0xFFE5E7EB),
           ),
         ),
@@ -149,7 +149,7 @@ class _EnhancedTextFormFieldState extends State<EnhancedTextFormField> {
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
           borderSide: BorderSide(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
+                ? Colors.white.withOpacity(0.1)
                 : const Color(0xFFE5E7EB),
             width: 1.5,
           ),
@@ -303,7 +303,7 @@ class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
           borderSide: BorderSide(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
+                ? Colors.white.withOpacity(0.1)
                 : const Color(0xFFE5E7EB),
             width: 1.5,
           ),
@@ -424,9 +424,9 @@ class _EnhancedSearchableDropdownFieldState<T>
   }
 
   Widget _buildDropdownMenu(ThemeData theme, bool isDark) {
-    final dropdownMenu = LayoutBuilder(
-      builder: (context, constraints) {
-        final double menuWidth = widget.width ?? constraints.maxWidth;
+    final dropdownMenu = Builder(
+      builder: (context) {
+        final double menuWidth = widget.width ?? MediaQuery.of(context).size.width - 64; // Fallback with some padding
 
         return DropdownMenu<T>(
           controller: widget.controller,
@@ -457,7 +457,7 @@ class _EnhancedSearchableDropdownFieldState<T>
               borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
               borderSide: BorderSide(
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
+                    ? Colors.white.withOpacity(0.1)
                     : const Color(0xFFE5E7EB),
                 width: 1.5,
               ),
@@ -505,3 +505,4 @@ class _EnhancedSearchableDropdownFieldState<T>
     return dropdownMenu;
   }
 }
+

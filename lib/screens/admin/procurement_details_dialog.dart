@@ -51,7 +51,7 @@ class ProcurementDetailsDialog extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Icon(Icons.assignment_rounded, color: Colors.white),
@@ -108,7 +108,7 @@ class ProcurementDetailsDialog extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
+                              color: const Color(0xFF1B5E20).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -201,9 +201,9 @@ class ProcurementDetailsDialog extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                          border: Border.all(color: Colors.orange.withOpacity(0.2)),
                         ),
                         child: Row(
                           children: [
@@ -271,3 +271,4 @@ class ProcurementDetailsDialog extends StatelessWidget {
     );
   }
 }
+

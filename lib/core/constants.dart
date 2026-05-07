@@ -1,16 +1,39 @@
 class AppConstants {
   static const String appTitle = 'AgriWork & Financial Planning System (AWFPS)';
 
+  // Firestore Collections
+  static const String colActivities = 'activities';
+  static const String colBudgetLines = 'budget_lines';
+  static const String colExpenditures = 'expenditures';
+  static const String colPrograms = 'programs';
+  static const String colProcurements = 'procurements';
+  static const String colNotifications = 'notifications';
+  static const String colSystemLogs = 'system_logs';
+  static const String colUsers = 'users';
+  static const String colCmoLedger = 'cmo_ledger';
+  static const String colPrLogs = 'pr_logs';
+
   // Sectors
+  // Sector Names
+  static const String sectorAdmin = 'Administrative Support Services Unit';
+  static const String sectorLogistics = 'Agriculture Logistics Section';
+  static const String sectorCrop = 'Crop Section';
+  static const String sectorFisheries = 'Inland Fisheries Section';
+  static const String sectorInstitutional = 'Institutional Development Section';
+  static const String sectorLab = 'Integrated Agricultural Laboratory';
+  static const String sectorME = 'Monitoring and Evaluation Section';
+  static const String sectorProject = 'Project Development Section';
+
+  // Sectors List
   static const List<String> sectors = [
-    'Administrative Support Services Unit',
-    'Agriculture Logistics Section',
-    'Crop Section',
-    'Inland Fisheries Section',
-    'Institutional Development Section',
-    'Integrated Agricultural Laboratory',
-    'Monitoring and Evaluation Section',
-    'Project Development Section',
+    sectorAdmin,
+    sectorLogistics,
+    sectorCrop,
+    sectorFisheries,
+    sectorInstitutional,
+    sectorLab,
+    sectorME,
+    sectorProject,
   ];
 
   // Sub-sectors
@@ -48,16 +71,11 @@ class AppConstants {
     'December',
   ];
 
-  // Years
-  static const List<String> years = [
-    '2024',
-    '2025',
-    '2026',
-    '2027',
-    '2028',
-    '2029',
-    '2030',
-  ];
+  // Years (Dynamically generated)
+  static List<String> get years {
+    final currentYear = DateTime.now().year;
+    return List.generate(11, (index) => (currentYear - 2 + index).toString());
+  }
 
   // Object of Expenditure
   static const List<String> objectsOfExpenditure = [
@@ -251,7 +269,7 @@ class AppConstants {
         .toUpperCase();
   }
 
-  // Sectional Performance Targets (2026 facilitated PPAs)
+  // Sectional Performance Targets (facilitated PPAs)
   static const Map<String, int> sectorTargets = {
     'Crop Section': 35,
     'Inland Fisheries Section': 5,
@@ -260,4 +278,17 @@ class AppConstants {
   };
 
 }
+
+class SystemConfig {
+  static int get currentFiscalYear => DateTime.now().year;
+  static int get nextFiscalYear => currentFiscalYear + 1;
+  
+  static String get currentFiscalYearStr => currentFiscalYear.toString();
+  static String get nextFiscalYearStr => nextFiscalYear.toString();
+  
+  static const String adminRole = 'admin';
+  static const String staffRole = 'staff';
+  static const String programHeadRole = 'program_head';
+}
+
 

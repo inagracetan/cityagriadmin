@@ -1,11 +1,12 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/design_system.dart';
 import '../../../models/activity.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../../../services/activity_form_provider.dart';
 
 /// Premium Summary Card as seen in the PPMP Dashboard
@@ -36,7 +37,7 @@ class PPMPSummaryCard extends StatelessWidget {
     final activeColor = trendColor ?? AppColors.primary;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Reduced vertical padding
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(16),
@@ -62,75 +63,81 @@ class PPMPSummaryCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: activeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon ?? Icons.analytics_outlined, size: 18, color: activeColor),
-              ),
-              if (percentage != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: activeColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: activeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon ?? Icons.analytics_outlined, size: 22, color: activeColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade500,
+                    letterSpacing: 1.0,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    '${(percentage! * 100).toStringAsFixed(1)}%',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
+                    value,
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: activeColor,
+                      color: Colors.black.withValues(alpha: 0.9),
+                      letterSpacing: -0.5,
                     ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
-              letterSpacing: 0.2,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: Colors.black.withValues(alpha: 0.9),
-                letterSpacing: -0.5,
-              ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle!,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade400,
+          if (percentage != null) ...[
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: activeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: activeColor.withValues(alpha: 0.2)),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Text(
+                '${(percentage! * 100).toStringAsFixed(1)}%',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: activeColor,
+                ),
+              ),
             ),
           ],
         ],
@@ -536,11 +543,36 @@ class PPMPProjectListTable extends StatefulWidget {
 
 class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
   String searchQuery = '';
+  int _currentPage = 1;
+  final int _rowsPerPage = 10;
+  late final ScrollController _horizontalController;
+
+  @override
+  void initState() {
+    super.initState();
+    _horizontalController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
   final formatCurrency = NumberFormat.simpleCurrency(name: '₱ ');
 
   @override
   Widget build(BuildContext context) {
     final filteredActivities = widget.activities.where((a) => a.matchesSearch(searchQuery)).toList();
+    
+    // Pagination logic
+    final totalItems = filteredActivities.length;
+    final totalPages = (totalItems / _rowsPerPage).ceil();
+    if (_currentPage > totalPages && totalPages > 0) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _rowsPerPage;
+    final endIndex = (startIndex + _rowsPerPage) > totalItems ? totalItems : (startIndex + _rowsPerPage);
+    final paginatedActivities = totalItems > 0 ? filteredActivities.sublist(startIndex, endIndex) : <Activity>[];
 
     return Container(
       padding: const EdgeInsets.all(32),
@@ -609,54 +641,230 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
             data: Theme.of(context).copyWith(
               dividerTheme: const DividerThemeData(thickness: 1, color: Color(0xFFF1F5F9)),
             ),
-            child: SizedBox(
-              width: double.infinity,
+            child: Scrollbar(
+              controller: _horizontalController,
+              thumbVisibility: true,
               child: SingleChildScrollView(
+                controller: _horizontalController,
                 scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columnSpacing: 32,
-                  horizontalMargin: 0,
-                  headingRowHeight: 56,
-                  dataRowMaxHeight: 72,
-                  headingTextStyle: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.grey.shade500,
-                    letterSpacing: 0.5,
+                physics: const ClampingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DataTable(
+                    columnSpacing: 16,
+                    horizontalMargin: 0,
+                    headingRowHeight: 56,
+                    dataRowMaxHeight: 72,
+                    headingTextStyle: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.grey.shade500,
+                      letterSpacing: 0.5,
+                    ),
+                    columns: const [
+                      DataColumn(label: SizedBox(width: 200, child: Text('PROJECT NAME / LINE ITEM', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 100, child: Text('BUDGET', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 100, child: Text('PR AMOUNT', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 100, child: Text('PO AMOUNT', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 100, child: Text('BALANCE', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 80, child: Text('STATUS', overflow: TextOverflow.ellipsis))),
+                      DataColumn(label: SizedBox(width: 60, child: Text(''))),
+                    ],
+                    rows: paginatedActivities.map((activity) {
+                      final balance = activity.unexpendedBalance;
+                      Color statusColor = Colors.blue;
+                      if (activity.status.toLowerCase() == 'completed') statusColor = const Color(0xFF10B981);
+                      if (activity.status.toLowerCase() == 'planned') statusColor = Colors.grey.shade400;
+                      if (activity.status.toLowerCase().contains('no budget')) statusColor = const Color(0xFFEF4444);
+  
+                      return _buildRow(
+                        context,
+                        activity,
+                        activity.activityName,
+                        formatCurrency.format(activity.approvedBudget),
+                        formatCurrency.format(activity.effectivePRAmount),
+                        formatCurrency.format(activity.effectivePOAmount),
+                        formatCurrency.format(balance),
+                        activity.status,
+                        statusColor,
+                      );
+                    }).toList(),
                   ),
-                  columns: const [
-                    DataColumn(label: Text('PROJECT NAME / LINE ITEM')),
-                    DataColumn(label: Text('BUDGET')),
-                    DataColumn(label: Text('PR AMOUNT')),
-                    DataColumn(label: Text('PO AMOUNT')),
-                    DataColumn(label: Text('BALANCE')),
-                    DataColumn(label: Text('STATUS')),
-                    DataColumn(label: Text('')),
-                  ],
-                  rows: filteredActivities.map((activity) {
-                    final balance = activity.unexpendedBalance;
-                    Color statusColor = Colors.blue;
-                    if (activity.status.toLowerCase() == 'completed') statusColor = const Color(0xFF10B981);
-                    if (activity.status.toLowerCase() == 'planned') statusColor = Colors.grey.shade400;
-                    if (activity.status.toLowerCase().contains('no budget')) statusColor = const Color(0xFFEF4444);
-
-                    return _buildRow(
-                      context,
-                      activity,
-                      activity.activityName,
-                      formatCurrency.format(activity.approvedBudget),
-                      formatCurrency.format(activity.effectivePRAmount),
-                      formatCurrency.format(activity.effectivePOAmount),
-                      formatCurrency.format(balance),
-                      activity.status,
-                      statusColor,
-                    );
-                  }).toList(),
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          _buildPagination(totalItems, totalPages),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPagination(int totalItems, int totalPages) {
+    if (totalItems == 0) return const SizedBox();
+
+    final startIndex = (_currentPage - 1) * _rowsPerPage + 1;
+    final endIndex = (startIndex + _rowsPerPage - 1) > totalItems ? totalItems : (startIndex + _rowsPerPage - 1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Showing $startIndex to $endIndex of $totalItems entries',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          Row(
+            children: [
+              _paginationButton(
+                icon: Icons.chevron_left_rounded,
+                isEnabled: _currentPage > 1,
+                onTap: () {
+                  if (_currentPage > 1) {
+                    setState(() {
+                      _currentPage--;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+              ..._buildPageNumbers(totalPages),
+              const SizedBox(width: 8),
+              _paginationButton(
+                icon: Icons.chevron_right_rounded,
+                isEnabled: _currentPage < totalPages,
+                onTap: () {
+                  if (_currentPage < totalPages) {
+                    setState(() {
+                      _currentPage++;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildPageNumbers(int totalPages) {
+    List<Widget> widgets = [];
+    
+    // Logic to show limited page numbers if there are too many
+    if (totalPages <= 5) {
+      for (int i = 1; i <= totalPages; i++) {
+        widgets.add(_pageNumberButton(i));
+        if (i < totalPages) widgets.add(const SizedBox(width: 4));
+      }
+    } else {
+      // Show first, current-1, current, current+1, last with dots
+      if (_currentPage <= 3) {
+        for (int i = 1; i <= 4; i++) {
+          widgets.add(_pageNumberButton(i));
+          widgets.add(const SizedBox(width: 4));
+        }
+        widgets.add(_pageDots());
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageNumberButton(totalPages));
+      } else if (_currentPage >= totalPages - 2) {
+        widgets.add(_pageNumberButton(1));
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageDots());
+        widgets.add(const SizedBox(width: 4));
+        for (int i = totalPages - 3; i <= totalPages; i++) {
+          widgets.add(_pageNumberButton(i));
+          if (i < totalPages) widgets.add(const SizedBox(width: 4));
+        }
+      } else {
+        widgets.add(_pageNumberButton(1));
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageDots());
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageNumberButton(_currentPage - 1));
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageNumberButton(_currentPage));
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageNumberButton(_currentPage + 1));
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageDots());
+        widgets.add(const SizedBox(width: 4));
+        widgets.add(_pageNumberButton(totalPages));
+      }
+    }
+    return widgets;
+  }
+
+  Widget _pageNumberButton(int page) {
+    final bool isSelected = _currentPage == page;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _currentPage = page;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade200,
+          ),
+        ),
+        child: Text(
+          page.toString(),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pageDots() {
+    return Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      child: Text(
+        '...',
+        style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _paginationButton({required IconData icon, required bool isEnabled, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: isEnabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isEnabled ? Colors.grey.shade700 : Colors.grey.shade300,
+        ),
       ),
     );
   }
@@ -666,7 +874,7 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
       cells: [
         DataCell(
           SizedBox(
-            width: 220, 
+            width: 200, 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -694,42 +902,53 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
             )
           )
         ),
-        DataCell(Text(budget, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13))),
-        DataCell(Text(pr, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12))),
-        DataCell(Text(po, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12))),
+        DataCell(SizedBox(width: 100, child: Text(budget, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13), overflow: TextOverflow.ellipsis))),
+        DataCell(SizedBox(width: 100, child: Text(pr, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12), overflow: TextOverflow.ellipsis))),
+        DataCell(SizedBox(width: 100, child: Text(po, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12), overflow: TextOverflow.ellipsis))),
         DataCell(
-          Text(
-            balance, 
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.w700, 
-              fontSize: 13,
-              color: activity.unexpendedBalance < 0 ? Colors.red : AppColors.emeraldPrimary,
+          SizedBox(
+            width: 100,
+            child: Text(
+              balance, 
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700, 
+                fontSize: 13,
+                color: activity.unexpendedBalance < 0 ? Colors.red : AppColors.emeraldPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
             )
           )
         ),
         DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1), 
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: statusColor.withValues(alpha: 0.2)),
-            ),
-            child: Text(
-              status.toUpperCase(), 
-              style: GoogleFonts.inter(color: statusColor, fontWeight: FontWeight.w800, fontSize: 9, letterSpacing: 0.5)
+          SizedBox(
+            width: 80,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1), 
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+              ),
+              child: Text(
+                status.toUpperCase(), 
+                style: GoogleFonts.inter(color: statusColor, fontWeight: FontWeight.w800, fontSize: 9, letterSpacing: 0.5),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
         ),
         DataCell(
-          IconButton(
-            icon: const Icon(Icons.edit_note_rounded, color: Colors.grey), 
-            onPressed: () {
-              context.read<ActivityFormProvider>().openForm(activity: activity);
-            }
-          )
+          SizedBox(
+            width: 60,
+            child: IconButton(
+              icon: const Icon(Icons.edit_note_rounded, color: Colors.grey), 
+              onPressed: () {
+                context.read<ActivityFormProvider>().openForm(activity: activity);
+              },
+            ),
+          ),
         ),
-      ]
+      ],
     );
   }
 
@@ -747,13 +966,13 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
             ),
             child: Row(
               children: [
-                Icon(Icons.search_rounded, size: 20, color: Colors.grey.shade400),
-                const SizedBox(width: 12),
+                Icon(Icons.search_rounded, size: AppDesignSystem.iconSizeSmall, color: Colors.grey.shade400),                const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
                     onChanged: (value) {
                       setState(() {
                         searchQuery = value;
+                        _currentPage = 1; // Reset to first page on search
                       });
                     },
                     decoration: InputDecoration(
@@ -809,9 +1028,28 @@ class _PPMPProjectListTableState extends State<PPMPProjectListTable> {
 }
 
 /// WFP Heatmap View
-class PPMPHeatmapView extends StatelessWidget {
+class PPMPHeatmapView extends StatefulWidget {
   final List<Activity> activities;
   const PPMPHeatmapView({super.key, required this.activities});
+
+  @override
+  State<PPMPHeatmapView> createState() => _PPMPHeatmapViewState();
+}
+
+class _PPMPHeatmapViewState extends State<PPMPHeatmapView> {
+  late final ScrollController _heatmapScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _heatmapScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _heatmapScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -975,12 +1213,12 @@ class PPMPHeatmapView extends StatelessWidget {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
     // Aggregate data from activities
-    final displayActivities = activities.take(10).toList(); // Show top 10 for readability
+    final displayActivities = widget.activities.take(10).toList(); // Show top 10 for readability
     
     final List<double> totals = List.generate(12, (_) => 0.0);
     double grandTotal = 0;
 
-    for (var a in activities) {
+    for (var a in widget.activities) {
       if (a.monthlyDistribution != null && a.monthlyDistribution!.length == 12) {
         for (int i = 0; i < 12; i++) {
           totals[i] += a.monthlyDistribution![i];
@@ -1001,43 +1239,51 @@ class PPMPHeatmapView extends StatelessWidget {
 
     final formatCurrency = NumberFormat.compactSimpleCurrency(name: '₱ ');
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
+    return Scrollbar(
+      controller: _heatmapScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _heatmapScrollController, // Independent controller
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(width: 200, child: Text('Line Item', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))),
-              const SizedBox(width: 80, child: Center(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey)))),
-              ...months.map((m) => SizedBox(width: 50, child: Center(child: Text(m, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))))),
+              // Header
+              Row(
+                children: [
+                  const SizedBox(width: 200, child: Text('Line Item', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))),
+                  const SizedBox(width: 80, child: Center(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey)))),
+                  ...months.map((m) => SizedBox(width: 50, child: Center(child: Text(m, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.grey))))),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...displayActivities.map((a) {
+                final List<double> monthlyValues = List.generate(12, (_) => 0.0);
+                if (a.monthlyDistribution != null && a.monthlyDistribution!.length == 12) {
+                  for (int i = 0; i < 12; i++) {
+                    monthlyValues[i] = a.monthlyDistribution![i];
+                  }
+                } else {
+                  final qBudgets = [a.q1Budget, a.q2Budget, a.q3Budget, a.q4Budget];
+                  for (int q = 0; q < 4; q++) {
+                    final monthly = qBudgets[q] / 3;
+                    for (int m = 0; m < 3; m++) {
+                      monthlyValues[q * 3 + m] = monthly;
+                    }
+                  }
+                }
+                return _buildHeatmapRow(a.activityName, formatCurrency.format(a.approvedBudget), monthlyValues.map((e) => e.toInt()).toList());
+              }),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
+              _buildHeatmapRow('TOTAL', formatCurrency.format(grandTotal), totals.map((e) => e.toInt()).toList(), isTotal: true),
             ],
           ),
-          const SizedBox(height: 16),
-          ...displayActivities.map((a) {
-            final List<double> monthlyValues = List.generate(12, (_) => 0.0);
-            if (a.monthlyDistribution != null && a.monthlyDistribution!.length == 12) {
-              for (int i = 0; i < 12; i++) {
-                monthlyValues[i] = a.monthlyDistribution![i];
-              }
-            } else {
-              final qBudgets = [a.q1Budget, a.q2Budget, a.q3Budget, a.q4Budget];
-              for (int q = 0; q < 4; q++) {
-                final monthly = qBudgets[q] / 3;
-                for (int m = 0; m < 3; m++) {
-                  monthlyValues[q * 3 + m] = monthly;
-                }
-              }
-            }
-            return _buildHeatmapRow(a.activityName, formatCurrency.format(a.approvedBudget), monthlyValues.map((e) => e.toInt()).toList());
-          }),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(),
-          ),
-          _buildHeatmapRow('TOTAL', formatCurrency.format(grandTotal), totals.map((e) => e.toInt()).toList(), isTotal: true),
-        ],
+        ),
       ),
     );
   }
@@ -1122,3 +1368,4 @@ class PPMPHeatmapView extends StatelessWidget {
     return const Color(0xFF059669);
   }
 }
+

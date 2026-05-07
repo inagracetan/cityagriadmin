@@ -14,7 +14,6 @@ import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../services/activity_form_provider.dart';
 import '../../services/import_service.dart';
-import '../../services/seed_data_loader.dart';
 
 // Models
 import '../../models/activity.dart';
@@ -92,34 +91,12 @@ class _AdminDashboardState extends State<AdminDashboard> with AutomaticKeepAlive
           onPressed: () =>
               _showExportOptions(context, _activities, authService, fbService),
         ),
-        IconButton(
-          icon: const Icon(Icons.data_exploration_outlined, color: Color(0xFFD4AF37)),
-          tooltip: 'Seed Data',
-          onPressed: () => _seedData(context, fbService),
-        ),
       ],
       fab: null,
     );
   }
 
-  void _seedData(BuildContext context, FirebaseService fbService) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Seeding data from seed_data.json...')),
-      );
-      await SeedDataLoader.load(fbService, force: true);
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Seed data loaded successfully!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('Seeding error: $e')));
-      }
-    }
-  }
+
 
 
 
@@ -184,10 +161,11 @@ class _AdminDashboardState extends State<AdminDashboard> with AutomaticKeepAlive
 
     final activities = _activities;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 1000;
-        final horizontalPadding = constraints.maxWidth > 1200 ? 40.0 : 24.0;
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isDesktop = screenWidth > 1000;
+        final horizontalPadding = screenWidth > 1200 ? 40.0 : 24.0;
 
         return SingleChildScrollView(
           padding: EdgeInsets.symmetric(vertical: 40, horizontal: horizontalPadding),
@@ -454,15 +432,6 @@ class _AdminDashboardState extends State<AdminDashboard> with AutomaticKeepAlive
             title: '2. Import PPMP Excel Data',
             description: 'If you have an existing PPMP in Excel format, you can import it directly to populate the system instantly.',
             onTap: () => _importData(fbService),
-          ),
-          const SizedBox(height: 16),
-          _buildGuideItem(
-            context,
-            icon: Icons.data_exploration_outlined,
-            color: const Color(0xFF3B82F6),
-            title: '3. Load Sample Seed Data',
-            description: 'Want to test the system? Load the 2026 sample agricultural data to see how the dashboard charts and management lists look.',
-            onTap: () => _seedData(context, fbService),
           ),
         ],
       ),
@@ -753,3 +722,4 @@ class _AdminDashboardState extends State<AdminDashboard> with AutomaticKeepAlive
     );
   }
 }
+

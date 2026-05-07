@@ -60,15 +60,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+            side: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
           ),
           child: Column(
             children: [
               ListTile(
                 contentPadding: const EdgeInsets.all(16),
                 leading: CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary.withValues(
-                    alpha: 0.1,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1,
                   ),
                   radius: 28,
                   child: Icon(
@@ -89,8 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'Role: ${user?.role ?? 'Unknown'} • ${user?.email ?? ''}',
                   style: TextStyle(
                     inherit: true,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
-                      alpha: 0.6,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6,
                     ),
                   ),
                 ),
@@ -123,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+            side: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
           ),
           child: Column(
             children: [
@@ -170,7 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+            side: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
           ),
           child: Column(
             children: [
@@ -520,3 +518,4 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+

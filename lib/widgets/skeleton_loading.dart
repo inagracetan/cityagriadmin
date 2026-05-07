@@ -199,7 +199,7 @@ class SkeletonKanban extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark ? Slate.shade900.withValues(alpha: 0.5) : Slate.shade50,
+              color: Theme.of(context).brightness == Brightness.dark ? Slate.shade900.withOpacity(0.5) : Slate.shade50,
               borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
             ),
             child: SingleChildScrollView(
@@ -222,3 +222,4 @@ class SkeletonKanban extends StatelessWidget {
     );
   }
 }
+

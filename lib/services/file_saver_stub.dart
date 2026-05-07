@@ -5,3 +5,4 @@ Future<String?> saveFileSafely(
 ) async {
   throw UnsupportedError('Cannot save file on this platform');
 }
+

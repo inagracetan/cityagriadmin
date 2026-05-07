@@ -25,7 +25,7 @@ class UserModel {
     return UserModel(
       uid: doc.id,
       email: (data['email'] as String? ?? '').trim(),
-      role: (data['role'] as String? ?? 'staff').trim(),
+      role: (data['role'] as String? ?? SystemConfig.staffRole).trim(),
       name: (data['name'] as String? ?? '').trim(),
       password: (data['password'] as String? ?? '').trim(),
       staffId: (data['staff_id'] as String?)?.trim(),
@@ -64,8 +64,8 @@ class UserModel {
     };
   }
 
-  bool get isAdmin => role == 'admin';
-  bool get isProgramHead => role == 'program_head';
+  bool get isAdmin => role == SystemConfig.adminRole;
+  bool get isProgramHead => role == SystemConfig.programHeadRole;
 
   bool canEditProgram(String programId) {
     if (isAdmin) return true;
@@ -98,3 +98,4 @@ class UserModel {
         contains(assignedProgramId);
   }
 }
+

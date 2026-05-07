@@ -35,7 +35,7 @@ class CloseOutReport extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.2),
+                    color: const Color(0xFF1B5E20).withOpacity(0.2),
                     blurRadius: 15,
                     offset: const Offset(0, 5),
                   ),
@@ -70,7 +70,7 @@ class CloseOutReport extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -88,10 +88,10 @@ class CloseOutReport extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
@@ -183,15 +183,15 @@ class CloseOutReport extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
+                color: isDark ? Colors.white.withOpacity(0.02) : Colors.white,
                 border: Border(
                   top: BorderSide(
-                    color: theme.dividerColor.withValues(alpha: 0.1),
+                    color: theme.dividerColor.withOpacity(0.1),
                   ),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -5),
                   ),
@@ -208,7 +208,7 @@ class CloseOutReport extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF1B5E20).withValues(alpha: 0.3),
+                            color: const Color(0xFF1B5E20).withOpacity(0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -276,7 +276,7 @@ class CloseOutReport extends StatelessWidget {
               height: 2,
               color: Theme.of(
                 context,
-              ).colorScheme.primary.withValues(alpha: 0.5),
+              ).colorScheme.primary.withOpacity(0.5),
             ),
             const SizedBox(width: 8),
             Text(
@@ -315,7 +315,7 @@ class CloseOutReport extends StatelessWidget {
               label,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
-                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
                 fontSize: 13,
               ),
             ),
@@ -344,7 +344,7 @@ class CloseOutReport extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.05),
+        color: theme.colorScheme.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -377,7 +377,7 @@ class CloseOutReport extends StatelessWidget {
             child: LinearProgressIndicator(
               value: rate / 100,
               minHeight: 8,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation<Color>(
                 theme.colorScheme.primary,
               ),
@@ -388,3 +388,4 @@ class CloseOutReport extends StatelessWidget {
     );
   }
 }
+

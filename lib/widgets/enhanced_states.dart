@@ -42,7 +42,7 @@ class EnhancedEmptyState extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
+                    ? Colors.white.withOpacity(0.05)
                     : const Color(0xFFF3F4F6),
                 shape: BoxShape.circle,
               ),
@@ -50,7 +50,7 @@ class EnhancedEmptyState extends StatelessWidget {
                 icon,
                 size: compact ? 48 : 64,
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.3)
+                    ? Colors.white.withOpacity(0.3)
                     : const Color(0xFF9CA3AF),
               ),
             ),
@@ -78,8 +78,7 @@ class EnhancedEmptyState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.6,
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6,
                 ),
               ),
             ),
@@ -146,7 +145,7 @@ class EnhancedErrorState extends StatelessWidget {
                 compact ? AppDesignSystem.spacing16 : AppDesignSystem.spacing24,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                color: const Color(0xFFDC2626).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -179,8 +178,7 @@ class EnhancedErrorState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.6,
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6,
                 ),
               ),
             ),
@@ -236,7 +234,7 @@ class EnhancedLoadingState extends StatelessWidget {
           padding: EdgeInsets.all(AppDesignSystem.spacing16),
           decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withOpacity(0.05)
                 : const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
           ),
@@ -251,7 +249,7 @@ class EnhancedLoadingState extends StatelessWidget {
           Text(
             message!,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -297,7 +295,7 @@ class EnhancedSkeleton extends StatelessWidget {
       width: width,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
+            ? Colors.white.withOpacity(0.08)
             : const Color(0xFFE5E7EB),
         borderRadius:
             borderRadius ?? BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -361,13 +359,13 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
               ],
               colors: [
                 isDark
-                    ? Colors.white.withValues(alpha: 0.05)
+                    ? Colors.white.withOpacity(0.05)
                     : const Color(0xFFE5E7EB),
                 isDark
-                    ? Colors.white.withValues(alpha: 0.15)
+                    ? Colors.white.withOpacity(0.15)
                     : Colors.grey.shade100,
                 isDark
-                    ? Colors.white.withValues(alpha: 0.05)
+                    ? Colors.white.withOpacity(0.05)
                     : const Color(0xFFE5E7EB),
               ],
             ).createShader(bounds);
@@ -407,3 +405,4 @@ class EnhancedSkeletonList extends StatelessWidget {
     );
   }
 }
+

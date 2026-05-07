@@ -1,26 +1,27 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../services/firebase_service.dart';
-import '../../services/auth_service.dart';
-import '../../models/activity.dart';
+import 'package:open_file/open_file.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/app_colors.dart';
+import '../../core/constants.dart';
 import '../../core/date_formatter.dart';
+import '../../core/design_system.dart';
+import '../../core/localization.dart';
+import '../../core/responsive_utils.dart';
+import '../../models/activity.dart';
 import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
+import '../../services/export_service.dart';
+import '../../services/firebase_service.dart';
 import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
-import '../../core/localization.dart';
 import '../../widgets/agri_ui.dart';
-import '../../core/constants.dart';
-import '../../core/app_colors.dart';
-import '../../core/design_system.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:open_file/open_file.dart';
-import '../../services/export_service.dart';
 import 'activity_details_dialog.dart';
-import 'edit_activity_dialog.dart';
 import 'budget_plan_report.dart';
-import '../../core/responsive_utils.dart';
+import 'edit_activity_dialog.dart';
 
 class FinancialReportsScreen extends StatefulWidget {
   final bool isActive;
@@ -36,6 +37,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   bool get wantKeepAlive => true;
 
   late TabController _tabController;
+  final ScrollController _summaryController = ScrollController();
+  final ScrollController _sectorController = ScrollController();
+  final ScrollController _staffController = ScrollController();
+  final ScrollController _expenditureController = ScrollController();
   final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ');
 
   // Sorting state
@@ -265,6 +270,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _summaryController.dispose();
+    _sectorController.dispose();
+    _staffController.dispose();
+    _expenditureController.dispose();
     super.dispose();
   }
 
@@ -292,14 +301,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     decoration: InputDecoration(
                       hintText: 'Search reports by activity, PR, supplier...',
                       hintStyle: AppDesignSystem.bodyMedium.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
                       ),
                       prefixIcon: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Icon(
                           Icons.search_rounded,
+                          size: AppDesignSystem.iconSizeSmall,
                           color: AppColors.emeraldPrimary,
-                          size: 22,
                         ),
                       ),
                       filled: false,
@@ -325,7 +334,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               isScrollable: true,
               tabAlignment: TabAlignment.center,
               labelColor: AppColors.emeraldPrimary,
-              unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.5),
               overlayColor: WidgetStateProperty.all(Colors.transparent),
               labelStyle: AppDesignSystem.labelMedium.copyWith(
                 fontWeight: FontWeight.w800,
@@ -336,7 +345,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+                color: AppColors.emeraldPrimary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: const Border(
                   bottom: BorderSide(
@@ -415,10 +424,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   return TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildSummaryTab(activities),
-                      _buildSectorTab(activities),
-                      _buildStaffTab(activities, staffIdMap),
-                      _buildExpenditureTab(activities),
+                      _buildSummaryTab(activities, _summaryController),
+                      _buildSectorTab(activities, _sectorController),
+                      _buildStaffTab(activities, staffIdMap, _staffController),
+                      _buildExpenditureTab(activities, _expenditureController),
                       BudgetPlanReport(
                         activities: activities,
                         isDark: theme.brightness == Brightness.dark,
@@ -435,7 +444,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
   }
 
   // ── TAB 1: OVERALL SUMMARY ─────────────────────────────────────────────────
-  Widget _buildSummaryTab(List<Activity> activities) {
+  Widget _buildSummaryTab(List<Activity> activities, ScrollController controller) {
     final overallTotalB = activities.fold(0.0, (s, a) => s + a.approvedBudget);
     final overallTotalS = activities.fold(
       0.0,
@@ -470,9 +479,13 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         .length;
 
     final l10n = context.watch<SettingsProvider>().l10n;
-    return SingleChildScrollView(
-      padding: ResponsiveUtils.screenPadding(context),
-      child: Column(
+    return Scrollbar(
+      controller: controller,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: controller,
+        padding: ResponsiveUtils.screenPadding(context),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildGrandTotalCard(
@@ -541,11 +554,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           _buildFundingTable(activities),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── TAB 2: BY SECTOR ───────────────────────────────────────────────────────
-  Widget _buildSectorTab(List<Activity> activities) {
+  Widget _buildSectorTab(List<Activity> activities, ScrollController controller) {
     final l10n = context.watch<SettingsProvider>().l10n;
     final Map<String, List<Activity>> sectorMap = {};
     for (var a in activities) {
@@ -553,13 +567,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     }
     final sectors = sectorMap.keys.toList();
     _sortKeys(sectors, sectorMap, _sectorSort, _sectorAsc);
-    return _buildGroupingTab(sectors, sectorMap, l10n, AppColors.primary);
+    return _buildGroupingTab(sectors, sectorMap, l10n, AppColors.primary, controller);
   }
 
   // ── TAB 3: BY STAFF ────────────────────────────────────────────────────────
   Widget _buildStaffTab(
     List<Activity> activities,
     Map<String, String?> staffIdMap,
+    ScrollController controller,
   ) {
     final l10n = context.watch<SettingsProvider>().l10n;
     final Map<String, List<Activity>> staffMap = {};
@@ -573,6 +588,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       staffMap,
       l10n,
       AppColors.secondary,
+      controller,
       staffIdMap: staffIdMap,
     );
   }
@@ -582,13 +598,18 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     List<String> keys,
     Map<String, List<Activity>> groupMap,
     AppLocalization l10n,
-    Color themeColor, {
+    Color themeColor,
+    ScrollController controller, {
     Map<String, String?>? staffIdMap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Scrollbar(
+      controller: controller,
+      thumbVisibility: true,
+      child: ListView.builder(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: keys.length + 1,
       itemBuilder: (context, i) {
         if (i == keys.length) {
@@ -629,12 +650,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
+                  ? Colors.white.withOpacity(0.05)
                   : Colors.grey.shade200,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -644,7 +665,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             data: Theme.of(context).copyWith(
               dividerColor: Colors.transparent,
               hoverColor: Colors.transparent,
-              splashColor: themeColor.withValues(alpha: 0.05),
+              splashColor: themeColor.withOpacity(0.05),
             ),
             child: ExpansionTile(
               tilePadding: const EdgeInsets.symmetric(
@@ -724,8 +745,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.2)
-                        : Slate.shade50.withValues(alpha: 0.5),
+                        ? Colors.black.withOpacity(0.2)
+                        : Slate.shade50.withOpacity(0.5),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
                       bottomRight: Radius.circular(20),
@@ -773,7 +794,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           ),
         );
       },
-    );
+    ),
+  );
   }
 
   void _sortKeys(
@@ -833,12 +855,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.08 : 0.05),
+        color: color.withOpacity(isDark ? 0.08 : 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.03),
+            color: color.withOpacity(0.03),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -849,7 +871,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -860,8 +882,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               message,
               style: GoogleFonts.inter(
                 color: isDark
-                    ? color.withValues(alpha: 0.9)
-                    : color.withValues(alpha: 0.8),
+                    ? color.withOpacity(0.9)
+                    : color.withOpacity(0.8),
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
                 height: 1.3,
@@ -967,7 +989,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: effectiveColor.withValues(alpha: 0.1),
+                        color: effectiveColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -996,7 +1018,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       Text(
                         '%',
                         style: AppDesignSystem.labelSmall.copyWith(
-                          color: effectiveColor.withValues(alpha: 0.5),
+                          color: effectiveColor.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -1004,7 +1026,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   Text(
                     'UTILIZATION',
                     style: AppDesignSystem.labelSmall.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -1018,7 +1040,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 height: 12,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: effectiveColor.withValues(alpha: 0.1),
+                  color: effectiveColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -1032,13 +1054,13 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   gradient: LinearGradient(
                     colors: [
                       effectiveColor,
-                      effectiveColor.withValues(alpha: 0.7),
+                      effectiveColor.withOpacity(0.7),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(6),
                   boxShadow: [
                     BoxShadow(
-                      color: effectiveColor.withValues(alpha: 0.2),
+                      color: effectiveColor.withOpacity(0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1135,7 +1157,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   Text(
                     l10n.translate('overall_utilization').toUpperCase(),
                     style: AppDesignSystem.labelSmall.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -1156,7 +1178,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       Text(
                         '%',
                         style: AppDesignSystem.headingSmall.copyWith(
-                          color: AppColors.emeraldPrimary.withValues(alpha: 0.5),
+                          color: AppColors.emeraldPrimary.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -1169,10 +1191,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+                  color: AppColors.emeraldPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.emeraldPrimary.withValues(alpha: 0.2),
+                    color: AppColors.emeraldPrimary.withOpacity(0.2),
                   ),
                 ),
                 child: Column(
@@ -1186,7 +1208,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     Text(
                       l10n.translate('activities').toUpperCase(),
                       style: AppDesignSystem.labelSmall.copyWith(
-                        color: AppColors.emeraldPrimary.withValues(alpha: 0.5),
+                        color: AppColors.emeraldPrimary.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -1199,9 +1221,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.3),
+              color: theme.colorScheme.surface.withOpacity(0.3),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1211,7 +1233,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.goldAccent.withValues(alpha: 0.1),
+                        color: AppColors.goldAccent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -1231,8 +1253,11 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   ],
                 ),
                 const SizedBox(height: 24),
-                LayoutBuilder(
-                  builder: (context, constraints) {
+                Builder(
+                  builder: (context) {
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    // Adjust for typical padding/margins of the parent containers
+                    final availableWidth = screenWidth - 112; // Adjusted for padding
                     final crossAxisCount = ResponsiveUtils.valueByScreen(
                       context,
                       mobile: 1,
@@ -1240,7 +1265,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       desktop: 4,
                     );
                     final itemWidth =
-                        (constraints.maxWidth - (16 * (crossAxisCount - 1))) /
+                        (availableWidth - (16 * (crossAxisCount - 1))) /
                         crossAxisCount;
                     return Wrap(
                       spacing: 16,
@@ -1282,7 +1307,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+                top: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.1)),
               ),
             ),
             child: Row(
@@ -1297,7 +1322,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Container(
                   width: 1,
                   height: 40,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                  color: theme.colorScheme.onSurface.withOpacity(0.1),
                 ),
                 Expanded(
                   child: _buildSecondaryMetric(
@@ -1309,7 +1334,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Container(
                   width: 1,
                   height: 40,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                  color: theme.colorScheme.onSurface.withOpacity(0.1),
                 ),
                 Expanded(
                   child: _buildSecondaryMetric(
@@ -1340,7 +1365,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+              color: AppColors.emeraldPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: AppColors.emeraldPrimary, size: 20),
@@ -1353,7 +1378,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Text(
                   label,
                   style: AppDesignSystem.labelSmall.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1383,7 +1408,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+            color: AppColors.emeraldPrimary.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -1396,7 +1421,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
         Text(
           label.toUpperCase(),
           style: AppDesignSystem.labelSmall.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),
         ),
         const SizedBox(height: 6),
@@ -1432,7 +1457,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.emeraldPrimary.withValues(alpha: 0.1),
+                  color: AppColors.emeraldPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -1451,8 +1476,10 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             ],
           ),
           const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final availableWidth = screenWidth - 112; // Adjusted for padding
               final crossAxisCount = ResponsiveUtils.valueByScreen(
                 context,
                 mobile: 2,
@@ -1460,7 +1487,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 desktop: 4,
               );
               final itemWidth =
-                  (constraints.maxWidth - (16 * (crossAxisCount - 1))) /
+                  (availableWidth - (16 * (crossAxisCount - 1))) /
                   crossAxisCount;
               return Wrap(
                 spacing: 16,
@@ -1515,9 +1542,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       width: width ?? 150,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.2),
+        color: theme.colorScheme.surface.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        border: Border.all(color: color.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1527,7 +1554,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(icon, size: 12, color: color),
@@ -1650,7 +1677,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
 
 
   // ── TAB 5: BY EXPENDITURE TYPE ─────────────────────────────────────────────
-  Widget _buildExpenditureTab(List<Activity> activities) {
+  Widget _buildExpenditureTab(List<Activity> activities, ScrollController controller) {
     final l10n = context.watch<SettingsProvider>().l10n;
     final Map<String, List<Activity>> expMap = {};
 
@@ -1683,8 +1710,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Scrollbar(
+      controller: controller,
+      thumbVisibility: true,
+      child: ListView.builder(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: types.length + 1,
       itemBuilder: (context, i) {
         if (i == types.length) {
@@ -1770,12 +1801,12 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
+                  ? Colors.white.withOpacity(0.05)
                   : Colors.grey.shade200,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1785,7 +1816,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             data: Theme.of(context).copyWith(
               dividerColor: Colors.transparent,
               hoverColor: Colors.transparent,
-              splashColor: AppColors.primary.withValues(alpha: 0.05),
+              splashColor: AppColors.primary.withOpacity(0.05),
             ),
             child: ExpansionTile(
               tilePadding: const EdgeInsets.symmetric(
@@ -1793,7 +1824,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 vertical: 16,
               ),
               iconColor: AppColors.emeraldPrimary,
-              collapsedIconColor: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              collapsedIconColor: theme.colorScheme.onSurface.withOpacity(0.4),
               title: Text(
                 type,
                 style: AppDesignSystem.headingSmall.copyWith(
@@ -1811,7 +1842,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                           borderRadius: BorderRadius.circular(10),
                           child: LinearProgressIndicator(
                             value: rate.clamp(0.0, 1.0),
-                            backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                            backgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               rate > 0.9 ? Colors.red : AppColors.emeraldPrimary,
                             ),
@@ -1860,8 +1891,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.2)
-                        : Slate.shade50.withValues(alpha: 0.5),
+                        ? Colors.black.withOpacity(0.2)
+                        : Slate.shade50.withOpacity(0.5),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
                       bottomRight: Radius.circular(20),
@@ -1909,7 +1940,8 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           ),
         );
       },
-    );
+    ),
+  );
   }
 
   Widget _buildActivityBreakdownRow(Activity a) {
@@ -1977,14 +2009,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
             Icon(
               icon,
               size: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(width: 4),
             Text(
               label.toUpperCase(),
               style: AppDesignSystem.labelSmall.copyWith(
                 fontSize: 9,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurface.withOpacity(0.4),
               ),
             ),
           ],
@@ -2013,7 +2045,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.03),
+          color: theme.colorScheme.onSurface.withOpacity(0.03),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -2024,14 +2056,14 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                 Icon(
                   icon,
                   size: 12,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   label.toUpperCase(),
                   style: AppDesignSystem.labelSmall.copyWith(
                     fontSize: 8,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: theme.colorScheme.onSurface.withOpacity(0.4),
                   ),
                 ),
               ],
@@ -2189,7 +2221,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 30,
                       offset: const Offset(0, 10),
                     ),
@@ -2211,7 +2243,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -2296,8 +2328,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                                         style: GoogleFonts.inter(
                                           color: rodIndex == 0
                                               ? Colors.blue.shade200
-                                              : AppColors.tertiary.withValues(
-                                                  alpha: 0.8,
+                                              : AppColors.tertiary.withOpacity(0.8,
                                                 ),
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
@@ -2369,7 +2400,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                               drawVerticalLine: false,
                               getDrawingHorizontalLine: (value) => FlLine(
                                 color: isDark
-                                    ? Colors.white.withValues(alpha: 0.05)
+                                    ? Colors.white.withOpacity(0.05)
                                     : Slate.shade100,
                                 strokeWidth: 1,
                               ),
@@ -2381,8 +2412,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                                 barRods: [
                                   BarChartRodData(
                                     toY: sectorBudgets[e.value]!,
-                                    color: Colors.blue.withValues(
-                                      alpha: isDark ? 0.4 : 0.3,
+                                    color: Colors.blue.withOpacity(isDark ? 0.4 : 0.3,
                                     ),
                                     width: 16,
                                     borderRadius: BorderRadius.circular(4),
@@ -2394,7 +2424,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                                           ) *
                                           1.15,
                                       color: isDark
-                                          ? Colors.white.withValues(alpha: 0.02)
+                                          ? Colors.white.withOpacity(0.02)
                                           : Slate.shade50,
                                     ),
                                   ),
@@ -2406,8 +2436,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                                     gradient: LinearGradient(
                                       colors: [
                                         AppColors.tertiary,
-                                        AppColors.tertiary.withValues(
-                                          alpha: 0.7,
+                                        AppColors.tertiary.withOpacity(0.7,
                                         ),
                                       ],
                                       begin: Alignment.bottomCenter,
@@ -2436,17 +2465,15 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: Theme.of(context).brightness == Brightness.dark
-                    ? 0.2
-                    : 0.03,
+              color: Colors.black.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.03,
               ),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
           ],
           border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+            color: Theme.of(context).dividerColor.withOpacity(0.05),
           ),
         ),
         child: Column(
@@ -2531,7 +2558,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                     getDrawingHorizontalLine: (value) => FlLine(
                       color: Theme.of(
                         context,
-                      ).dividerColor.withValues(alpha: 0.05),
+                      ).dividerColor.withOpacity(0.05),
                       strokeWidth: 1,
                     ),
                   ),
@@ -2542,7 +2569,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                       barRods: [
                         BarChartRodData(
                           toY: sectorBudgets[e.value]!,
-                          color: AppColors.primary.withValues(alpha: 0.2),
+                          color: AppColors.primary.withOpacity(0.2),
                           width: 10,
                           borderRadius: BorderRadius.circular(3),
                         ),
@@ -2554,7 +2581,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen>
                           gradient: LinearGradient(
                             colors: [
                               AppColors.tertiary,
-                              AppColors.tertiary.withValues(alpha: 0.8),
+                              AppColors.tertiary.withOpacity(0.8),
                             ],
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
@@ -2594,7 +2621,7 @@ class _SectionHeader extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   theme.primaryColor,
-                  theme.primaryColor.withValues(alpha: 0.6),
+                  theme.primaryColor.withOpacity(0.6),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -2609,7 +2636,7 @@ class _SectionHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                color: theme.colorScheme.onSurface.withOpacity(0.9),
                 letterSpacing: 0.5,
               ),
             ),
@@ -2619,3 +2646,5 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+

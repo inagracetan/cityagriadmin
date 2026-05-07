@@ -65,9 +65,13 @@ class CurrencyInputFormatter extends TextInputFormatter {
   static double parse(String value) {
     if (value.isEmpty) return 0.0;
     try {
-      return double.parse(value.replaceAll(',', ''));
+      // Remove everything except numbers and decimal point
+      String clean = value.replaceAll(RegExp(r'[^0-9.]'), '');
+      if (clean.isEmpty) return 0.0;
+      return double.parse(clean);
     } catch (_) {
       return 0.0;
     }
   }
 }
+

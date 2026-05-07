@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/constants.dart';
 import '../models/activity.dart';
 import '../models/user_model.dart';
 import '../models/pr_log.dart';
@@ -15,7 +16,7 @@ class FirebaseService {
   // ── Budget Lines (Layer A) ──────────────────────────────────────────
 
   Stream<List<BudgetLine>> streamBudgetLines() {
-    return db.collection('budget_lines').snapshots().map(
+    return db.collection(AppConstants.colBudgetLines).snapshots().map(
           (snapshot) => snapshot.docs
               .map((doc) => BudgetLine.fromFirestore(doc.data(), doc.id))
               .toList(),
@@ -23,13 +24,13 @@ class FirebaseService {
   }
 
   Future<void> updateBudgetLine(BudgetLine line) async {
-    await db.collection('budget_lines').doc(line.id).set(line.toFirestore());
+    await db.collection(AppConstants.colBudgetLines).doc(line.id).set(line.toFirestore());
   }
 
   // ── Expenditures (Layer B) ───────────────────────────────────────────
 
   Stream<List<Expenditure>> streamExpenditures({String? sector, String? prNumber}) {
-    Query<Map<String, dynamic>> query = db.collection('expenditures');
+    Query<Map<String, dynamic>> query = db.collection(AppConstants.colExpenditures);
     if (sector != null && sector.isNotEmpty) {
       query = query.where('sector', isEqualTo: sector);
     }
@@ -45,7 +46,7 @@ class FirebaseService {
 
   Future<String> addExpenditure(Expenditure expenditure) async {
     // 1. Add expenditure
-    final docRef = await db.collection('expenditures').add(expenditure.toFirestore());
+    final docRef = await db.collection(AppConstants.colExpenditures).add(expenditure.toFirestore());
     
     // 2. Update Budget Line balance (Deduct)
     if (expenditure.fundSource != null && expenditure.objectOfExpenditure != null) {
@@ -56,12 +57,23 @@ class FirebaseService {
       );
     }
     
+    
+    // Trigger notification
+    await addNotification(SystemNotification(
+      id: '',
+      title: 'New Expenditure Recorded',
+      message: 'An expenditure of ₱${expenditure.amount.toStringAsFixed(2)} for "${expenditure.activityName}" has been added.',
+      timestamp: DateTime.now(),
+      type: NotificationType.budget,
+      relatedId: docRef.id,
+    ));
+
     return docRef.id;
   }
 
   Future<void> updateExpenditure(Expenditure expenditure, double oldAmount) async {
     // 1. Update expenditure
-    await db.collection('expenditures').doc(expenditure.id).update(expenditure.toFirestore());
+    await db.collection(AppConstants.colExpenditures).doc(expenditure.id).update(expenditure.toFirestore());
     
     // 2. Adjust Budget Line balance if amount changed
     if (expenditure.amount != oldAmount) {
@@ -77,7 +89,7 @@ class FirebaseService {
 
   Future<void> deleteExpenditure(Expenditure expenditure) async {
     // 1. Delete expenditure
-    await db.collection('expenditures').doc(expenditure.id).delete();
+    await db.collection(AppConstants.colExpenditures).doc(expenditure.id).delete();
     
     // 2. Restore Budget Line balance (Add back)
     if (expenditure.fundSource != null && expenditure.objectOfExpenditure != null) {
@@ -91,7 +103,7 @@ class FirebaseService {
 
   Future<void> _adjustBudgetBalance(String fs, String oe, double adjustment) async {
     final query = await db
-        .collection('budget_lines')
+        .collection(AppConstants.colBudgetLines)
         .where('fund_source', isEqualTo: fs)
         .where('object_of_expenditure', isEqualTo: oe)
         .limit(1)
@@ -107,14 +119,14 @@ class FirebaseService {
   // ── CMO Budget (Layer C) ─────────────────────────────────────────────
 
   Future<void> adjustCMOBudget(double adjustment, String remarks) async {
-    final query = await db.collection('budget_lines').where('is_cmo', isEqualTo: true).limit(1).get();
+    final query = await db.collection(AppConstants.colBudgetLines).where('is_cmo', isEqualTo: true).limit(1).get();
     if (query.docs.isNotEmpty) {
       final doc = query.docs.first;
       final currentBalance = (doc.data()['current_balance'] ?? 0).toDouble();
       await doc.reference.update({'current_balance': currentBalance + adjustment});
       
       // Log adjustment? (Optional but good)
-      await db.collection('cmo_ledger').add({
+      await db.collection(AppConstants.colCmoLedger).add({
         'adjustment': adjustment,
         'remarks': remarks,
         'timestamp': FieldValue.serverTimestamp(),
@@ -124,22 +136,13 @@ class FirebaseService {
 
   // ── Activities ──────────────────────────────────────────────────────
   
-  // Cache for streams to prevent redundant subscriptions
-  final Map<String, Stream<List<Activity>>> _activityStreamsCache = {};
-
   // Stream all activities for Admin Master Table
   Stream<List<Activity>> streamActivities({
     String? sector,
     String? status,
     String? responsiblePerson,
   }) {
-    final cacheKey = 'activities_${sector ?? ''}_${status ?? ''}_${responsiblePerson ?? ''}';
-    
-    if (_activityStreamsCache.containsKey(cacheKey)) {
-      return _activityStreamsCache[cacheKey]!;
-    }
-
-    Query<Map<String, dynamic>> query = db.collection('activities');
+    Query<Map<String, dynamic>> query = db.collection(AppConstants.colActivities);
     if (sector != null && sector.isNotEmpty) {
       query = query.where('sector', isEqualTo: sector);
     }
@@ -150,20 +153,17 @@ class FirebaseService {
       query = query.where('responsible_person', isEqualTo: responsiblePerson);
     }
 
-    final stream = query.snapshots().map(
+    return query.snapshots().map(
       (snapshot) => snapshot.docs
           .map((doc) => Activity.fromFirestore(doc.data(), doc.id))
           .toList(),
-    ).asBroadcastStream(); // Use broadcast stream for multiple listeners
-
-    _activityStreamsCache[cacheKey] = stream;
-    return stream;
+    );
   }
 
   // Stream activities assigned to a specific staff
   Stream<List<Activity>> streamActivitiesForStaff(String staffName) {
     return db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .where('responsible_person', isEqualTo: staffName)
         .snapshots()
         .map(
@@ -176,9 +176,9 @@ class FirebaseService {
   // Stream PR logs for an activity
   Stream<List<PRLog>> streamPRLogs(String activityId) {
     return db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .doc(activityId)
-        .collection('pr_logs')
+        .collection(AppConstants.colPrLogs)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map(
@@ -191,16 +191,16 @@ class FirebaseService {
   // Add a PR log entry
   Future<void> addPRLog(PRLog log) async {
     await db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .doc(log.activityId)
-        .collection('pr_logs')
+        .collection(AppConstants.colPrLogs)
         .add(log.toFirestore());
   }
 
   // Add a new activity
   Future<String> addActivity(Activity activity) async {
     final docRef = await db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .add(activity.toFirestore());
 
     // Trigger notification
@@ -231,7 +231,7 @@ class FirebaseService {
       final chunk = activities.sublist(i, end);
       final batch = db.batch();
       for (var activity in chunk) {
-        final docRef = db.collection('activities').doc();
+        final docRef = db.collection(AppConstants.colActivities).doc();
         batch.set(docRef, activity.toFirestore());
       }
       await batch.commit();
@@ -246,7 +246,7 @@ class FirebaseService {
     }
 
     await db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .doc(activity.id)
         .update(activity.toFirestore());
 
@@ -272,8 +272,18 @@ class FirebaseService {
   // Update only the status of an activity
   Future<void> updateActivityStatus(String activityId, String newStatus) async {
     try {
-      await db.collection('activities').doc(activityId).update({'status': newStatus});
+      await db.collection(AppConstants.colActivities).doc(activityId).update({'status': newStatus});
       
+      // Trigger notification
+      await addNotification(SystemNotification(
+        id: '',
+        title: 'Status Updated',
+        message: 'The status of an activity has been changed to $newStatus.',
+        timestamp: DateTime.now(),
+        type: NotificationType.info,
+        relatedId: activityId,
+      ));
+
       // Log the event
       await logEvent(
         type: 'activity',
@@ -292,22 +302,22 @@ class FirebaseService {
 
     // Delete all PR logs first
     final prLogs = await db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .doc(activityId)
-        .collection('pr_logs')
+        .collection(AppConstants.colPrLogs)
         .get();
     for (final doc in prLogs.docs) {
       batch.delete(doc.reference);
     }
 
     // Delete the activity itself
-    batch.delete(db.collection('activities').doc(activityId));
+    batch.delete(db.collection(AppConstants.colActivities).doc(activityId));
     await batch.commit();
   }
 
   // Get a list of all staff names
   Future<List<String>> getAvailableStaff() async {
-    final snapshot = await db.collection('users').get();
+    final snapshot = await db.collection(AppConstants.colUsers).get();
     return snapshot.docs
         .map((doc) => (doc.get('name') as String).trim())
         .where((name) => name.isNotEmpty)
@@ -319,7 +329,7 @@ class FirebaseService {
   // Stream all users
   Stream<List<UserModel>> streamUsers() {
     return db
-        .collection('users')
+        .collection(AppConstants.colUsers)
         .snapshots()
         .map(
           (snapshot) =>
@@ -330,7 +340,7 @@ class FirebaseService {
   Future<bool> checkDuplicateActivity(
       String name, String sector, String targetDate, {String? excludeId}) async {
     final query = await db
-        .collection('activities')
+        .collection(AppConstants.colActivities)
         .where('activity_name', isEqualTo: name)
         .where('sector', isEqualTo: sector)
         .where('target_date', isEqualTo: targetDate)
@@ -345,7 +355,7 @@ class FirebaseService {
   // ── Programs (WFP Entity) ───────────────────────────────────────────
 
   Stream<List<Program>> streamPrograms() {
-    return db.collection('programs').snapshots().map(
+    return db.collection(AppConstants.colPrograms).snapshots().map(
           (snapshot) => snapshot.docs
               .map((doc) => Program.fromFirestore(doc.data(), doc.id))
               .toList(),
@@ -353,16 +363,16 @@ class FirebaseService {
   }
 
   Future<void> updateProgram(Program program) async {
-    await db.collection('programs').doc(program.id).set(program.toFirestore());
+    await db.collection(AppConstants.colPrograms).doc(program.id).set(program.toFirestore());
   }
 
   // ── Procurements (Procurement Entity) ────────────────────────────────
 
   Stream<List<Procurement>> streamProcurements(String programId) {
     return db
-        .collection('programs')
+        .collection(AppConstants.colPrograms)
         .doc(programId)
-        .collection('procurements')
+        .collection(AppConstants.colProcurements)
         .orderBy('created_at', descending: true)
         .snapshots()
         .map(
@@ -375,7 +385,7 @@ class FirebaseService {
   // searchable data table utilize collectionGroup
   Stream<List<Procurement>> streamAllProcurements() {
     return db
-        .collectionGroup('procurements')
+        .collectionGroup(AppConstants.colProcurements)
         .orderBy('created_at', descending: true)
         .snapshots()
         .map(
@@ -395,13 +405,24 @@ class FirebaseService {
 
     // 2. Add procurement
     final docRef = await db
-        .collection('programs')
+        .collection(AppConstants.colPrograms)
         .doc(procurement.programId)
-        .collection('procurements')
+        .collection(AppConstants.colProcurements)
         .add(procurement.toFirestore());
 
     // 3. Deduct from Program Balance
     await _adjustProgramBalance(procurement.programId, -procurement.prAmount);
+
+    
+    // Trigger notification
+    await addNotification(SystemNotification(
+      id: '',
+      title: 'New Procurement Added',
+      message: 'Procurement PR "${procurement.prNumber}" has been added to program.',
+      timestamp: DateTime.now(),
+      type: NotificationType.activity,
+      relatedId: docRef.id,
+    ));
 
     return docRef.id;
   }
@@ -409,9 +430,9 @@ class FirebaseService {
   Future<void> updateProcurement(Procurement procurement, double oldAmount) async {
     // 1. Update procurement
     await db
-        .collection('programs')
+        .collection(AppConstants.colPrograms)
         .doc(procurement.programId)
-        .collection('procurements')
+        .collection(AppConstants.colProcurements)
         .doc(procurement.id)
         .update(procurement.toFirestore());
 
@@ -423,9 +444,9 @@ class FirebaseService {
 
   Future<void> deleteProcurement(Procurement procurement) async {
     await db
-        .collection('programs')
+        .collection(AppConstants.colPrograms)
         .doc(procurement.programId)
-        .collection('procurements')
+        .collection(AppConstants.colProcurements)
         .doc(procurement.id)
         .delete();
 
@@ -434,7 +455,7 @@ class FirebaseService {
   }
 
   Future<void> _adjustProgramBalance(String programId, double adjustment) async {
-    final docRef = db.collection('programs').doc(programId);
+    final docRef = db.collection(AppConstants.colPrograms).doc(programId);
     await db.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
       if (snapshot.exists) {
@@ -446,7 +467,7 @@ class FirebaseService {
 
   Future<void> _validateAgainstAppropriation(String fs, String oe, double amount) async {
     final query = await db
-        .collection('budget_lines') // Using budget_lines as appropriations
+        .collection(AppConstants.colBudgetLines) // Using budget_lines as appropriations
         .where('fund_source', isEqualTo: fs)
         .where('object_of_expenditure', isEqualTo: oe)
         .limit(1)
@@ -469,7 +490,7 @@ class FirebaseService {
   // ── Notifications ───────────────────────────────────────────────────
 
   Stream<List<SystemNotification>> streamNotifications({String? userId}) {
-    Query<Map<String, dynamic>> query = db.collection('notifications');
+    Query<Map<String, dynamic>> query = db.collection(AppConstants.colNotifications);
     
     // Show user-specific OR global notifications
     if (userId != null) {
@@ -489,24 +510,39 @@ class FirebaseService {
   }
 
   Future<void> addNotification(SystemNotification notification) async {
-    await db.collection('notifications').add(notification.toFirestore());
+    await db.collection(AppConstants.colNotifications).add(notification.toFirestore());
   }
 
   Future<void> markNotificationAsRead(String id) async {
-    await db.collection('notifications').doc(id).update({'is_read': true});
+    await db.collection(AppConstants.colNotifications).doc(id).update({'is_read': true});
   }
 
   Future<void> markAllNotificationsAsRead(String? userId) async {
-    final query = await db.collection('notifications')
-        .where('user_id', isEqualTo: userId)
-        .where('is_read', isEqualTo: false)
-        .get();
+    Query<Map<String, dynamic>> query = db.collection(AppConstants.colNotifications)
+        .where('is_read', isEqualTo: false);
         
-    final batch = db.batch();
-    for (final doc in query.docs) {
-      batch.update(doc.reference, {'is_read': true});
+    if (userId != null) {
+      // Mark user specific and global notifications as read
+      // Note: In a real app, you might only want to mark user-specific as read 
+      // or track 'read' status per user for global ones. 
+      // For this system, we'll just mark whatever is in the view.
+      final snapshot = await query.get();
+      final batch = db.batch();
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['user_id'] == userId || data['user_id'] == null) {
+          batch.update(doc.reference, {'is_read': true});
+        }
+      }
+      await batch.commit();
+    } else {
+      final snapshot = await query.where('user_id', isNull: true).get();
+      final batch = db.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'is_read': true});
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   // ── System Logs ─────────────────────────────────────────────────────
@@ -519,7 +555,7 @@ class FirebaseService {
     String? userName,
     Map<String, dynamic>? metadata,
   }) async {
-    await db.collection('system_logs').add({
+    await db.collection(AppConstants.colSystemLogs).add({
       'type': type,
       'action': action,
       'message': message,
@@ -531,11 +567,12 @@ class FirebaseService {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> streamSystemLogs() {
-    return db.collection('system_logs')
+    return db.collection(AppConstants.colSystemLogs)
         .orderBy('timestamp', descending: true)
         .limit(100)
         .snapshots();
   }
 }
+
 
 

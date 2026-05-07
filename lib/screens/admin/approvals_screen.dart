@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/design_system.dart';
 import '../../models/activity.dart';
 import '../../services/firebase_service.dart';
-import 'activity_details_dialog.dart';
-import 'edit_activity_dialog.dart';
-import '../../widgets/skeleton_loading.dart';
 import '../../services/navigation_provider.dart';
 import '../../services/settings_provider.dart';
+import '../../widgets/skeleton_loading.dart';
+import 'activity_details_dialog.dart';
+import 'edit_activity_dialog.dart';
 
 
 class ApprovalsScreen extends StatefulWidget {
@@ -166,10 +167,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> with AutomaticKeepAli
                 decoration: InputDecoration(
                   hintText: 'Search by activity name, sector, or person...',
                   hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Icons.search_rounded, size: AppDesignSystem.iconSizeSmall, color: Color(0xFF64748B)),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 20),
+                          icon: const Icon(Icons.close_rounded, size: AppDesignSystem.iconSizeSmall),
                           onPressed: () => _searchController.clear(),
                         )
                       : null,
@@ -271,7 +272,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> with AutomaticKeepAli
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -453,3 +454,4 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> with AutomaticKeepAli
     );
   }
 }
+

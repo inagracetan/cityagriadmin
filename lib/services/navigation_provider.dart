@@ -5,7 +5,7 @@ class NavigationProvider extends ChangeNotifier {
   List<Widget>? actions;
   Widget? fab;
   String title = 'LGU Agri App';
-  int _selectedIndex = 0;
+  int _selectedIndex = 2;
 
   int get selectedIndex => _selectedIndex;
 
@@ -39,3 +39,4 @@ class NavigationProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+

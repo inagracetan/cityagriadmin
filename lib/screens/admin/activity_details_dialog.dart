@@ -94,7 +94,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.emeraldPrimary.withValues(alpha: 0.2),
+                    color: AppColors.emeraldPrimary.withOpacity(0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -111,7 +111,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
@@ -141,13 +141,13 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                 Icon(
                                   Icons.business_center_rounded,
                                   size: 14,
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: Colors.white.withOpacity(0.6),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   activity.sector,
                                   style: AppDesignSystem.labelMedium.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                    color: Colors.white.withOpacity(0.8),
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -184,7 +184,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                   color: theme.colorScheme.surface,
                   border: Border(
                     bottom: BorderSide(
-                      color: theme.dividerColor.withValues(alpha: 0.1),
+                      color: theme.dividerColor.withOpacity(0.1),
                     ),
                   ),
                 ),
@@ -248,11 +248,11 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: theme.dividerColor.withValues(alpha: 0.05),
+                          color: theme.dividerColor.withOpacity(0.05),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black.withOpacity(0.04),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -306,11 +306,11 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: theme.dividerColor.withValues(alpha: 0.05),
+                          color: theme.dividerColor.withOpacity(0.05),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black.withOpacity(0.04),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -349,8 +349,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
-                                          color: theme.disabledColor.withValues(
-                                            alpha: 0.5,
+                                          color: theme.disabledColor.withOpacity(0.5,
                                           ),
                                           letterSpacing: 0.5,
                                         ),
@@ -365,8 +364,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
-                                          color: theme.disabledColor.withValues(
-                                            alpha: 0.5,
+                                          color: theme.disabledColor.withOpacity(0.5,
                                           ),
                                           letterSpacing: 0.5,
                                         ),
@@ -382,8 +380,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                                         style: AppDesignSystem.bodyMedium.copyWith(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 11,
-                                          color: theme.disabledColor.withValues(
-                                            alpha: 0.5,
+                                          color: theme.disabledColor.withOpacity(0.5,
                                           ),
                                           letterSpacing: 0.5,
                                         ),
@@ -533,11 +530,11 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: theme.dividerColor.withValues(alpha: 0.05),
+                          color: theme.dividerColor.withOpacity(0.05),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black.withOpacity(0.04),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -627,9 +624,9 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: color.withValues(alpha: 0.2)),
+          side: BorderSide(color: color.withOpacity(0.2)),
         ),
-        backgroundColor: color.withValues(alpha: 0.05),
+        backgroundColor: color.withOpacity(0.05),
       ),
     );
 
@@ -693,7 +690,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: groupColor.withValues(alpha: 0.10),
+              color: groupColor.withOpacity(0.10),
               borderRadius: BorderRadius.circular(8),
               border: Border(left: BorderSide(color: groupColor, width: 3)),
             ),
@@ -743,7 +740,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           decoration: BoxDecoration(
-            color: theme.primaryColor.withValues(alpha: 0.06),
+            color: theme.primaryColor.withOpacity(0.06),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -913,7 +910,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           width: 500,
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111).withValues(alpha: 0.95),
+            color: const Color(0xFF111111).withOpacity(0.95),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: Colors.white10),
           ),
@@ -1010,9 +1007,9 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
+        color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Text(
         label,
@@ -1097,7 +1094,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1137,7 +1134,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
           Text(
             title.toUpperCase(),
             style: AppDesignSystem.labelSmall.copyWith(
-              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
               letterSpacing: 1.2,
               fontWeight: FontWeight.bold,
             ),
@@ -1171,7 +1168,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
             label.toUpperCase(),
             style: AppDesignSystem.labelSmall.copyWith(
               fontSize: 10,
-              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+              color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
               fontWeight: FontWeight.w800,
               letterSpacing: 1.0,
             ),
@@ -1181,10 +1178,10 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.1),
+                color: badgeColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: badgeColor.withValues(alpha: 0.2),
+                  color: badgeColor.withOpacity(0.2),
                   width: 1.5,
                 ),
               ),
@@ -1234,16 +1231,16 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.05),
+              color: Colors.grey.withOpacity(0.05),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+              border: Border.all(color: Colors.black.withOpacity(0.05)),
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.history_toggle_off_outlined,
                   size: 32,
-                  color: Colors.grey.withValues(alpha: 0.4),
+                  color: Colors.grey.withOpacity(0.4),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -1283,10 +1280,10 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1303,7 +1300,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                 formatDate.format(log.timestamp),
                 style: AppDesignSystem.bodyMedium.copyWith(
                   fontSize: 11,
-                  color: theme.disabledColor.withValues(alpha: 0.6),
+                  color: theme.disabledColor.withOpacity(0.6),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1321,7 +1318,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         Icon(
                           Icons.tag_rounded,
                           size: 16,
-                          color: theme.primaryColor.withValues(alpha: 0.5),
+                          color: theme.primaryColor.withOpacity(0.5),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -1354,7 +1351,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: theme.primaryColor.withValues(alpha: 0.05),
+                    color: theme.primaryColor.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -1365,7 +1362,7 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
                         style: AppDesignSystem.bodyMedium.copyWith(
                           fontSize: 8,
                           fontWeight: FontWeight.w900,
-                          color: theme.primaryColor.withValues(alpha: 0.5),
+                          color: theme.primaryColor.withOpacity(0.5),
                           letterSpacing: 1.0,
                         ),
                       ),
@@ -1388,9 +1385,9 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.dividerColor.withValues(alpha: 0.04),
+                color: theme.dividerColor.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.05)),
               ),
               child: Text(
                 log.remarks,
@@ -1408,3 +1405,4 @@ class _ActivityDetailsDialogState extends State<ActivityDetailsDialog> {
     );
   }
 }
+

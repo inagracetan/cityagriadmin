@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/constants.dart';
+import '../../core/design_system.dart';
 import '../../models/activity.dart';
+import '../../services/activity_form_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/navigation_provider.dart';
-import '../../services/activity_form_provider.dart';
-import '../../core/constants.dart';
 import '../../widgets/skeleton_loading.dart';
 
 
@@ -99,25 +101,25 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
             margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               color: isDark 
-                ? Colors.white.withValues(alpha: 0.05) 
-                : Slate.shade100.withValues(alpha: 0.8),
+                ? Colors.white.withOpacity(0.05) 
+                : Slate.shade100.withOpacity(0.8),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isDark 
-                  ? Colors.white.withValues(alpha: 0.1) 
+                  ? Colors.white.withOpacity(0.1) 
                   : Slate.shade200,
                 width: 1.5,
               ),
               boxShadow: [
                 if (isDark)
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.05),
+                    color: AppColors.primary.withOpacity(0.05),
                     blurRadius: 10,
                     spreadRadius: 2,
                   )
                 else
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
+                    color: Colors.black.withOpacity(0.02),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -138,9 +140,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                   color: isDark ? Colors.white38 : Slate.shade400,
                 ),
                 prefixIcon: Icon(
-                  Icons.search_rounded, 
-                  size: 20, 
-                  color: _searchQuery.isNotEmpty ? AppColors.primary : (isDark ? Colors.white38 : Slate.shade400)
+                  Icons.search_rounded,
+                  size: AppDesignSystem.iconSizeSmall,
+                  color: _searchQuery.isNotEmpty ? AppColors.primary : (isDark ? Colors.white38 : Slate.shade400),
                 ),
                 suffixIcon: _searchQuery.isNotEmpty 
                   ? IconButton(
@@ -194,22 +196,22 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          hoverColor: AppColors.primary.withValues(alpha: 0.05),
+          hoverColor: AppColors.primary.withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white,
+              color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: hasBadge ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.1) : Slate.shade200),
+                color: hasBadge ? AppColors.primary : (isDark ? Colors.white.withOpacity(0.1) : Slate.shade200),
                 width: hasBadge ? 1.5 : 1,
               ),
               boxShadow: [
                 if (hasBadge)
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     blurRadius: 10,
                     spreadRadius: 1,
                   ),
@@ -262,7 +264,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black.withOpacity(0.3),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -278,7 +280,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                          color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF1F5F9),
                         ),
                       ),
                     ),
@@ -290,7 +292,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: AppColors.primary.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(Icons.filter_list_rounded, color: AppColors.primary, size: 20),
@@ -437,7 +439,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.black.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+                      color: isDark ? Colors.black.withOpacity(0.1) : const Color(0xFFF8FAFC),
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(24),
                         bottomRight: Radius.circular(24),
@@ -484,15 +486,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                    color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                      color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0),
                     ),
                   ),
                   child: Icon(
                     Icons.swap_vert_rounded,
-                    color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF64748B),
+                    color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B),
                   ),
                 ),
               ),
@@ -543,12 +545,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
         decoration: BoxDecoration(
           color: isSelected 
             ? AppColors.primary 
-            : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+            : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected 
               ? AppColors.primary 
-              : (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0)),
+              : (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFE2E8F0)),
           ),
         ),
         child: Text(
@@ -723,9 +725,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                               scrollbarTheme: ScrollbarThemeData(
                                 thumbColor: WidgetStateProperty.resolveWith((states) {
                                   if (states.contains(WidgetState.hovered)) {
-                                    return AppColors.primary.withValues(alpha: 0.4);
+                                    return AppColors.primary.withOpacity(0.4);
                                   }
-                                  return isDark ? Colors.white.withValues(alpha: 0.1) : Slate.shade300;
+                                  return isDark ? Colors.white.withOpacity(0.1) : Slate.shade300;
                                 }),
                                 radius: const Radius.circular(12),
                                 thickness: WidgetStateProperty.all(8),
@@ -792,13 +794,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200,
+              color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade200,
             ),
           ),
           child: ClipRRect(
@@ -811,7 +813,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                   child: Icon(
                     Icons.auto_graph_rounded,
                     size: 140,
-                    color: AppColors.primary.withValues(alpha: 0.03),
+                    color: AppColors.primary.withOpacity(0.03),
                   ),
                 ),
                 Padding(
@@ -822,14 +824,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+                            colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
+                              color: AppColors.primary.withOpacity(0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -885,14 +887,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Slate.shade200,
+          color: isDark ? Colors.white.withOpacity(0.08) : Slate.shade200,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -901,14 +903,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.primary.withValues(alpha: 0.7)),
+          Icon(icon, size: 16, color: AppColors.primary.withOpacity(0.7)),
           const SizedBox(width: 10),
           Text(
             label,
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white.withValues(alpha: 0.8) : Slate.shade800,
+              color: isDark ? Colors.white.withOpacity(0.8) : Slate.shade800,
             ),
           ),
         ],
@@ -926,7 +928,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
           Container(
             padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.02) : Slate.shade50,
+              color: isDark ? Colors.white.withOpacity(0.02) : Slate.shade50,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -1032,17 +1034,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
           width: 380,
           margin: const EdgeInsets.only(right: 28),
           decoration: BoxDecoration(
-            color: isDark ? Slate.shade900.withValues(alpha: 0.4) : Slate.shade50.withValues(alpha: 0.8),
+            color: isDark ? Slate.shade900.withOpacity(0.4) : Slate.shade50.withOpacity(0.8),
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
               color: isOver 
                 ? columnColor 
-                : (isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200),
+                : (isDark ? Colors.white.withOpacity(0.05) : Slate.shade200),
               width: isOver ? 2.5 : 1,
             ),
             boxShadow: isOver ? [
               BoxShadow(
-                color: columnColor.withValues(alpha: 0.2),
+                color: columnColor.withOpacity(0.2),
                 blurRadius: 20,
                 spreadRadius: 2,
               )
@@ -1064,7 +1066,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -1085,7 +1087,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: columnColor.withValues(alpha: 0.3),
+                                color: columnColor.withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -1113,7 +1115,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                                      color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade100,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1134,7 +1136,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                                     height: 4,
                                     width: double.infinity,
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                                      color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade100,
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
@@ -1167,7 +1169,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: columnColor.withValues(alpha: 0.4),
+                                        color: columnColor.withOpacity(0.4),
                                         blurRadius: 8,
                                       )
                                     ],
@@ -1184,7 +1186,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.02) : Slate.shade100.withValues(alpha: 0.5),
+                        color: isDark ? Colors.white.withOpacity(0.02) : Slate.shade100.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -1240,10 +1242,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
       margin: const EdgeInsets.only(top: 60),
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.01) : Slate.shade100.withValues(alpha: 0.3),
+        color: isDark ? Colors.white.withOpacity(0.01) : Slate.shade100.withOpacity(0.3),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.03) : Slate.shade200, 
+          color: isDark ? Colors.white.withOpacity(0.03) : Slate.shade200, 
           style: BorderStyle.solid,
         ),
       ),
@@ -1263,18 +1265,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> with AutomaticKeepAlive
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
+                color: isDark ? Colors.white.withOpacity(0.02) : Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 20,
                   )
                 ],
               ),
               child: Icon(
                 icon, 
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200, 
+                color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade200, 
                 size: 56,
               ),
             ),
@@ -1423,7 +1425,7 @@ class _HoverableProjectCardState extends State<_HoverableProjectCard> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
+                    color: Colors.black.withOpacity(0.4),
                     blurRadius: 40,
                     offset: const Offset(0, 20),
                   ),
@@ -1445,7 +1447,7 @@ class _HoverableProjectCardState extends State<_HoverableProjectCard> {
             child: Container(
               height: 220,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.02) : Slate.shade100,
+                color: isDark ? Colors.white.withOpacity(0.02) : Slate.shade100,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
                   color: isDark ? Slate.shade800 : Slate.shade200,
@@ -1464,15 +1466,15 @@ class _HoverableProjectCardState extends State<_HoverableProjectCard> {
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
                   color: _isHovered 
-                    ? statusColor.withValues(alpha: 0.5) 
-                    : (isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200),
+                    ? statusColor.withOpacity(0.5) 
+                    : (isDark ? Colors.white.withOpacity(0.05) : Slate.shade200),
                   width: _isHovered ? 1.5 : 1,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: _isHovered 
-                      ? statusColor.withValues(alpha: 0.2) 
-                      : Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+                      ? statusColor.withOpacity(0.2) 
+                      : Colors.black.withOpacity(isDark ? 0.15 : 0.03),
                     blurRadius: _isHovered ? 20 : 12,
                     offset: _isHovered ? const Offset(0, 8) : const Offset(0, 4),
                   ),
@@ -1519,7 +1521,7 @@ class _StaticCardContent extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [statusColor, statusColor.withValues(alpha: 0.6)],
+                colors: [statusColor, statusColor.withOpacity(0.6)],
               ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(28),
@@ -1559,10 +1561,10 @@ class _StaticCardContent extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.02) : Slate.shade50,
+                      color: isDark ? Colors.white.withOpacity(0.02) : Slate.shade50,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isDark ? Colors.white.withValues(alpha: 0.03) : Slate.shade100,
+                        color: isDark ? Colors.white.withOpacity(0.03) : Slate.shade100,
                       ),
                     ),
                     child: Row(
@@ -1595,7 +1597,7 @@ class _StaticCardContent extends StatelessWidget {
                         Container(
                           width: 1,
                           height: 30,
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200,
+                          color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade200,
                           margin: const EdgeInsets.symmetric(horizontal: 16),
                         ),
                         Expanded(
@@ -1644,7 +1646,7 @@ class _StaticCardContent extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
+                          color: statusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1664,33 +1666,35 @@ class _StaticCardContent extends StatelessWidget {
                       Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade100,
+                          color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade100,
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final percent = activity.approvedBudget > 0 ? (activity.effectivePOAmount / activity.approvedBudget).clamp(0.0, 1.0) : 0.0;
-                          return AnimatedContainer(
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: activity.approvedBudget > 0 
+                              ? (activity.effectivePOAmount / activity.approvedBudget).clamp(0.0, 1.0) 
+                              : 0.0,
+                          child: AnimatedContainer(
                             duration: const Duration(milliseconds: 1000),
                             curve: Curves.fastOutSlowIn,
                             height: 8,
-                            width: constraints.maxWidth * percent,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [statusColor, statusColor.withValues(alpha: 0.7)],
+                                colors: [statusColor, statusColor.withOpacity(0.7)],
                               ),
                               borderRadius: BorderRadius.circular(10),
                               boxShadow: [
                                 BoxShadow(
-                                  color: statusColor.withValues(alpha: 0.3),
+                                  color: statusColor.withOpacity(0.3),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                          );
-                        }
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1704,7 +1708,7 @@ class _StaticCardContent extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isDark ? Colors.white.withValues(alpha: 0.1) : Slate.shade200,
+                            color: isDark ? Colors.white.withOpacity(0.1) : Slate.shade200,
                             width: 1,
                           ),
                         ),
@@ -1753,7 +1757,7 @@ class _StaticCardContent extends StatelessWidget {
                       Icon(
                         Icons.drag_indicator_rounded,
                         size: 20,
-                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Slate.shade200,
+                        color: isDark ? Colors.white.withOpacity(0.05) : Slate.shade200,
                       ),
                     ],
                   ),
@@ -1776,23 +1780,23 @@ class _SectorTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String label = AppConstants.abbreviate(sector);
-    Color tagColor = isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9);
-    Color textColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF64748B);
+    Color tagColor = isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF1F5F9);
+    Color textColor = isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF64748B);
 
     if (label == 'ASSU') {
-      tagColor = const Color(0xFF6366F1).withValues(alpha: 0.15);
+      tagColor = const Color(0xFF6366F1).withOpacity(0.15);
       textColor = const Color(0xFF818CF8);
     } else if (label == 'CS') {
-      tagColor = const Color(0xFF10B981).withValues(alpha: 0.15);
+      tagColor = const Color(0xFF10B981).withOpacity(0.15);
       textColor = const Color(0xFF34D399);
     } else if (label == 'IDS') {
-      tagColor = const Color(0xFF8B5CF6).withValues(alpha: 0.15);
+      tagColor = const Color(0xFF8B5CF6).withOpacity(0.15);
       textColor = const Color(0xFFA78BFA);
     } else if (label == 'IAL') {
-      tagColor = const Color(0xFF0EA5E9).withValues(alpha: 0.15);
+      tagColor = const Color(0xFF0EA5E9).withOpacity(0.15);
       textColor = const Color(0xFF38BDF8);
     } else if (label == 'M&E') {
-      tagColor = const Color(0xFFF59E0B).withValues(alpha: 0.15);
+      tagColor = const Color(0xFFF59E0B).withOpacity(0.15);
       textColor = const Color(0xFFFBBF24);
     }
 
@@ -1802,7 +1806,7 @@ class _SectorTag extends StatelessWidget {
         color: tagColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: textColor.withValues(alpha: 0.1),
+          color: textColor.withOpacity(0.1),
         ),
       ),
       child: Text(
@@ -1817,6 +1821,7 @@ class _SectorTag extends StatelessWidget {
     );
   }
 }
+
 
 
 

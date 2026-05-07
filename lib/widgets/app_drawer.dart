@@ -55,7 +55,7 @@ class AppMenuContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0B121E), // Deeper, darker navy for a more premium look
         border: isSidebar 
-          ? Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.03)))
+          ? Border(right: BorderSide(color: Colors.white.withOpacity(0.03)))
           : null,
       ),
       child: Column(
@@ -77,10 +77,10 @@ class AppMenuContent extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
+                        color: AppColors.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.2),
+                          color: AppColors.primary.withOpacity(0.2),
                         ),
                       ),
                       child: Image.asset(
@@ -99,7 +99,7 @@ class AppMenuContent extends StatelessWidget {
                           Text(
                             (role == 'admin' ? 'ADMIN PANEL' : 'STAFF PANEL'),
                             style: TextStyle(
-                              color: AppColors.primaryAccent.withValues(alpha: 0.8),
+                              color: AppColors.primaryAccent.withOpacity(0.8),
                               letterSpacing: 1.2,
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
@@ -133,9 +133,16 @@ class AppMenuContent extends StatelessWidget {
                 _buildSectionHeader('PLANNING'),
                 _buildItem(
                   context,
-                  index: 0,
+                  index: 2,
                   icon: Icons.grid_view_rounded,
                   title: 'Dashboard',
+                  onTap: () => _handleNavigation(2, context),
+                ),
+                _buildItem(
+                  context,
+                  index: 0,
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Budget Allocation',
                   onTap: () => _handleNavigation(0, context),
                 ),
                 _buildItem(
@@ -144,13 +151,6 @@ class AppMenuContent extends StatelessWidget {
                   icon: Icons.folder_rounded,
                   title: 'Projects (PPMP)',
                   onTap: () => _handleNavigation(8, context),
-                ),
-                _buildItem(
-                  context,
-                  index: 2,
-                  icon: Icons.account_balance_wallet_rounded,
-                  title: 'Budget Allocation',
-                  onTap: () => _handleNavigation(2, context),
                 ),
                 _buildItem(
                   context,
@@ -202,7 +202,7 @@ class AppMenuContent extends StatelessWidget {
               index: -1,
               icon: Icons.logout_rounded,
               title: 'Logout',
-              color: Colors.white.withValues(alpha: 0.6),
+              color: Colors.white.withOpacity(0.6),
               onTap: () => _showLogoutDialog(context, authService, l10n),
             ),
           ),
@@ -225,7 +225,7 @@ class AppMenuContent extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Colors.white.withOpacity(0.2),
           letterSpacing: 2.0,
           fontWeight: FontWeight.w900,
           fontSize: 10,
@@ -257,16 +257,16 @@ class AppMenuContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: isSelected ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              color: isSelected ? Colors.white.withOpacity(0.05) : Colors.transparent,
               border: isSelected ? Border.all(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
               ) : null,
             ),
             child: Row(
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.4),
+                  color: isSelected ? activeColor : Colors.white.withOpacity(0.4),
                   size: 20,
                 ),
                 const SizedBox(width: 14),
@@ -275,7 +275,7 @@ class AppMenuContent extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                      color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
                       fontSize: 14,
                     ),
                   ),
@@ -289,7 +289,7 @@ class AppMenuContent extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: activeColor.withValues(alpha: 0.6),
+                          color: activeColor.withOpacity(0.6),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
@@ -339,3 +339,4 @@ class AppMenuContent extends StatelessWidget {
   }
 
 }
+

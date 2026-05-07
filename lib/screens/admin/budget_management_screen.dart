@@ -5,7 +5,6 @@ import '../../models/budget_line.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/grid_form_fields.dart';
 import '../../core/currency_formatter.dart';
-import '../../services/seed_data_loader.dart';
 import '../../core/constants.dart';
 import '../../widgets/skeleton_loading.dart';
 import '../../services/navigation_provider.dart';
@@ -83,17 +82,8 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                   Icon(Icons.account_balance_wallet_outlined, size: 64, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
                   Text(
-                    'No budget data available for 2026.',
+                    'No budget data available for ${SystemConfig.nextFiscalYearStr}.',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final fbService = context.read<FirebaseService>();
-                      SeedDataLoader.load(fbService, force: true);
-                    },
-                    icon: const Icon(Icons.data_saver_on),
-                    label: const Text('Seed 2026 Budgets'),
                   ),
                 ],
               ),
@@ -157,7 +147,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.3),
+            color: Colors.blue.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -310,9 +300,9 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Colors.green.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                          border: Border.all(color: Colors.green.withOpacity(0.3)),
                         ),
                         child: const Text(
                           'Agri MOOE',
@@ -378,7 +368,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isLow ? Colors.red.withValues(alpha: 0.05) : Colors.green.withValues(alpha: 0.05),
+                color: isLow ? Colors.red.withOpacity(0.05) : Colors.green.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -413,7 +403,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
         Text(
           label,
           style: TextStyle(
-            color: color.withValues(alpha: 0.7),
+            color: color.withOpacity(0.7),
             fontSize: small ? 10 : 12,
             fontWeight: FontWeight.w500,
           ),
@@ -485,7 +475,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   ),
                   child: Row(
@@ -544,7 +534,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                               value: isAgriMooe,
                               onChanged: (v) => setState(() => isAgriMooe = v),
                               activeThumbColor: Colors.green,
-                              activeTrackColor: Colors.green.withValues(alpha: 0.5),
+                              activeTrackColor: Colors.green.withOpacity(0.5),
                             ),
                           ),
                         ),
@@ -565,7 +555,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                           child: GridAutocompleteField(
                             controller: fundSourceCtl,
                             options: AppConstants.fundingSources,
-                            hint: 'e.g. General Fund 2026',
+                            hint: 'e.g. General Fund ${SystemConfig.nextFiscalYearStr}',
                             tooltip: 'The specific fund source (e.g., General Fund, Special Project).',
                           ),
                         ),
@@ -665,7 +655,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
                           isOdd: true,
                           child: GridCurrencyField(
                             controller: budgetLimitCtl,
-                            hint: '2026 Hard Limit',
+                            hint: '${SystemConfig.nextFiscalYearStr} Hard Limit',
                             tooltip: 'The strict maximum ceiling that cannot be exceeded.',
                           ),
                         ),
@@ -913,3 +903,4 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> with Au
     );
   }
 }
+

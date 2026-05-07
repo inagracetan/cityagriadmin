@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/activity.dart';
 import '../models/budget_line.dart';
 import 'firebase_service.dart';
+import '../core/constants.dart';
 
 class ImportService {
   static Future<void> importActivitiesFromExcel(
@@ -260,7 +261,7 @@ class ImportService {
     List<String> errorLogs = [];
     int successCount = 0;
 
-    var sheet = excel.tables['2026'];
+    var sheet = excel.tables[SystemConfig.nextFiscalYearStr];
     sheet ??= excel.tables[excel.tables.keys.first];
 
     if (sheet == null) return {'status': 'error', 'message': 'Sheet not found'};
@@ -357,7 +358,7 @@ class ImportService {
           ppmpAmount: totalAmount,
           responsiblePerson: 'Unassigned',
           status: 'Planned',
-          targetDate: '2026',
+          targetDate: SystemConfig.nextFiscalYearStr,
           monthlyDistribution: monthly,
           accountCode: accountCode,
         ),
@@ -447,3 +448,4 @@ class ImportService {
     return '20% DF'; // fallback
   }
 }
+

@@ -35,7 +35,7 @@ class ActivityCardList extends StatelessWidget {
             borderRadius: 20,
             padding: EdgeInsets.zero,
             border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.05),
+              color: theme.dividerColor.withOpacity(0.05),
               width: 1,
             ),
             child: ExpansionTile(
@@ -83,18 +83,14 @@ class ActivityCardList extends StatelessWidget {
                       Icon(
                         Icons.business_outlined,
                         size: 14,
-                        color: theme.textTheme.bodySmall?.color?.withValues(
-                          alpha: 0.5,
-                        ),
+                        color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         activity.sector,
                         style: TextStyle(
                           inherit: true,
-                          color: theme.textTheme.bodyMedium?.color?.withValues(
-                            alpha: 0.7,
-                          ),
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -102,9 +98,10 @@ class ActivityCardList extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      if (constraints.maxWidth < 450) {
+                  Builder(
+                    builder: (context) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      if (screenWidth < 450) {
                         return Column(
                           children: [
                             _metricRow(
@@ -112,7 +109,7 @@ class ActivityCardList extends StatelessWidget {
                               'PPMP BALANCE',
                               formatCurrency.format(activity.ppmpBalance),
                               color: theme.textTheme.bodySmall?.color
-                                  ?.withValues(alpha: 0.5),
+                                  ?.withOpacity(0.5),
                               fullWidth: true,
                             ),
                             const SizedBox(height: 12),
@@ -160,7 +157,7 @@ class ActivityCardList extends StatelessWidget {
                               'PPMP BALANCE',
                               formatCurrency.format(activity.ppmpBalance),
                               color: theme.textTheme.bodySmall?.color
-                                  ?.withValues(alpha: 0.5),
+                                  ?.withOpacity(0.5),
                             ),
                           ),
                           Expanded(
@@ -264,7 +261,7 @@ class ActivityCardList extends StatelessWidget {
           style: TextStyle(
             inherit: true,
             fontSize: 10,
-            color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+            color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
@@ -295,7 +292,7 @@ class ActivityCardList extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -324,7 +321,7 @@ class ActivityCardList extends StatelessWidget {
           Icon(
             icon,
             size: 16,
-            color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.4),
+            color: theme.textTheme.bodySmall?.color?.withOpacity(0.4),
           ),
           const SizedBox(width: 12),
           Text(
@@ -332,7 +329,7 @@ class ActivityCardList extends StatelessWidget {
             style: TextStyle(
               inherit: true,
               fontSize: 13,
-              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
             ),
           ),
           Text(
@@ -341,7 +338,7 @@ class ActivityCardList extends StatelessWidget {
               inherit: true,
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8),
+              color: theme.textTheme.bodyLarge?.color?.withOpacity(0.8),
             ),
           ),
         ],
@@ -349,3 +346,4 @@ class ActivityCardList extends StatelessWidget {
     );
   }
 }
+

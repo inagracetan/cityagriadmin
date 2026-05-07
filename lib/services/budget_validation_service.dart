@@ -1,5 +1,6 @@
 import '../models/activity.dart';
 import '../models/budget_line.dart';
+import '../core/constants.dart';
 
 class BudgetValidationService {
   /// Check for "No Budget" Flag: Immediately flag any activity or item that has
@@ -27,7 +28,7 @@ class BudgetValidationService {
   static bool hasTimelineVariance(Activity activity, DateTime now) {
     if (activity.quarter == 'Q1') {
       // Q1 ends March 31. If today is April 1 or later of the same year or later year.
-      if (now.year > 2026 || (now.year == 2026 && now.month > 3)) {
+      if (now.year > SystemConfig.nextFiscalYear || (now.year == SystemConfig.nextFiscalYear && now.month > 3)) {
         final status = activity.status.toLowerCase();
         // If status is still in early stages
         return status == 'planned' || status == 'pr preparation';
@@ -38,7 +39,7 @@ class BudgetValidationService {
 
   /// Functional Constraint: Budget Ceiling
   /// The sum of all TOTAL AMOUNT entries in the PPMP for a specific account code
-  /// must not exceed the PROPOSED EXPENDITURES for 2026 for that same code.
+  /// must not exceed the PROPOSED EXPENDITURES for ${SystemConfig.nextFiscalYearStr} for that same code.
   static double getAccountCodePPMPTotal(String accountCode, List<Activity> allActivities) {
     double total = 0;
     for (var activity in allActivities) {
@@ -80,3 +81,4 @@ class BudgetValidationService {
     };
   }
 }
+

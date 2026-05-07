@@ -296,7 +296,7 @@ class _ListScreenExampleState extends State<ListScreenExample> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    ).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium,
                     ),
@@ -354,7 +354,7 @@ class DialogExample extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(
                 context,
-              ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              ).textTheme.bodySmall?.color?.withOpacity(0.6),
             ),
           ),
         ],
@@ -496,3 +496,4 @@ class ButtonsExample extends StatelessWidget {
     );
   }
 }
+

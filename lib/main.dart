@@ -1,27 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'dart:async';
+import 'package:provider/provider.dart';
 
-import 'services/auth_service.dart';
-import 'services/firebase_service.dart';
-import 'services/navigation_provider.dart';
-import 'services/settings_provider.dart';
-import 'services/activity_form_provider.dart';
-import 'services/project_initialization_service.dart';
-import 'services/seed_data_loader.dart';
-import 'services/connectivity_service.dart';
+import 'core/app_colors.dart';
+import 'core/constants.dart';
+import 'core/design_system.dart';
+import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/main_layout.dart';
-import 'core/app_colors.dart';
-import 'core/design_system.dart';
+import 'services/activity_form_provider.dart';
+import 'services/auth_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/firebase_service.dart';
+import 'services/navigation_provider.dart';
+import 'services/settings_provider.dart';
 import 'widgets/enhanced_states.dart';
 import 'widgets/skeleton_loading.dart';
-
-import 'firebase_options.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -44,11 +41,6 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase init failed: $e');
   }
-
-  // Initialize 2026 Targets & Seed Data in background to prevent startup hang
-  final fbService = FirebaseService();
-  unawaited(ProjectInitializationService.initialize2026Targets(fbService));
-  unawaited(SeedDataLoader.load(fbService));
 
   runApp(
     MultiProvider(
@@ -85,11 +77,15 @@ class LGUAgriApp extends StatelessWidget {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'AgriWork & Financial Planning System (AWFPS)',
+          title: AppConstants.appTitle,
           themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
           theme: ThemeData(
             useMaterial3: true,
             textTheme: textTheme,
+            iconTheme: const IconThemeData(size: AppDesignSystem.iconSizeSmall),
+            primaryIconTheme: const IconThemeData(
+              size: AppDesignSystem.iconSizeSmall,
+            ),
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.primary,
               primary: AppColors.primary,
@@ -101,6 +97,9 @@ class LGUAgriApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: AppColors.background,
             appBarTheme: AppBarTheme(
+              iconTheme: const IconThemeData(
+                size: AppDesignSystem.iconSizeSmall,
+              ),
               backgroundColor: Colors.transparent,
               foregroundColor: AppColors.primary,
               centerTitle: false,
@@ -154,6 +153,10 @@ class LGUAgriApp extends StatelessWidget {
           darkTheme: ThemeData(
             useMaterial3: true,
             textTheme: textTheme,
+            iconTheme: const IconThemeData(size: AppDesignSystem.iconSizeSmall),
+            primaryIconTheme: const IconThemeData(
+              size: AppDesignSystem.iconSizeSmall,
+            ),
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.primary,
               primary: AppColors.primary,
@@ -165,6 +168,9 @@ class LGUAgriApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: AppColors.premiumNavy,
             appBarTheme: AppBarTheme(
+              iconTheme: const IconThemeData(
+                size: AppDesignSystem.iconSizeSmall,
+              ),
               backgroundColor: Colors.transparent,
               foregroundColor: Colors.white,
               elevation: 0,
@@ -179,7 +185,7 @@ class LGUAgriApp extends StatelessWidget {
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusXLarge,
                 ),
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                side: BorderSide(color: Colors.white.withOpacity(0.05)),
               ),
             ),
           ),
@@ -245,7 +251,8 @@ class AuthWrapperState extends State<AuthWrapper> {
                         onLoginTap: toggleView,
                       ),
               );
-            } else if (user.role == 'admin' || user.role == 'staff') {
+            } else if (user.role == SystemConfig.adminRole ||
+                user.role == SystemConfig.staffRole) {
               content = const MainLayout(key: ValueKey('main'));
             } else {
               // Unrecognized role or data error

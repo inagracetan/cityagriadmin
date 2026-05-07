@@ -1,14 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/app_colors.dart';
+import '../../core/design_system.dart';
+import '../../core/responsive_utils.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_provider.dart';
-import '../../core/responsive_utils.dart';
-import '../../core/app_colors.dart';
-import '../../core/design_system.dart';
 import '../../widgets/skeleton_loading.dart';
+import '../../core/constants.dart';
 
 
 class UserManagementScreen extends StatefulWidget {
@@ -130,7 +132,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
               decoration: InputDecoration(
                 labelText: 'Staff ID',
                 labelStyle: GoogleFonts.inter(),
-                hintText: 'e.g. AGRI-2024-001',
+                hintText: 'e.g. AGRI-${SystemConfig.currentFiscalYearStr}-001',
                 filled: true,
                 fillColor: Slate.shade50,
                 border: OutlineInputBorder(
@@ -218,8 +220,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Icon(
                       Icons.search_rounded,
+                      size: AppDesignSystem.iconSizeSmall,
                       color: AppColors.emeraldPrimary,
-                      size: 22,
                     ),
                   ),
                   filled: true,
@@ -230,7 +232,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -321,10 +323,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                                 ),
                               ),
                                 child: Text(
@@ -353,7 +355,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
                           Text(
                             'UID: ${user.uid}',
                             style: AppDesignSystem.labelSmall.copyWith(
-                              color: AppColors.textMuted.withValues(alpha: 0.5),
+                              color: AppColors.textMuted.withOpacity(0.5),
                               fontSize: 9,
                             ),
                           ),
@@ -365,8 +367,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
                             ),
                             decoration: BoxDecoration(
                               color: user.role == 'admin'
-                                  ? const Color(0xFFE11D48).withValues(alpha: 0.1)
-                                  : const Color(0xFF059669).withValues(alpha: 0.1),
+                                  ? const Color(0xFFE11D48).withOpacity(0.1)
+                                  : const Color(0xFF059669).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -456,3 +458,4 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Automa
 );
   }
 }
+

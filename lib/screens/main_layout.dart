@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
@@ -39,6 +40,139 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> with RouteAware {
   bool isCurrent = true;
+  StreamSubscription? _notificationSubscription;
+  DateTime _appStartTime = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    final authService = context.read<AuthService>();
+    final userId = authService.currentUser?.uid;
+    if (userId == null) return;
+
+    final settingsProvider = context.read<SettingsProvider>();
+    
+    // Cancel existing if any
+    _notificationSubscription?.cancel();
+    
+    if (!settingsProvider.notificationsEnabled) return;
+
+    final fbService = context.read<FirebaseService>();
+    _notificationSubscription = fbService.streamNotifications(userId: userId).listen(
+      (notifications) {
+        if (notifications.isEmpty) return;
+
+        // Only look at the most recent one
+        final latest = notifications.first;
+        
+        // If it's new (after app start) and unread
+        if (latest.timestamp.isAfter(_appStartTime) && !latest.isRead) {
+          // Update app start time so we don't show the same one again 
+          _appStartTime = latest.timestamp;
+          
+          _showInAppNotification(latest);
+        }
+      },
+      onError: (e) => debugPrint('Notification Stream Error: $e'),
+    );
+  }
+
+  void _showInAppNotification(SystemNotification notification) {
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+            ),
+          ),
+          child: Row(
+            children: [
+              _getNotificationIcon(notification.type, theme),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notification.message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 16),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _getNotificationIcon(NotificationType type, ThemeData theme) {
+    IconData icon;
+    Color color;
+    switch (type) {
+      case NotificationType.success:
+        icon = Icons.check_circle;
+        color = Colors.green;
+        break;
+      case NotificationType.warning:
+        icon = Icons.warning;
+        color = Colors.orange;
+        break;
+      case NotificationType.error:
+        icon = Icons.error;
+        color = Colors.red;
+        break;
+      default:
+        icon = Icons.info;
+        color = theme.colorScheme.primary;
+    }
+    return Icon(icon, color: color, size: 24);
+  }
 
   @override
   void didChangeDependencies() {
@@ -49,6 +183,7 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    _notificationSubscription?.cancel();
     super.dispose();
   }
 
@@ -82,13 +217,13 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
     String newTitle;
     switch (index) {
       case 0:
-        newTitle = l10n.translate('dashboard');
+        newTitle = 'Budget Management';
         break;
       case 1:
         newTitle = 'Activity Management';
         break;
       case 2:
-        newTitle = 'Budget Management';
+        newTitle = l10n.translate('dashboard');
         break;
       case 3:
         newTitle = 'Expenditure Tracker';
@@ -127,9 +262,18 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
     final navProvider = context.watch<NavigationProvider>();
-    final l10n = context.watch<SettingsProvider>().l10n;
+    final settingsProvider = context.watch<SettingsProvider>();
+    final l10n = settingsProvider.l10n;
     final selectedIndex = navProvider.selectedIndex;
     final user = authService.currentUser;
+
+    // Check if notifications were toggled
+    if (settingsProvider.notificationsEnabled && _notificationSubscription == null) {
+      _setupNotificationListener();
+    } else if (!settingsProvider.notificationsEnabled && _notificationSubscription != null) {
+      _notificationSubscription?.cancel();
+      _notificationSubscription = null;
+    }
 
     if (user == null) {
       return const Scaffold(body: SkeletonDashboard());
@@ -139,13 +283,13 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
     String defaultTitle;
     switch (selectedIndex) {
       case 0:
-        defaultTitle = l10n.translate('dashboard');
+        defaultTitle = 'Budget Management';
         break;
       case 1:
         defaultTitle = 'Activity Management';
         break;
       case 2:
-        defaultTitle = 'Budget Management';
+        defaultTitle = l10n.translate('dashboard');
         break;
       case 3:
         defaultTitle = 'Expenditure Tracker';
@@ -172,14 +316,14 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
         defaultTitle = 'AWFPS';
     }
     final List<Widget> pages = [
-      // Index 0: Dashboard
-      user.role == 'admin'
-          ? PPMPDashboard(isActive: selectedIndex == 0)
-          : StaffDashboard(staffName: user.name, isActive: selectedIndex == 0),
+      // Index 0: Budget Management
+      BudgetManagementScreen(isActive: selectedIndex == 0),
       // Index 1: Activity Management
       ActivityManagementScreen(isActive: selectedIndex == 1),
-      // Index 2: Budget Management
-      BudgetManagementScreen(isActive: selectedIndex == 2),
+      // Index 2: Dashboard
+      user.role == 'admin'
+          ? PPMPDashboard(isActive: selectedIndex == 2)
+          : StaffDashboard(staffName: user.name, isActive: selectedIndex == 2),
       // Index 3: Expenditure Tracker
       ExpenditureTrackerScreen(isActive: selectedIndex == 3),
       // Index 4: Section/Unit overview
@@ -257,11 +401,11 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
                     );
                   },
                 ),
+                ...?navProvider.actions,
                 UserProfileBadge(
                   user: user,
                   onTap: () => onPageChanged(6), // Navigate to Settings
                 ),
-                ...?navProvider.actions,
               ],
               // Hide the FAB only when the Add Activity form is open and NOT minimized, or a modal route is pushed
               floatingActionButton: (!isCurrent || (formProvider.isOpen && !formProvider.isMinimized))
@@ -292,7 +436,7 @@ class _MainLayoutState extends State<MainLayout> with RouteAware {
               // Dark backdrop: tapping outside minimizes the form
               GestureDetector(
                 onTap: () => formProvider.minimizeForm(),
-                child: Container(color: Colors.black.withValues(alpha: 0.45)),
+                child: Container(color: Colors.black.withOpacity(0.45)),
               ),
               // Centered popup
               Center(
@@ -448,3 +592,4 @@ class PlaceholderView extends StatelessWidget {
     );
   }
 }
+

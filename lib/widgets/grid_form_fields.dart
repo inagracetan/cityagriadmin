@@ -114,7 +114,7 @@ class GridStatusBreadcrumbs extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: isSelected ? GridFormTheme.accentGreen.withValues(alpha: 0.1) : Colors.transparent,
+                      color: isSelected ? GridFormTheme.accentGreen.withOpacity(0.1) : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected ? GridFormTheme.accentGreen : Colors.transparent,
@@ -176,7 +176,7 @@ class GridStepIndicator extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: isActive ? GridFormTheme.accentGreen : (isCompleted ? GridFormTheme.accentGreen.withValues(alpha: 0.1) : Colors.white),
+                        color: isActive ? GridFormTheme.accentGreen : (isCompleted ? GridFormTheme.accentGreen.withOpacity(0.1) : Colors.white),
                         shape: BoxShape.circle,
                         border: Border.all(color: color, width: 1.5),
                       ),
@@ -270,7 +270,7 @@ class _GridRowState extends State<GridRow> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: GridFormTheme.accentGreen.withValues(alpha: 0.1),
+                    color: GridFormTheme.accentGreen.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -327,7 +327,7 @@ class _GridRowState extends State<GridRow> {
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _isHovered ? GridFormTheme.accentGreen.withValues(alpha: 0.1) : GridFormTheme.labelBg,
+                color: _isHovered ? GridFormTheme.accentGreen.withOpacity(0.1) : GridFormTheme.labelBg,
                 border: const Border(
                   right: BorderSide(color: GridFormTheme.border, width: 0.8),
                 ),
@@ -336,7 +336,7 @@ class _GridRowState extends State<GridRow> {
                 widget.label,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withValues(alpha: 0.6),
+                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withOpacity(0.6),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -375,7 +375,7 @@ class _GridRowState extends State<GridRow> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.symmetric(horizontal: 24),
                       decoration: BoxDecoration(
-                        color: GridFormTheme.textMain.withValues(alpha: 0.9),
+                        color: GridFormTheme.textMain.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       textStyle: const TextStyle(color: Colors.white, fontSize: 12),
@@ -488,7 +488,7 @@ class _GridDualRowState extends State<GridDualRow> {
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _isHovered ? GridFormTheme.accentGreen.withValues(alpha: 0.1) : GridFormTheme.labelBg,
+                color: _isHovered ? GridFormTheme.accentGreen.withOpacity(0.1) : GridFormTheme.labelBg,
                 border: const Border(
                   right: BorderSide(color: GridFormTheme.border, width: 0.8),
                 ),
@@ -497,7 +497,7 @@ class _GridDualRowState extends State<GridDualRow> {
                 widget.label,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withValues(alpha: 0.6),
+                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withOpacity(0.6),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -821,7 +821,7 @@ class _GridCurrencyFieldState extends State<GridCurrencyField> {
           child: Text(
             'PHP',
             style: TextStyle(
-              color: widget.hasError ? GridFormTheme.warningRed : GridFormTheme.accentGreen.withValues(alpha: 0.6),
+              color: widget.hasError ? GridFormTheme.warningRed : GridFormTheme.accentGreen.withOpacity(0.6),
               fontWeight: FontWeight.w800,
               fontSize: widget.isCompact ? 10 : 11,
             ),
@@ -1062,7 +1062,7 @@ class _GridDateFieldState extends State<GridDateField> {
         suffix: Icon(
           Icons.calendar_today_rounded,
           size: widget.isCompact ? 14 : 16,
-          color: GridFormTheme.accentGreen.withValues(alpha: 0.6),
+          color: GridFormTheme.accentGreen.withOpacity(0.6),
         ),
       ),
       onTap: () async {
@@ -1574,5 +1574,6 @@ class GridMonthGrid extends StatelessWidget {
     );
   }
 }
+
 
 

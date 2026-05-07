@@ -92,9 +92,9 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isSmall = constraints.maxWidth < ResponsiveUtils.mobileBreakpoint;
+          Builder(
+            builder: (context) {
+              final isSmall = MediaQuery.of(context).size.width < ResponsiveUtils.mobileBreakpoint;
               
               final searchField = TextField(
                 controller: _searchController,
@@ -169,9 +169,9 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
                 : Column(
                     children: [
                       const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isSmall = constraints.maxWidth < ResponsiveUtils.mobileBreakpoint;
+                      Builder(
+                        builder: (context) {
+                          final isSmall = MediaQuery.of(context).size.width < ResponsiveUtils.mobileBreakpoint;
                           final crossAxisCount = ResponsiveUtils.gridCrossAxisCount(
                             context, 
                             mobile: 1, 
@@ -283,7 +283,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
       leadingIcon: Container(
         margin: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -360,7 +360,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
                 : Theme.of(context).textTheme.bodyMedium?.color,
             side: BorderSide(
               color: _showFilters || activeFiltersCount > 0
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
                   : Theme.of(context).dividerColor,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -377,7 +377,7 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(
               context,
-            ).colorScheme.primaryContainer.withValues(alpha: 0.5),
+            ).colorScheme.primaryContainer.withOpacity(0.5),
             foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
@@ -404,3 +404,4 @@ class _ActivityFiltersBarState extends State<ActivityFiltersBar> {
     );
   }
 }
+

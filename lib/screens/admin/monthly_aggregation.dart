@@ -119,7 +119,7 @@ class MonthlyAggregationViewer extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.2),
+                    color: const Color(0xFF1B5E20).withOpacity(0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -130,7 +130,7 @@ class MonthlyAggregationViewer extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
@@ -201,7 +201,7 @@ class MonthlyAggregationViewer extends StatelessWidget {
                       itemCount: sortedMonths.length,
                       separatorBuilder: (_, __) => Divider(
                         height: 1,
-                        color: theme.dividerColor.withValues(alpha: 0.05),
+                        color: theme.dividerColor.withOpacity(0.05),
                       ),
                       itemBuilder: (context, index) {
                         final monthKey = sortedMonths[index];
@@ -218,8 +218,7 @@ class MonthlyAggregationViewer extends StatelessWidget {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.08,
+                                color: theme.colorScheme.primary.withOpacity(0.08,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -260,7 +259,7 @@ class MonthlyAggregationViewer extends StatelessWidget {
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
                                     color: theme.textTheme.bodySmall?.color
-                                        ?.withValues(alpha: 0.5),
+                                        ?.withOpacity(0.5),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -277,14 +276,14 @@ class MonthlyAggregationViewer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.02)
+                    ? Colors.white.withOpacity(0.02)
                     : Colors.white,
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(24),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -4),
                   ),
@@ -319,3 +318,4 @@ class MonthlyAggregationViewer extends StatelessWidget {
     );
   }
 }
+

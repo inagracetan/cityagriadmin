@@ -32,8 +32,85 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
 
   @override
   Widget build(BuildContext context) {
-    final formatCurrency = NumberFormat.simpleCurrency(name: 'PHP ', decimalDigits: 2);
-    
+    final formatCurrency = NumberFormat.simpleCurrency(
+      name: 'PHP ',
+      decimalDigits: 2,
+    );
+
+    // Pre-compute filtered lists for the hierarchy
+    final travExpenses = _filter(widget.activities, oe: 'Travelling Expenses');
+
+    final trainingAll = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+    );
+    final trainRice = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+      sub: 'Rice',
+    );
+    final trainCorn = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+      sub: 'Corn',
+    );
+    final trainHVCD = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+      sub: 'HVCDP',
+    );
+    final trainOrganic = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+      sub: 'Organic Program',
+    );
+    final trainFish = _filter(
+      widget.activities,
+      oe: 'Trainings and Seminar Expenses',
+      sec: 'Inland Fisheries Section',
+    );
+
+    final officeSupp = _filter(
+      widget.activities,
+      oe: 'Office Supplies Expenses',
+    );
+    final agriSupp = _filter(
+      widget.activities,
+      oe: 'Agricultural Supplies Expenses',
+    );
+    final labSupp = _filter(
+      widget.activities,
+      oe: 'Laboratory Supplies Expenses',
+    );
+    final fuel = _filter(widget.activities, oe: 'Fuel/Oil Expenses');
+    final otherSupp = _filter(
+      widget.activities,
+      oe: 'Other Supplies and Materials Expenses',
+    );
+    final suppAll = [
+      ...officeSupp,
+      ...agriSupp,
+      ...labSupp,
+      ...fuel,
+      ...otherSupp,
+    ];
+
+    final commsAll = _filter(widget.activities, oe: 'Communication Expenses');
+    final repairsAll = _filter(
+      widget.activities,
+      oe: 'Repair/Maintenance Expenses',
+    );
+
+    final personnel = _filter(
+      widget.activities,
+      oe: 'Personnel Development Expenses',
+    );
+    final meetingsAll = _filter(widget.activities, oe: 'Meetings Expenses');
+    final otherMoeAll = _filter(widget.activities, oe: 'Other-MOE Expenses');
+    final moeSectionAll = [...personnel, ...meetingsAll, ...otherMoeAll];
+
+    final capOutlay = _filter(widget.activities, fs: 'Capital Outlay');
+
     // Detailed grouping logic with Account Codes
     return Scrollbar(
       controller: _verticalController,
@@ -47,39 +124,285 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
             _buildHeader(),
             const SizedBox(height: 24),
             _buildBudgetTable(context, formatCurrency, [
-              _RowDef('5-02-01-010', 'Traveling Expenses', _filter(widget.activities, oe: 'Travelling Expenses')),
-              _RowDef('5-02-02-010', 'Training Expenses', _filter(widget.activities, oe: 'Trainings and Seminar Expenses')),
-              _RowDef('', '  - Rice Program', _filter(widget.activities, oe: 'Trainings and Seminar Expenses', sub: 'Rice')),
-              _RowDef('', '  - Corn Program', _filter(widget.activities, oe: 'Trainings and Seminar Expenses', sub: 'Corn')),
-              _RowDef('', '  - HVCD Program', _filter(widget.activities, oe: 'Trainings and Seminar Expenses', sub: 'HVCDP')),
-              _RowDef('', '  - Organic Program', _filter(widget.activities, oe: 'Trainings and Seminar Expenses', sub: 'Organic Program')),
-              _RowDef('', '  - Inland Fisheries Program', _filter(widget.activities, oe: 'Trainings and Seminar Expenses', sec: 'Inland Fisheries Section')),
-              
-              _RowDef('', 'Supplies & Materials', _filter(widget.activities, oePattern: 'Supplies')),
-              _RowDef('5-02-03-010', '  - Office Supplies Expenses', _filter(widget.activities, oe: 'Office Supplies Expenses')),
-              _RowDef('5-02-03-100', '  - Agricultural Supplies Expenses', _filter(widget.activities, oe: 'Agricultural Supplies Expenses')),
-              _RowDef('', '    * City Nursery Supplies', _filter(widget.activities, namePattern: 'Nursery')),
-              _RowDef('', '    * Organic Fertilizer', _filter(widget.activities, namePattern: 'Fertilizer')),
-              _RowDef('', '    * Rodenticide/Insecticide', _filter(widget.activities, namePattern: 'Rodenticide')),
-              
-              _RowDef('5-02-99-990', '  - Laboratory Supplies Expenses', _filter(widget.activities, oe: 'Laboratory Supplies Expenses')),
-              _RowDef('', '    * Soils Testing', _filter(widget.activities, namePattern: 'Soils')),
-              _RowDef('', '    * Plant Tissue Culture', _filter(widget.activities, namePattern: 'Tissue Culture')),
-              
-              _RowDef('5-02-03-090', '  - Fuel, Oil & Lubricants', _filter(widget.activities, oe: 'Fuel/Oil Expenses')),
-              
-              _RowDef('5-02-05-020', 'Communication Expenses', _filter(widget.activities, oe: 'Communication Expenses')),
-              _RowDef('', '  - Telephone/Internet', _filter(widget.activities, oe: 'Communication Expenses')),
-              
-              _RowDef('', 'Repairs and Maintenance', _filter(widget.activities, oe: 'Repair/Maintenance Expenses')),
-              _RowDef('5-02-13-030', '  - Building/Structures', _filter(widget.activities, namePattern: 'Building')),
-              _RowDef('5-02-13-060', '  - Transportation Equipment', _filter(widget.activities, namePattern: 'Transportation')),
-              
-              _RowDef('5-02-99-990', 'Other Maintenance and Operating Expenses', _filter(widget.activities, oe: 'Other-MOE Expenses')),
-              _RowDef('', '  - Personnel Development', _filter(widget.activities, oe: 'Personnel Development Expenses')),
-              _RowDef('', '  - Meetings', _filter(widget.activities, oe: 'Meetings Expenses')),
-              
-              _RowDef('', 'Capital Outlay', _filter(widget.activities, fs: 'Capital Outlay')),
+              // a) Travelling Expenses
+              _RowDef(
+                '5-02-01-010',
+                'a) Travelling Expenses',
+                travExpenses,
+                isHeader: true,
+              ),
+
+              // b) Training Expenses
+              _RowDef(
+                '5-02-02-010',
+                'b) Training Expenses',
+                trainingAll,
+                isHeader: true,
+              ),
+              _RowDef('', '    1) Rice Program', trainRice, isDetail: true),
+              _RowDef('', '    2) Corn Program', trainCorn, isDetail: true),
+              _RowDef('', '    3) HVCD Program', trainHVCD, isDetail: true),
+              _RowDef(
+                '',
+                '    4) Organic Program',
+                trainOrganic,
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    5) Inland Fisheries Program',
+                trainFish,
+                isDetail: true,
+              ),
+
+              // c) Supplies & Materials
+              _RowDef(
+                '5-02-03',
+                'c) Supplies & Materials',
+                suppAll,
+                isHeader: true,
+              ),
+
+              _RowDef(
+                '5-02-03-010',
+                '    1) Office Supplies Expenses',
+                officeSupp,
+              ),
+
+              _RowDef(
+                '5-02-03-100',
+                '    2) Agricultural Supplies Expenses',
+                agriSupp,
+              ),
+              _RowDef(
+                '',
+                '         1) City Nursery Supplies',
+                _filter(agriSupp, namePattern: 'Nursery'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         2) Organic Fertilizer',
+                _filter(agriSupp, namePattern: 'Fertilizer'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         3) Rodenticide',
+                _filter(agriSupp, namePattern: 'Rodenticide'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         4) Insecticide',
+                _filter(agriSupp, namePattern: 'Insecticide'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         5) Fungicide',
+                _filter(agriSupp, namePattern: 'Fungicide'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         6) High Valued Commercial Crop Techno Demo Supplies',
+                _filter(agriSupp, namePattern: 'Techno Demo'),
+                isDetail: true,
+              ),
+
+              _RowDef(
+                '5-02-99-990',
+                '    3) Laboratory Supplies Expenses',
+                labSupp,
+              ),
+              _RowDef(
+                '',
+                '         1) City Soils Testing Laboratory',
+                _filter(labSupp, namePattern: 'Soils'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         2) Plant Tissue Culture Laboratory',
+                _filter(labSupp, namePattern: 'Tissue Culture'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         3) Bio-Con Laboratory',
+                _filter(labSupp, namePattern: 'Bio-Con'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         4) NFTS Concoction Production Project',
+                _filter(labSupp, namePattern: 'NFTS'),
+                isDetail: true,
+              ),
+
+              _RowDef(
+                '5-02-03-090',
+                '    4) Fuel, Oil & Lubricants (Plus Backhoe use)',
+                fuel,
+              ),
+
+              _RowDef(
+                '',
+                '    5) Other Supplies and Materials Expenses',
+                otherSupp,
+              ),
+              _RowDef(
+                '',
+                '         1) 20 Pcs Folding Tables',
+                _filter(otherSupp, namePattern: 'Folding Tables'),
+                isDetail: true,
+              ),
+
+              // d) Communication Expenses
+              _RowDef(
+                '5-02-05-020',
+                'd) Communication Expenses',
+                commsAll,
+                isHeader: true,
+              ),
+              _RowDef(
+                '',
+                '    1) Postage & Courier Services',
+                _filter(commsAll, namePattern: 'Postage'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    2) Telephone Expenses',
+                _filter(commsAll, namePattern: 'Telephone'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    3) Internet Subscription Expenses',
+                _filter(commsAll, namePattern: 'Internet'),
+                isDetail: true,
+              ),
+
+              // e) Repairs and Maintenance
+              _RowDef(
+                '5-02-13',
+                'e) Repairs and Maintenance',
+                repairsAll,
+                isHeader: true,
+              ),
+              _RowDef(
+                '5-02-13-030',
+                '    1) Repairs and Maintenance - Building and Other Structures',
+                _filter(repairsAll, namePattern: 'Building'),
+              ),
+              _RowDef(
+                '5-02-13-050',
+                '    2) Repairs and Maintenance - Machinery and Equipment',
+                _filter(repairsAll, namePattern: 'Machinery'),
+              ),
+              _RowDef(
+                '5-02-13-060',
+                '    3) Repairs and Maintenance - Transportation Equipment',
+                _filter(repairsAll, namePattern: 'Transportation'),
+              ),
+
+              // f) Other Maintenance and Operating Expenses
+              _RowDef(
+                '5-02-99-990',
+                'f) Other Maintenance and Operating Expenses',
+                moeSectionAll,
+                isHeader: true,
+              ),
+              _RowDef(
+                '',
+                '    1. Personnel Development',
+                personnel,
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    2. Agriculture & Fisheries Congress',
+                _filter(otherMoeAll, namePattern: 'Congress'),
+                isDetail: true,
+              ),
+              _RowDef('', '    3. Meetings', meetingsAll, isDetail: true),
+              _RowDef(
+                '',
+                '         Rural Improvement Club Meetings',
+                _filter(meetingsAll, namePattern: 'Rural Improvement'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         4-H Club Meetings',
+                _filter(meetingsAll, namePattern: '4-H'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         CAFC Meetings',
+                _filter(meetingsAll, namePattern: 'CAFC'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Fisherfolks Meetings',
+                _filter(meetingsAll, namePattern: 'Fisherfolk'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Organic Farmers Meetings',
+                _filter(meetingsAll, namePattern: 'Organic Farmer'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Vegetable Farmers Meetings',
+                _filter(meetingsAll, namePattern: 'Vegetable'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Corn Farmers Meetings',
+                _filter(meetingsAll, namePattern: 'Corn Farmer'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Rice Farmers Meetings',
+                _filter(meetingsAll, namePattern: 'Rice Farmer'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '         Strengthening of Farmers Meetings',
+                _filter(meetingsAll, namePattern: 'Strengthening'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    4. Project Development',
+                _filter(otherMoeAll, namePattern: 'Project Development'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    5. Monitoring and Evaluation',
+                _filter(otherMoeAll, namePattern: 'Monitoring'),
+                isDetail: true,
+              ),
+              _RowDef(
+                '',
+                '    6. CAFC Capability Building',
+                _filter(otherMoeAll, namePattern: 'CAFC Capability'),
+                isDetail: true,
+              ),
+
+              // Capital Outlay
+              _RowDef('', 'Capital Outlay', capOutlay, isHeader: true),
             ]),
             const SizedBox(height: 32),
             _buildSummaryFooter(widget.activities, formatCurrency),
@@ -89,10 +412,11 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
     );
   }
 
-  List<Activity> _filter(List<Activity> list, {
-    String? oe, 
-    String? sub, 
-    String? sec, 
+  List<Activity> _filter(
+    List<Activity> list, {
+    String? oe,
+    String? sub,
+    String? sec,
     String? fs,
     String? oePattern,
     String? namePattern,
@@ -102,10 +426,16 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
       if (sub != null && a.subSector != sub) return false;
       if (sec != null && a.sector != sec) return false;
       if (fs != null && a.fundingSource != fs) return false;
-      if (oePattern != null && !(a.objectOfExpenditure?.contains(oePattern) ?? false)) return false;
-      if (namePattern != null && !a.activityName.toLowerCase().contains(namePattern.toLowerCase())) {
+      if (oePattern != null &&
+          !(a.objectOfExpenditure?.contains(oePattern) ?? false)) {
+        return false;
+      }
+      if (namePattern != null &&
+          !a.activityName.toLowerCase().contains(namePattern.toLowerCase())) {
         // Also check breakdown items
-        if (!a.breakdown.any((item) => item.name.toLowerCase().contains(namePattern.toLowerCase()))) {
+        if (!a.breakdown.any(
+          (item) => item.name.toLowerCase().contains(namePattern.toLowerCase()),
+        )) {
           return false;
         }
       }
@@ -146,71 +476,182 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
     );
   }
 
-  Widget _buildBudgetTable(BuildContext context, NumberFormat fmt, List<_RowDef> rows) {
+  Widget _buildBudgetTable(
+    BuildContext context,
+    NumberFormat fmt,
+    List<_RowDef> rows,
+  ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: widget.isDark ? Colors.white10 : Slate.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        border: Border.all(
+          color: widget.isDark ? Colors.white10 : Slate.shade300,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Scrollbar(
+      child: Scrollbar(
+        controller: _horizontalController,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           controller: _horizontalController,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            controller: _horizontalController,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(widget.isDark ? Colors.white.withOpacity(0.02) : Slate.shade50),
-              horizontalMargin: 20,
-              columnSpacing: 24,
-              columns: [
-                _headerCell('ACCOUNT CODE'),
-                _headerCell('OBJECT OF EXPENDITURES'),
-                _headerCell('${SystemConfig.currentFiscalYearStr} BUDGET'),
-                _headerCell('PROPOSED ${SystemConfig.nextFiscalYearStr}'),
-                _headerCell('ACTUAL (PO)'),
-              ],
-              rows: rows.map((row) {
-                final isSub = row.label.startsWith('  ');
-                final isSubSub = row.label.startsWith('    ');
-                final totalCurrent = row.items.fold(0.0, (sum, a) => sum + (a.targetDate != SystemConfig.nextFiscalYearStr ? a.approvedBudget : 0));
-                final totalProposed = row.items.fold(0.0, (sum, a) => sum + (a.targetDate == SystemConfig.nextFiscalYearStr ? a.approvedBudget : 0));
-                final totalActual = row.items.fold(0.0, (sum, a) => sum + a.effectivePOAmount);
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(
+              widget.isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey.shade200,
+            ),
+            horizontalMargin: 12,
+            columnSpacing: 16,
+            border: TableBorder.all(
+              color: widget.isDark ? Colors.white10 : Colors.black54,
+              width: 1,
+            ),
+            columns: [
+              _headerCell('OBJECT OF EXPENDITURES'),
+              _headerCell('ACCOUNT\nCODE'),
+              _headerCell(
+                'Proposed Budget\nin Details (Office\nControl)',
+                isYellow: true,
+              ),
+              _headerCell(
+                'PPMP\nAmount',
+              ),
+              _headerCell(
+                'PR\nObligated',
+              ),
+              _headerCell(
+                'PR\nBalance',
+              ),
+              _headerCell(
+                'Savings',
+              ),
+              _headerCell(
+                'PROPOSED\nEXPENDITURES ${SystemConfig.nextFiscalYearStr}\nANNUAL BUDGET',
+              ),
+            ],
+            rows: rows.map((row) {
+              final isHeader = row.isHeader;
+              final totalProposed = row.items.fold(
+                0.0,
+                (sum, a) =>
+                    sum +
+                    (a.targetDate == SystemConfig.nextFiscalYearStr
+                        ? a.approvedBudget
+                        : 0),
+              );
 
-                return DataRow(
-                  cells: [
-                    DataCell(Text(
+              final totalPPMP = row.items.fold(0.0, (s, a) => s + a.ppmpAmount);
+              final totalPR = row.items.fold(0.0, (s, a) => s + a.effectivePRAmount);
+              final totalPO = row.items.fold(0.0, (s, a) => s + a.effectivePOAmount);
+              final prBalance = totalPPMP - totalPR;
+              final savings = totalPR - totalPO;
+
+              return DataRow(
+                color: WidgetStateProperty.all(
+                  isHeader
+                      ? (widget.isDark
+                            ? Colors.white.withOpacity(0.02)
+                            : Colors.grey.shade100)
+                      : Colors.transparent,
+                ),
+                cells: [
+                  DataCell(
+                    Padding(
+                      padding: EdgeInsets.only(left: row.isDetail ? 16.0 : 0.0),
+                      child: Text(
+                        row.label,
+                        style: GoogleFonts.inter(
+                          fontWeight: isHeader ? FontWeight.w900 : FontWeight.w500,
+                          fontSize: isHeader ? 14 : 13,
+                          color: widget.isDark ? Colors.white : Colors.black,
+                          decoration: isHeader
+                              ? TextDecoration.underline
+                              : TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
                       row.code,
                       style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11,
-                        color: widget.isDark ? Colors.white38 : Slate.shade400,
+                        fontSize: 12,
+                        color: widget.isDark ? Colors.white70 : Colors.black87,
                       ),
-                    )),
-                    DataCell(Text(
-                      row.label,
-                      style: GoogleFonts.inter(
-                        fontWeight: (isSub || isSubSub) ? FontWeight.normal : FontWeight.bold,
-                        fontSize: isSubSub ? 12 : (isSub ? 13 : 14),
-                        color: isSubSub ? (widget.isDark ? Colors.white38 : Slate.shade400) : (isSub ? (widget.isDark ? Colors.white70 : Slate.shade600) : (widget.isDark ? Colors.white : Slate.shade900)),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    )),
-                    DataCell(_amountText(fmt, totalCurrent, isSub || isSubSub)),
-                    DataCell(_amountText(fmt, totalProposed, isSub || isSubSub, color: Colors.blue)),
-                    DataCell(_amountText(fmt, totalActual, isSub || isSubSub, color: Colors.green)),
-                  ],
-                );
-              }).toList(),
-            ),
+                      color: row.isDetail
+                          ? Colors.yellow.withOpacity(widget.isDark ? 0.2 : 1.0)
+                          : Colors.transparent,
+                      child: _amountText(
+                        fmt,
+                        row.isDetail ? totalProposed : 0,
+                        !row.isDetail,
+                        hideZero: true,
+                      ),
+                    ),
+                  ),
+                  // PPMP Amount
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      child: _amountText(fmt, totalPPMP, true, hideZero: true),
+                    ),
+                  ),
+                  // PR Obligated
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      child: _amountText(fmt, totalPR, true, color: Colors.orange.shade800, hideZero: true),
+                    ),
+                  ),
+                  // PR Balance
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      child: _amountText(
+                        fmt, 
+                        prBalance, 
+                        false, 
+                        color: prBalance < 0 ? Colors.red : Colors.green.shade700,
+                        hideZero: true,
+                      ),
+                    ),
+                  ),
+                  // Savings
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      child: _amountText(fmt, savings, true, color: Colors.blue.shade700, hideZero: true),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: _amountText(
+                        fmt,
+                        !row.isDetail && !isHeader ? totalProposed : 0,
+                        false,
+                        color: Colors.red.shade700,
+                        hideZero: true,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),
@@ -218,8 +659,12 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
   }
 
   Widget _buildSummaryFooter(List<Activity> activities, NumberFormat fmt) {
-    final totalCurrent = activities.where((a) => a.targetDate != SystemConfig.nextFiscalYearStr).fold(0.0, (s, a) => s + a.approvedBudget);
-    final totalNext = activities.where((a) => a.targetDate == SystemConfig.nextFiscalYearStr).fold(0.0, (s, a) => s + a.approvedBudget);
+    final totalCurrent = activities
+        .where((a) => a.targetDate != SystemConfig.nextFiscalYearStr)
+        .fold(0.0, (s, a) => s + a.approvedBudget);
+    final totalNext = activities
+        .where((a) => a.targetDate == SystemConfig.nextFiscalYearStr)
+        .fold(0.0, (s, a) => s + a.approvedBudget);
 
     // Quarterly Consolidation Logic
     double q1Total = 0, q2Total = 0, q3Total = 0, q4Total = 0;
@@ -239,7 +684,9 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
           decoration: BoxDecoration(
             color: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: widget.isDark ? Colors.white10 : Slate.shade200),
+            border: Border.all(
+              color: widget.isDark ? Colors.white10 : Slate.shade200,
+            ),
           ),
           child: Column(
             children: [
@@ -270,16 +717,28 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: widget.isDark ? [const Color(0xFF1E293B), const Color(0xFF0F172A)] : [Slate.shade50, Colors.white],
+              colors: widget.isDark
+                  ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                  : [Slate.shade50, Colors.white],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: widget.isDark ? Colors.white10 : Slate.shade200),
+            border: Border.all(
+              color: widget.isDark ? Colors.white10 : Slate.shade200,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _summaryMetric('TOTAL ${SystemConfig.currentFiscalYearStr} BUDGET', fmt.format(totalCurrent), Colors.grey),
-              _summaryMetric('PROPOSED ${SystemConfig.nextFiscalYearStr} TOTAL', fmt.format(totalNext), Colors.blue),
+              _summaryMetric(
+                'TOTAL ${SystemConfig.currentFiscalYearStr} BUDGET',
+                fmt.format(totalCurrent),
+                Colors.grey,
+              ),
+              _summaryMetric(
+                'PROPOSED ${SystemConfig.nextFiscalYearStr} TOTAL',
+                fmt.format(totalNext),
+                Colors.blue,
+              ),
             ],
           ),
         ),
@@ -343,22 +802,45 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
     );
   }
 
-  DataColumn _headerCell(String label) {
+  DataColumn _headerCell(String label, {bool isYellow = false}) {
     return DataColumn(
-      label: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontWeight: FontWeight.w800,
-          fontSize: 11,
-          color: widget.isDark ? Colors.white30 : Slate.shade400,
-          letterSpacing: 1,
+      label: Container(
+        padding: isYellow
+            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+            : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: isYellow
+              ? Colors.yellow.withOpacity(widget.isDark ? 0.2 : 0.8)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            color: isYellow
+                ? (widget.isDark ? Colors.white : Colors.black87)
+                : (widget.isDark ? Colors.white30 : Slate.shade400),
+            letterSpacing: 1,
+          ),
         ),
       ),
     );
   }
 
-  Widget _amountText(NumberFormat fmt, double val, bool isLight, {Color? color}) {
-    if (val == 0) return const Text('-', style: TextStyle(color: Colors.grey));
+  Widget _amountText(
+    NumberFormat fmt,
+    double val,
+    bool isLight, {
+    Color? color,
+    bool hideZero = false,
+  }) {
+    if (val == 0) {
+      if (hideZero) return const SizedBox();
+      return const Text('-', style: TextStyle(color: Colors.grey));
+    }
     return Text(
       fmt.format(val),
       style: GoogleFonts.jetBrainsMono(
@@ -374,7 +856,14 @@ class _RowDef {
   final String code;
   final String label;
   final List<Activity> items;
+  final bool isHeader;
+  final bool isDetail;
 
-  _RowDef(this.code, this.label, this.items);
+  _RowDef(
+    this.code,
+    this.label,
+    this.items, {
+    this.isHeader = false,
+    this.isDetail = false,
+  });
 }
-

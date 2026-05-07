@@ -9,6 +9,7 @@ class SettingsProvider extends ChangeNotifier {
   bool isDarkMode = false;
 
 
+
   AppLocalization get l10n => AppLocalization(language);
 
   SettingsProvider() {
@@ -20,6 +21,7 @@ class SettingsProvider extends ChangeNotifier {
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     language = prefs.getString('language') ?? 'English';
     isDarkMode = prefs.getBool('isDarkMode') ?? false;
+
 
     notifyListeners();
   }
@@ -45,5 +47,7 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('isDarkMode', value);
     notifyListeners();
   }
+
+
 }
 

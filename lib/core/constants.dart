@@ -81,27 +81,93 @@ class AppConstants {
   static const List<String> objectsOfExpenditure = [
     'Administrative Support Services Unit Appropriation',
     'Agriculture Logistics Section Appropriation',
-    'Communication Expenses',
     'Corn Appropriation',
     'Crop Section Appropriation',
-    'Fuel/Oil Expenses',
     'HVCDP Appropriation',
     'Inland Fisheries Section Appropriation',
     'Institutional Development Section Appropriation',
     'Integrated Agricultural Laboratory Appropriation',
-    'Meetings Expenses',
     'Monitoring and Evaluation Section Appropriation',
-    'Office Supplies Expenses',
-    'Organic Program Appropriation',
-    'Other-MOE Expenses',
-    'Personnel Development Expenses',
     'Project Development Section Appropriation',
-    'Repair/Maintenance Expenses',
     'Rice Appropriation',
-    'Trainings and Seminar Expenses',
+    'Organic Program Appropriation',
+
     'Travelling Expenses',
+    'Training Expenses',
+    'Office Supplies Expenses',
+    'Agricultural Supplies Expenses',
+    'Laboratory Supplies Expenses',
+    'Fuel, Oil & Lubricants (Plus Backhoe use)',
+    'Other Supplies and Materials Expenses',
+    'Communication Expenses',
+    'Repairs and Maintenance - Building and Other Structures',
+    'Repairs and Maintenance - Machinery and Equipment',
+    'Repairs and Maintenance - Transportation Equipment',
+    'Other Maintenance and Operating Expenses',
+
+    '3 Sets Desktop Office Computer with Printer',
+    '6 units Laptop (AMD Ryzen 7)',
+    'Furniture & Fixture',
+    'Fabrication of Office Cubicle',
+    'Purchase of Diesel Silent Type Generator Set',
+    '1 Unit Risographing Machine',
+    '200 Pcs Monoblock Chairs',
+    '20 Pcs Folding Tables',
+
     'Other',
   ];
+
+  // Grouped Sub-Categories
+  static const Map<String, List<String>> budgetSubCategories = {
+    'Training Expenses': [
+      'Rice Program',
+      'Corn Program',
+      'HVCD Program',
+      'Organic Program',
+      'Inland Fisheries Program',
+    ],
+    'Agricultural Supplies Expenses': [
+      'City Nursery Supplies',
+      'Organic Fertilizer',
+      'Rodenticide',
+      'Insecticide',
+      'Fungicide',
+      'High Valued Commercial Crop Techno Demo Supplies',
+    ],
+    'Laboratory Supplies Expenses': [
+      'City Soils Testing Laboratory',
+      'Plant Tissue Culture Laboratory',
+      'Bio-Con Laboratory',
+      'NFTS Concoction Production Project',
+    ],
+    'Other Supplies and Materials Expenses': ['20 Pcs Folding Tables'],
+    'Communication Expenses': [
+      'Postage & Courier Services',
+      'Telephone Expenses',
+      'Internet Subscription Expenses',
+    ],
+    'Repairs and Maintenance': [
+      'Repairs and Maintenance - Building and Other Structures',
+      'Repairs and Maintenance - Machinery and Equipment',
+      'Repairs and Maintenance - Transportation Equipment',
+    ],
+    'Other Maintenance and Operating Expenses': [
+      'Personnel Development',
+      'Agriculture & Fisheries Congress',
+      'Rural Improvement Club Meetings',
+      '4-H Club Meetings',
+      'CAFC Meetings',
+      'Fisherfolks Meetings',
+      'Organic Farmers Meetings',
+      'Vegetable Farmers Meetings',
+      'Corn Farmers Meetings',
+      'Rice Farmers Meetings',
+      'Strengthening of Farmers Meetings',
+      'Project Development',
+      'Monitoring and Evaluation',
+      'CAFC Capability Building',
+    ],
+  };
 
   // Activity Statuses (New Workflow Sequence)
   static const List<String> activityStatuses = [
@@ -145,7 +211,7 @@ class AppConstants {
   static const String statusPOSigned = 'PO Signed';
   static const String statusDelivered = 'Delivered';
   static const String statusCompleted = 'Completed';
-  
+
   // Legacy or specialized statuses (keeping for compatibility)
   static const String statusPRPreparation = 'PR Preparation';
   static const String statusBACProcessing = 'BAC Processing';
@@ -182,11 +248,7 @@ class AppConstants {
   ];
 
   // Staff List
-  static const List<String> staffList = [
-    'Admin',
-    'Ina Tan',
-    'Ina',
-  ];
+  static const List<String> staffList = ['Admin', 'Ina Tan', 'Ina'];
 
   // Common Units
   static const List<String> commonUnits = [
@@ -223,10 +285,10 @@ class AppConstants {
       // If we have a specific subSector for the Crop Section, use that
       final specificApprop =
           (sector == 'Crop Section' &&
-                  subSector != null &&
-                  subSector != 'Other')
-              ? '$subSector Appropriation'
-              : '$sector Appropriation';
+              subSector != null &&
+              subSector != 'Other')
+          ? '$subSector Appropriation'
+          : '$sector Appropriation';
 
       // If the specific sector/sub-sector appropriation exists in our master list,
       // place it at the top for easy selection.
@@ -261,9 +323,11 @@ class AppConstants {
     // Default to initials
     return n
         .split(RegExp(r'[\s\-/]'))
-        .where((e) =>
-            e.isNotEmpty &&
-            !['and', 'or', 'for', 'the', 'of'].contains(e.toLowerCase()))
+        .where(
+          (e) =>
+              e.isNotEmpty &&
+              !['and', 'or', 'for', 'the', 'of'].contains(e.toLowerCase()),
+        )
         .map((e) => e[0])
         .join()
         .toUpperCase();
@@ -276,19 +340,18 @@ class AppConstants {
     'Institutional Development Section': 23,
     'Monitoring and Evaluation Section': 11, // PMED
   };
-
 }
 
 class SystemConfig {
   static int get currentFiscalYear => DateTime.now().year;
-  static int get nextFiscalYear => currentFiscalYear + 1;
-  
+  static int get targetBudgetYear => 2026; // User explicitly requested 2026 budget plan
+  static int get nextFiscalYear => targetBudgetYear + 1;
+
   static String get currentFiscalYearStr => currentFiscalYear.toString();
+  static String get targetBudgetYearStr => targetBudgetYear.toString();
   static String get nextFiscalYearStr => nextFiscalYear.toString();
-  
+
   static const String adminRole = 'admin';
   static const String staffRole = 'staff';
   static const String programHeadRole = 'program_head';
 }
-
-

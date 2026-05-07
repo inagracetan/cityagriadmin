@@ -72,12 +72,52 @@ class BudgetValidationService {
   static Map<String, dynamic> getActivityAlerts(Activity activity, List<Activity> allActivities, List<BudgetLine> budgetLines) {
     final now = DateTime.now();
     return {
-      'noBudget': hasNoBudget(activity, budgetLines),
+      'noBudget': hasNoBudget(activity, budgetLines) || needsNoBudgetFlag(activity.effectivePRAmount, activity.prBalanceCalculated + activity.effectivePRAmount),
       'overObligated': isOverObligated(activity),
       'timelineVariance': hasTimelineVariance(activity, now),
       'ceilingViolation': activity.accountCode != null && activity.accountCode!.isNotEmpty 
           ? exceedsBudgetCeiling(activity.accountCode!, allActivities, budgetLines)
           : false,
+      'supplementalPPMP': needsSupplementalPPMP(activity.effectivePOAmount, activity.effectivePRAmount),
+    };
+  }
+
+  /// ── Validation Rules (Hard Stops) ──────────────────────────────────
+  
+  /// If Requested PR > Remaining PR Balance, Then set Status = "No Budget"
+  static bool needsNoBudgetFlag(double requestedPRAmount, double remainingPRBalance) {
+    if (remainingPRBalance <= 0) return true;
+    return requestedPRAmount > remainingPRBalance;
+  }
+
+  /// If PO Amount > PR Amount, Then flag for "Supplemental PPMP"
+  static bool needsSupplementalPPMP(double poAmount, double prAmount) {
+    if (prAmount <= 0) return false;
+    return poAmount > prAmount;
+  }
+
+  /// ── Summary Consolidation Logic ────────────────────────────────────
+  
+  static Map<String, double> getConsolidatedSummary(List<BudgetLine> allBudgetLines) {
+    double totalAppropriation = 0;
+    double totalObligated = 0;
+    double totalDisbursed = 0;
+    
+    for (var bl in allBudgetLines) {
+      totalAppropriation += bl.appropriation;
+      totalObligated += bl.prAmount;
+      totalDisbursed += bl.poAmount;
+    }
+    
+    double utilizationRate = totalAppropriation > 0 ? (totalObligated / totalAppropriation) * 100 : 0;
+    double unobligatedBalance = totalAppropriation - totalObligated;
+    
+    return {
+      'totalAppropriation': totalAppropriation,
+      'totalObligated': totalObligated,
+      'totalDisbursed': totalDisbursed,
+      'utilizationRate': utilizationRate,
+      'unobligatedBalance': unobligatedBalance,
     };
   }
 }

@@ -466,6 +466,21 @@ class ActivityFormProvider extends ChangeNotifier {
       prBalanceCtl.text = prBalanceStr;
     }
 
+    // ── Hard Stop Logic ──────────────────────────────────────────────
+    // If Requested PR > Remaining PR Balance, Then set Status = "No Budget"
+    // Note: remainingPRBalance here is prBalance before adding the latest PR, 
+    // but totalPRs already includes all logs. 
+    // So if prBalance < 0, it means we've exceeded the allocation.
+    if (prBalance < -0.01) { // small epsilon for double precision
+      if (selectedStatus != 'No Budget') {
+        selectedStatus = 'No Budget';
+      }
+    } else if (selectedStatus == 'No Budget') {
+      // Revert to a default status if balance is restored, or leave it to user?
+      // Typically, we revert to 'PR Preparation' or 'Planned'
+      selectedStatus = AppConstants.statusPRPreparation;
+    }
+
     notifyListeners();
   }
 

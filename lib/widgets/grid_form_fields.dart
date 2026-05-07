@@ -25,15 +25,17 @@ class GridFormTheme {
   static const Color warningBg = Color(0xFFFEF2F2);
 
   static const Map<String, String> accountCodes = {
-    '5-02-01-010': 'Traveling Expenses',
+    '5-02-01-010': 'Travelling Expenses',
     '5-02-02-010': 'Training Expenses',
     '5-02-03-010': 'Office Supplies Expenses',
     '5-02-03-100': 'Agricultural Supplies Expenses',
     '5-02-99-990': 'Laboratory Supplies Expenses',
-    '5-02-03-090': 'Fuel, Oil & Lubricants',
+    '5-02-03-090': 'Fuel, Oil & Lubricants (Plus Backhoe use)',
+    '5-02-03-990': 'Other Supplies and Materials Expenses',
     '5-02-05-020': 'Communication Expenses',
-    '5-02-13-030': 'Repairs - Building/Structures',
-    '5-02-13-060': 'Repairs - Transportation Equipment',
+    '5-02-13-030': 'Repairs and Maintenance - Building and Other Structures',
+    '5-02-13-050': 'Repairs and Maintenance - Machinery and Equipment',
+    '5-02-13-060': 'Repairs and Maintenance - Transportation Equipment',
     '5-02-99-991': 'Other Maintenance and Operating Expenses',
     '5-02-99-992': 'Personnel Development',
     '5-02-99-993': 'Meetings',
@@ -46,36 +48,40 @@ class GridFormTheme {
     bool hasError = false,
     Widget? prefix,
     Widget? suffix,
-  }) =>
-      InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.inter(
-          fontSize: isCompact ? 11 : 13,
-          color: Colors.black26,
-        ),
-        isDense: true,
-        filled: true,
-        fillColor: hasError ? warningBg : (readOnly ? Colors.grey[50] : Colors.white),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 8 : 12,
-          vertical: isCompact ? 6 : 12,
-        ),
-        prefixIcon: prefix,
-        suffixIcon: suffix,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: BorderSide(color: hasError ? warningRed : border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: BorderSide(color: hasError ? warningRed : border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: BorderSide(color: hasError ? warningRed : accentGreen, width: 1.5),
-        ),
-        errorStyle: const TextStyle(height: 0),
-      );
+  }) => InputDecoration(
+    hintText: hint,
+    hintStyle: GoogleFonts.inter(
+      fontSize: isCompact ? 11 : 13,
+      color: Colors.black26,
+    ),
+    isDense: true,
+    filled: true,
+    fillColor: hasError
+        ? warningBg
+        : (readOnly ? Colors.grey[50] : Colors.white),
+    contentPadding: EdgeInsets.symmetric(
+      horizontal: isCompact ? 8 : 12,
+      vertical: isCompact ? 6 : 12,
+    ),
+    prefixIcon: prefix,
+    suffixIcon: suffix,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
+      borderSide: BorderSide(color: hasError ? warningRed : border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
+      borderSide: BorderSide(color: hasError ? warningRed : border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
+      borderSide: BorderSide(
+        color: hasError ? warningRed : accentGreen,
+        width: 1.5,
+      ),
+    ),
+    errorStyle: const TextStyle(height: 0),
+  );
 }
 
 class GridStatusBreadcrumbs extends StatelessWidget {
@@ -107,25 +113,40 @@ class GridStatusBreadcrumbs extends StatelessWidget {
             return Row(
               children: [
                 if (index > 0)
-                  Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade300),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: Colors.grey.shade300,
+                  ),
                 GestureDetector(
                   onTap: () => onStatusChanged(status),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: isSelected ? GridFormTheme.accentGreen.withOpacity(0.1) : Colors.transparent,
+                      color: isSelected
+                          ? GridFormTheme.accentGreen.withOpacity(0.1)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected ? GridFormTheme.accentGreen : Colors.transparent,
+                        color: isSelected
+                            ? GridFormTheme.accentGreen
+                            : Colors.transparent,
                       ),
                     ),
                     child: Text(
                       status,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                        color: isSelected ? GridFormTheme.accentGreen : Colors.grey.shade500,
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? GridFormTheme.accentGreen
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ),
@@ -165,7 +186,9 @@ class GridStepIndicator extends StatelessWidget {
           final label = entry.value;
           final isCompleted = idx < currentStep;
           final isActive = idx == currentStep;
-          final color = isActive ? GridFormTheme.accentGreen : (isCompleted ? GridFormTheme.darkGreen : Colors.grey.shade400);
+          final color = isActive
+              ? GridFormTheme.accentGreen
+              : (isCompleted ? GridFormTheme.darkGreen : Colors.grey.shade400);
 
           return Expanded(
             child: Row(
@@ -176,7 +199,11 @@ class GridStepIndicator extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: isActive ? GridFormTheme.accentGreen : (isCompleted ? GridFormTheme.accentGreen.withOpacity(0.1) : Colors.white),
+                        color: isActive
+                            ? GridFormTheme.accentGreen
+                            : (isCompleted
+                                  ? GridFormTheme.accentGreen.withOpacity(0.1)
+                                  : Colors.white),
                         shape: BoxShape.circle,
                         border: Border.all(color: color, width: 1.5),
                       ),
@@ -202,8 +229,14 @@ class GridStepIndicator extends StatelessWidget {
                   Expanded(
                     child: Container(
                       height: 2,
-                      margin: const EdgeInsets.only(left: 12, right: 12, bottom: 18),
-                      color: isCompleted ? GridFormTheme.accentGreen : Colors.grey.shade200,
+                      margin: const EdgeInsets.only(
+                        left: 12,
+                        right: 12,
+                        bottom: 18,
+                      ),
+                      color: isCompleted
+                          ? GridFormTheme.accentGreen
+                          : Colors.grey.shade200,
                     ),
                   ),
               ],
@@ -267,8 +300,10 @@ class _GridRowState extends State<GridRow> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: GridFormTheme.accentGreen.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -308,9 +343,7 @@ class _GridRowState extends State<GridRow> {
       child: AnimatedContainer(
         duration: AppDesignSystem.durationQuick,
         decoration: BoxDecoration(
-          color: _isHovered
-              ? GridFormTheme.highlightGreen
-              : bg,
+          color: _isHovered ? GridFormTheme.highlightGreen : bg,
           border: widget.showBottomBorder
               ? const Border(
                   bottom: BorderSide(color: GridFormTheme.border, width: 0.8),
@@ -318,7 +351,8 @@ class _GridRowState extends State<GridRow> {
               : null,
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center, // Change from stretch to center to avoid IntrinsicHeight if possible, but actually we want it to look good.
+          crossAxisAlignment: CrossAxisAlignment
+              .center, // Change from stretch to center to avoid IntrinsicHeight if possible, but actually we want it to look good.
           // Let's keep the Row structure but consider removing IntrinsicHeight if children have viewports.
           children: [
             // Row identifier (Excel style header)
@@ -327,7 +361,9 @@ class _GridRowState extends State<GridRow> {
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _isHovered ? GridFormTheme.accentGreen.withOpacity(0.1) : GridFormTheme.labelBg,
+                color: _isHovered
+                    ? GridFormTheme.accentGreen.withOpacity(0.1)
+                    : GridFormTheme.labelBg,
                 border: const Border(
                   right: BorderSide(color: GridFormTheme.border, width: 0.8),
                 ),
@@ -336,7 +372,9 @@ class _GridRowState extends State<GridRow> {
                 widget.label,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withOpacity(0.6),
+                  color: _isHovered
+                      ? GridFormTheme.accentGreen
+                      : GridFormTheme.labelText.withOpacity(0.6),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -378,10 +416,17 @@ class _GridRowState extends State<GridRow> {
                         color: GridFormTheme.textMain.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      textStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
                       child: const Padding(
                         padding: EdgeInsets.only(left: 8),
-                        child: Icon(Icons.info_outline, size: 14, color: GridFormTheme.labelText),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: GridFormTheme.labelText,
+                        ),
                       ),
                     ),
                 ],
@@ -488,7 +533,9 @@ class _GridDualRowState extends State<GridDualRow> {
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _isHovered ? GridFormTheme.accentGreen.withOpacity(0.1) : GridFormTheme.labelBg,
+                color: _isHovered
+                    ? GridFormTheme.accentGreen.withOpacity(0.1)
+                    : GridFormTheme.labelBg,
                 border: const Border(
                   right: BorderSide(color: GridFormTheme.border, width: 0.8),
                 ),
@@ -497,7 +544,9 @@ class _GridDualRowState extends State<GridDualRow> {
                 widget.label,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: _isHovered ? GridFormTheme.accentGreen : GridFormTheme.labelText.withOpacity(0.6),
+                  color: _isHovered
+                      ? GridFormTheme.accentGreen
+                      : GridFormTheme.labelText.withOpacity(0.6),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -508,7 +557,9 @@ class _GridDualRowState extends State<GridDualRow> {
               constraints: const BoxConstraints(minHeight: 48),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: GridFormTheme.border, width: 0.8)),
+                border: Border(
+                  right: BorderSide(color: GridFormTheme.border, width: 0.8),
+                ),
               ),
               alignment: Alignment.centerLeft,
               child: Row(
@@ -520,7 +571,11 @@ class _GridDualRowState extends State<GridDualRow> {
                   Expanded(
                     child: Text(
                       widget.fieldLabel1,
-                      style: GoogleFonts.inter(fontSize: 13, color: GridFormTheme.textMain, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: GridFormTheme.textMain,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (widget.helpText1 != null)
@@ -528,7 +583,11 @@ class _GridDualRowState extends State<GridDualRow> {
                       message: widget.helpText1!,
                       child: const Padding(
                         padding: EdgeInsets.only(left: 4),
-                        child: Icon(Icons.info_outline, size: 12, color: GridFormTheme.labelText),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 12,
+                          color: GridFormTheme.labelText,
+                        ),
                       ),
                     ),
                 ],
@@ -538,9 +597,14 @@ class _GridDualRowState extends State<GridDualRow> {
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(minHeight: 48),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: const BoxDecoration(
-                  border: Border(right: BorderSide(color: GridFormTheme.border, width: 0.8)),
+                  border: Border(
+                    right: BorderSide(color: GridFormTheme.border, width: 0.8),
+                  ),
                 ),
                 child: widget.child1,
               ),
@@ -551,7 +615,9 @@ class _GridDualRowState extends State<GridDualRow> {
               constraints: const BoxConstraints(minHeight: 48),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: GridFormTheme.border, width: 0.8)),
+                border: Border(
+                  right: BorderSide(color: GridFormTheme.border, width: 0.8),
+                ),
               ),
               alignment: Alignment.centerLeft,
               child: Row(
@@ -559,7 +625,11 @@ class _GridDualRowState extends State<GridDualRow> {
                   Expanded(
                     child: Text(
                       widget.fieldLabel2,
-                      style: GoogleFonts.inter(fontSize: 13, color: GridFormTheme.textMain, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: GridFormTheme.textMain,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (widget.helpText2 != null)
@@ -567,7 +637,11 @@ class _GridDualRowState extends State<GridDualRow> {
                       message: widget.helpText2!,
                       child: const Padding(
                         padding: EdgeInsets.only(left: 4),
-                        child: Icon(Icons.info_outline, size: 12, color: GridFormTheme.labelText),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 12,
+                          color: GridFormTheme.labelText,
+                        ),
                       ),
                     ),
                 ],
@@ -577,7 +651,10 @@ class _GridDualRowState extends State<GridDualRow> {
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(minHeight: 48),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: widget.child2,
               ),
             ),
@@ -634,7 +711,9 @@ class _GridTextFieldState extends State<GridTextField> {
     if (widget.controller != null) {
       _effectiveController = widget.controller!;
     } else {
-      _effectiveController = TextEditingController(text: widget.initialValue ?? '');
+      _effectiveController = TextEditingController(
+        text: widget.initialValue ?? '',
+      );
       _isLocalController = true;
     }
   }
@@ -650,11 +729,15 @@ class _GridTextFieldState extends State<GridTextField> {
         _effectiveController = widget.controller!;
         _isLocalController = false;
       } else {
-        _effectiveController = TextEditingController(text: widget.initialValue ?? '');
+        _effectiveController = TextEditingController(
+          text: widget.initialValue ?? '',
+        );
         _isLocalController = true;
       }
-    } else if (_isLocalController && widget.initialValue != oldWidget.initialValue) {
-      if (widget.initialValue != null && widget.initialValue != _effectiveController.text) {
+    } else if (_isLocalController &&
+        widget.initialValue != oldWidget.initialValue) {
+      if (widget.initialValue != null &&
+          widget.initialValue != _effectiveController.text) {
         _effectiveController.text = widget.initialValue!;
       }
     }
@@ -693,10 +776,7 @@ class _GridTextFieldState extends State<GridTextField> {
     );
 
     if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: textField,
-      );
+      return Tooltip(message: widget.tooltip!, child: textField);
     }
     return textField;
   }
@@ -768,9 +848,12 @@ class _GridCurrencyFieldState extends State<GridCurrencyField> {
         _effectiveController = TextEditingController(text: initialText);
         _isLocalController = true;
       }
-    } else if (_isLocalController && widget.initialValue != oldWidget.initialValue) {
+    } else if (_isLocalController &&
+        widget.initialValue != oldWidget.initialValue) {
       if (widget.initialValue != null) {
-        final newText = CurrencyInputFormatter.formatDouble(widget.initialValue!);
+        final newText = CurrencyInputFormatter.formatDouble(
+          widget.initialValue!,
+        );
         if (newText != _effectiveController.text) {
           _effectiveController.text = newText;
         }
@@ -806,36 +889,39 @@ class _GridCurrencyFieldState extends State<GridCurrencyField> {
             : (widget.readOnly ? Colors.grey[700] : GridFormTheme.darkGreen),
         fontWeight: FontWeight.bold,
       ),
-      decoration: GridFormTheme.cellDecoration(
-        hint: widget.hint ?? '0.00',
-        readOnly: widget.readOnly,
-        isCompact: widget.isCompact,
-        hasError: widget.hasError,
-        prefix: Padding(
-          padding: EdgeInsets.only(
-            left: widget.isCompact ? 8 : 12,
-            right: widget.isCompact ? 4 : 8,
-            top: widget.isCompact ? 6 : 10,
-            bottom: widget.isCompact ? 6 : 10,
-          ),
-          child: Text(
-            'PHP',
-            style: TextStyle(
-              color: widget.hasError ? GridFormTheme.warningRed : GridFormTheme.accentGreen.withOpacity(0.6),
-              fontWeight: FontWeight.w800,
-              fontSize: widget.isCompact ? 10 : 11,
+      decoration:
+          GridFormTheme.cellDecoration(
+            hint: widget.hint ?? '0.00',
+            readOnly: widget.readOnly,
+            isCompact: widget.isCompact,
+            hasError: widget.hasError,
+            prefix: Padding(
+              padding: EdgeInsets.only(
+                left: widget.isCompact ? 8 : 12,
+                right: widget.isCompact ? 4 : 8,
+                top: widget.isCompact ? 6 : 10,
+                bottom: widget.isCompact ? 6 : 10,
+              ),
+              child: Text(
+                'PHP',
+                style: TextStyle(
+                  color: widget.hasError
+                      ? GridFormTheme.warningRed
+                      : GridFormTheme.accentGreen.withOpacity(0.6),
+                  fontWeight: FontWeight.w800,
+                  fontSize: widget.isCompact ? 10 : 11,
+                ),
+              ),
             ),
+          ).copyWith(
+            prefixIcon: widget.isPO
+                ? Icon(
+                    Icons.shopping_cart_outlined,
+                    size: widget.isCompact ? 12 : 14,
+                    color: const Color(0xFF1565C0),
+                  )
+                : null,
           ),
-        ),
-      ).copyWith(
-        prefixIcon: widget.isPO
-            ? Icon(
-                Icons.shopping_cart_outlined,
-                size: widget.isCompact ? 12 : 14,
-                color: const Color(0xFF1565C0),
-              )
-            : null,
-      ),
       onTapOutside: (_) {
         if (_effectiveController.text.isNotEmpty) {
           _effectiveController.text = CurrencyInputFormatter.formatDouble(
@@ -854,10 +940,7 @@ class _GridCurrencyFieldState extends State<GridCurrencyField> {
     );
 
     if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: textField,
-      );
+      return Tooltip(message: widget.tooltip!, child: textField);
     }
     return textField;
   }
@@ -951,7 +1034,10 @@ class _GridDropdownState<T> extends State<GridDropdown<T>> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(widget.isCompact ? 4 : 8),
-          borderSide: const BorderSide(color: GridFormTheme.accentGreen, width: 1.5),
+          borderSide: const BorderSide(
+            color: GridFormTheme.accentGreen,
+            width: 1.5,
+          ),
         ),
       ),
       menuStyle: MenuStyle(
@@ -971,10 +1057,7 @@ class _GridDropdownState<T> extends State<GridDropdown<T>> {
     );
 
     if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: dropdown,
-      );
+      return Tooltip(message: widget.tooltip!, child: dropdown);
     }
     return dropdown;
   }
@@ -1012,7 +1095,9 @@ class _GridDateFieldState extends State<GridDateField> {
     if (widget.controller != null) {
       _effectiveController = widget.controller!;
     } else {
-      _effectiveController = TextEditingController(text: widget.initialValue ?? '');
+      _effectiveController = TextEditingController(
+        text: widget.initialValue ?? '',
+      );
       _isLocalController = true;
     }
   }
@@ -1028,11 +1113,15 @@ class _GridDateFieldState extends State<GridDateField> {
         _effectiveController = widget.controller!;
         _isLocalController = false;
       } else {
-        _effectiveController = TextEditingController(text: widget.initialValue ?? '');
+        _effectiveController = TextEditingController(
+          text: widget.initialValue ?? '',
+        );
         _isLocalController = true;
       }
-    } else if (_isLocalController && widget.initialValue != oldWidget.initialValue) {
-      if (widget.initialValue != null && widget.initialValue != _effectiveController.text) {
+    } else if (_isLocalController &&
+        widget.initialValue != oldWidget.initialValue) {
+      if (widget.initialValue != null &&
+          widget.initialValue != _effectiveController.text) {
         _effectiveController.text = widget.initialValue!;
       }
     }
@@ -1099,10 +1188,7 @@ class _GridDateFieldState extends State<GridDateField> {
     );
 
     if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: textField,
-      );
+      return Tooltip(message: widget.tooltip!, child: textField);
     }
     return textField;
   }
@@ -1128,7 +1214,8 @@ class GridSupplierField extends StatelessWidget {
   Widget build(BuildContext context) {
     final dropdown = DropdownMenu<String>(
       initialSelection:
-          controller.text.isEmpty || !availableSuppliers.contains(controller.text)
+          controller.text.isEmpty ||
+              !availableSuppliers.contains(controller.text)
           ? ''
           : controller.text,
       controller: controller,
@@ -1160,7 +1247,10 @@ class GridSupplierField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: const BorderSide(color: GridFormTheme.accentGreen, width: 1.5),
+          borderSide: const BorderSide(
+            color: GridFormTheme.accentGreen,
+            width: 1.5,
+          ),
         ),
       ),
       menuStyle: MenuStyle(
@@ -1192,10 +1282,7 @@ class GridSupplierField extends StatelessWidget {
     );
 
     if (tooltip != null) {
-      return Tooltip(
-        message: tooltip!,
-        child: dropdown,
-      );
+      return Tooltip(message: tooltip!, child: dropdown);
     }
     return dropdown;
   }
@@ -1218,7 +1305,8 @@ class GridBreakdownDropdown<T> extends StatefulWidget {
   });
 
   @override
-  State<GridBreakdownDropdown<T>> createState() => _GridBreakdownDropdownState<T>();
+  State<GridBreakdownDropdown<T>> createState() =>
+      _GridBreakdownDropdownState<T>();
 }
 
 class _GridBreakdownDropdownState<T> extends State<GridBreakdownDropdown<T>> {
@@ -1277,7 +1365,10 @@ class _GridBreakdownDropdownState<T> extends State<GridBreakdownDropdown<T>> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide: const BorderSide(color: GridFormTheme.accentGreen, width: 1.5),
+          borderSide: const BorderSide(
+            color: GridFormTheme.accentGreen,
+            width: 1.5,
+          ),
         ),
       ),
       menuStyle: MenuStyle(
@@ -1294,10 +1385,7 @@ class _GridBreakdownDropdownState<T> extends State<GridBreakdownDropdown<T>> {
     );
 
     if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: dropdown,
-      );
+      return Tooltip(message: widget.tooltip!, child: dropdown);
     }
     return dropdown;
   }
@@ -1353,7 +1441,8 @@ class GridBarcodeField extends StatelessWidget {
 /// A specialized field that allows selecting from a list or typing a custom value.
 class GridAutocompleteField extends StatelessWidget {
   final TextEditingController controller;
-  final List<String> options;
+  final List<String>? options;
+  final Map<String, List<String>>? groupedOptions;
   final String? hint;
   final bool isCompact;
   final String? tooltip;
@@ -1361,19 +1450,53 @@ class GridAutocompleteField extends StatelessWidget {
   const GridAutocompleteField({
     super.key,
     required this.controller,
-    required this.options,
+    this.options,
+    this.groupedOptions,
     this.hint,
     this.isCompact = false,
     this.tooltip,
-  });
+  }) : assert(
+         options != null || groupedOptions != null,
+         'Must provide options or groupedOptions',
+       );
 
   @override
   Widget build(BuildContext context) {
+    // Generate entries based on options or groupedOptions
+    final List<DropdownMenuEntry<String>> entries = [];
+    if (groupedOptions != null) {
+      for (final entry in groupedOptions!.entries) {
+        entries.add(
+          DropdownMenuEntry<String>(
+            value: '',
+            label: '--- ${entry.key} ---',
+            enabled: false,
+          ),
+        );
+        for (final opt in entry.value) {
+          entries.add(DropdownMenuEntry<String>(value: opt, label: '  $opt'));
+        }
+      }
+    } else if (options != null) {
+      entries.addAll(
+        options!.map((s) => DropdownMenuEntry(value: s, label: s)),
+      );
+    }
+
+    // Determine initial selection logic
+    bool containsText = false;
+    if (groupedOptions != null) {
+      containsText = groupedOptions!.values
+          .expand((e) => e)
+          .contains(controller.text);
+    } else if (options != null) {
+      containsText = options!.contains(controller.text);
+    }
+
     final dropdown = DropdownMenu<String>(
-      initialSelection:
-          controller.text.isEmpty || !options.contains(controller.text)
-              ? null
-              : controller.text,
+      initialSelection: controller.text.isEmpty || !containsText
+          ? null
+          : controller.text,
       controller: controller,
       enableSearch: true,
       enableFilter: true,
@@ -1403,7 +1526,10 @@ class GridAutocompleteField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: const BorderSide(color: GridFormTheme.accentGreen, width: 1.5),
+          borderSide: const BorderSide(
+            color: GridFormTheme.accentGreen,
+            width: 1.5,
+          ),
         ),
       ),
       menuStyle: MenuStyle(
@@ -1413,19 +1539,16 @@ class GridAutocompleteField extends StatelessWidget {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-      dropdownMenuEntries: options.map((s) => DropdownMenuEntry(value: s, label: s)).toList(),
+      dropdownMenuEntries: entries,
       onSelected: (val) {
-        if (val != null) {
+        if (val != null && val.isNotEmpty) {
           controller.text = val;
         }
       },
     );
 
     if (tooltip != null) {
-      return Tooltip(
-        message: tooltip!,
-        child: dropdown,
-      );
+      return Tooltip(message: tooltip!, child: dropdown);
     }
     return dropdown;
   }
@@ -1480,7 +1603,10 @@ class GridAccountCodePicker extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isCompact ? 4 : 8),
-          borderSide: const BorderSide(color: GridFormTheme.accentGreen, width: 1.5),
+          borderSide: const BorderSide(
+            color: GridFormTheme.accentGreen,
+            width: 1.5,
+          ),
         ),
       ),
       dropdownMenuEntries: options.map((entry) {
@@ -1495,10 +1621,7 @@ class GridAccountCodePicker extends StatelessWidget {
     );
 
     if (tooltip != null) {
-      return Tooltip(
-        message: tooltip!,
-        child: dropdown,
-      );
+      return Tooltip(message: tooltip!, child: dropdown);
     }
     return dropdown;
   }
@@ -1517,15 +1640,33 @@ class GridMonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr',
-      'May', 'Jun', 'Jul', 'Aug',
-      'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     const fullMonths = [
-      'January', 'February', 'March', 'April',
-      'May', 'June', 'July', 'August',
-      'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     return Container(
@@ -1550,18 +1691,26 @@ class GridMonthGrid extends StatelessWidget {
                     height: 28,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: isSelected ? GridFormTheme.accentGreen : Colors.white,
+                      color: isSelected
+                          ? GridFormTheme.accentGreen
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: isSelected ? GridFormTheme.accentGreen : GridFormTheme.border,
+                        color: isSelected
+                            ? GridFormTheme.accentGreen
+                            : GridFormTheme.border,
                       ),
                     ),
                     child: Text(
                       months[idx],
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                        color: isSelected ? Colors.white : GridFormTheme.textMain,
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : GridFormTheme.textMain,
                       ),
                     ),
                   ),
@@ -1574,6 +1723,3 @@ class GridMonthGrid extends StatelessWidget {
     );
   }
 }
-
-
-

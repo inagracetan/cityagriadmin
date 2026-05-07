@@ -355,14 +355,21 @@ class Activity {
 
   double get unexpendedBalance => approvedBudget - effectivePOAmount;
 
-  // Balance Logic as per requirements:
-  // PPMP Balance = Approved Budget - PPMP Planned Amount
-  // PR Balance = PPMP Planned Amount - PR Amount
+  // ── Core Formulas (Procurement Cycle) ──────────────────────────────
+  /// PPMP Balance (Planning Balance): How much budget hasn't been assigned to a plan yet.
+  /// Calculation: Annual Appropriation - Total Items Planned in PPMP
   double get ppmpBalanceCalculated => approvedBudget - ppmpAmount;
+
+  /// PR Balance (Obligation Balance): "Spending power" left for this specific activity.
+  /// Calculation: PPMP Allocation - Purchase Request (PR) Amount
   double get prBalanceCalculated => ppmpAmount - effectivePRAmount;
 
-  double get unexpendedPPMP => ppmpBalanceCalculated;
+  /// Savings/Variance (PO Stage): Variance between PR and actual PO price.
+  /// Calculation: PR Amount - PO Amount (Actual)
+  double get savings => effectivePRAmount - effectivePOAmount;
 
+  /// Legacy alias for UI consistency
+  double get unexpendedPPMP => ppmpBalanceCalculated;
   double get unexpendedPR => prBalanceCalculated;
 
   bool get isLowBalance => approvedBudget > 0 && unexpendedBalance < 1000;
@@ -390,6 +397,9 @@ class Activity {
       (subSector?.toLowerCase() == 'rice' || sector.toLowerCase().contains('crop'));
 
   bool get isRecanvasWarning => status.toLowerCase() == 'recanvas';
+
+  bool get needsSupplementalPPMP => effectivePOAmount > effectivePRAmount && effectivePRAmount > 0;
+
 
   String get formattedSource {
     final s = fundingSource;

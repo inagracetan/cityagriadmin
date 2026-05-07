@@ -50,7 +50,7 @@ class SummaryCardsRow extends StatelessWidget {
     final isMobile = ResponsiveUtils.isMobile(context);
 
     return Padding(
-      padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+      padding: EdgeInsets.all(isMobile ? 8.0 : 16.0),
       child: Builder(
         builder: (context) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -210,12 +210,12 @@ class _SummaryCard extends StatelessWidget {
       width: width,
       child: GlassCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildIconBox(),
-            const SizedBox(width: 20),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -228,7 +228,7 @@ class _SummaryCard extends StatelessWidget {
                           title.toUpperCase(),
                           style: GoogleFonts.inter(
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
                           ),
@@ -257,7 +257,7 @@ class _SummaryCard extends StatelessWidget {
                       formatCurrency.format(amount),
                       style: GoogleFonts.inter(
                         color: theme.colorScheme.onSurface,
-                        fontSize: 24,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.8,
                       ),
@@ -269,7 +269,7 @@ class _SummaryCard extends StatelessWidget {
                       subtitle!,
                       style: GoogleFonts.inter(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -280,7 +280,7 @@ class _SummaryCard extends StatelessWidget {
               ),
             ),
             if (utilRate != null) ...[
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               _buildUtilizationCircle(),
             ],
           ],
@@ -291,20 +291,20 @@ class _SummaryCard extends StatelessWidget {
 
   Widget _buildIconBox() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
       ),
-      child: Icon(icon, color: color, size: 24),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 
   Widget _buildUtilizationCircle() {
     return SizedBox(
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -312,7 +312,7 @@ class _SummaryCard extends StatelessWidget {
             value: (utilRate ?? 0).clamp(0.0, 1.0),
             backgroundColor: color.withValues(alpha: 0.1),
             color: color,
-            strokeWidth: 4.5,
+            strokeWidth: 3.5,
             strokeCap: StrokeCap.round,
           ),
           Center(
@@ -320,7 +320,7 @@ class _SummaryCard extends StatelessWidget {
               '${((utilRate ?? 0) * 100).toInt()}%',
               style: GoogleFonts.inter(
                 color: color,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
               ),

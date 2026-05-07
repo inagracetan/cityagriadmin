@@ -19,12 +19,32 @@ class BudgetLine {
   final double q4Ppmp;
   final bool isCMO; // Whether this is the CMO Budget
   final bool isAgriMooe; // Whether this is under Agri MOOE
+  final String subCategory; // Sub-classification for hierarchical tracking
+
+  double get totalActualPRs => prAmount; // Convenience getter for UI labels
+
+  // ── Core Formulas (Hierarchical Calculation) ──────────────────────
+  /// PPMP Balance: Budget not yet assigned to any PPMP entry.
+  /// Appropriation (Level A) - Total PPMP (Level B)
+  double get ppmpBalance => appropriation - ppmpAmount;
+
+  /// PR Balance: Obligation capacity remaining for this line.
+  /// Total PPMP - Total PRs
+  double get prBalance => ppmpAmount - prAmount;
+
+  /// Savings/Variance: Realized savings at PO stage.
+  /// Total PR Amount - Total PO Amount
+  double get savings => prAmount - poAmount;
+
+  /// Utilization Rate: (Total Obligated / Total Appropriation) * 100
+  double get utilizationRate => appropriation > 0 ? (prAmount / appropriation) * 100 : 0.0;
 
   BudgetLine({
     required this.id,
     required this.accountCode,
     required this.fundSource,
     required this.objectOfExpenditure,
+    this.subCategory = '',
     this.proposedBudget = 0.0,
     this.proposedExpenditure = 0.0,
     this.approvedAmount = 0.0,
@@ -62,6 +82,7 @@ class BudgetLine {
       'q4_ppmp': q4Ppmp,
       'is_cmo': isCMO,
       'is_agri_mooe': isAgriMooe,
+      'sub_category': subCategory,
     };
   }
 
@@ -91,6 +112,7 @@ class BudgetLine {
       q4Ppmp: (data['q4_ppmp'] ?? 0).toDouble(),
       isCMO: data['is_cmo'] ?? false,
       isAgriMooe: data['is_agri_mooe'] ?? false,
+      subCategory: safeString(data['sub_category']),
     );
   }
 
@@ -114,6 +136,7 @@ class BudgetLine {
     double? q4Ppmp,
     bool? isCMO,
     bool? isAgriMooe,
+    String? subCategory,
   }) {
     return BudgetLine(
       id: id ?? this.id,
@@ -135,6 +158,7 @@ class BudgetLine {
       q4Ppmp: q4Ppmp ?? this.q4Ppmp,
       isCMO: isCMO ?? this.isCMO,
       isAgriMooe: isAgriMooe ?? this.isAgriMooe,
+      subCategory: subCategory ?? this.subCategory,
     );
   }
 }

@@ -745,8 +745,9 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                         [];
                     final indexA = subList.indexOf(a.subCategory);
                     final indexB = subList.indexOf(b.subCategory);
-                    if (indexA != -1 && indexB != -1)
+                    if (indexA != -1 && indexB != -1) {
                       return indexA.compareTo(indexB);
+                    }
                     if (indexA != -1) return -1;
                     if (indexB != -1) return 1;
                     return a.subCategory.compareTo(b.subCategory);
@@ -1006,8 +1007,9 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                               [];
                           final indexA = subList.indexOf(a.subCategory);
                           final indexB = subList.indexOf(b.subCategory);
-                          if (indexA != -1 && indexB != -1)
+                          if (indexA != -1 && indexB != -1) {
                             return indexA.compareTo(indexB);
+                          }
                           if (indexA != -1) return -1;
                           if (indexB != -1) return 1;
                           return a.subCategory.compareTo(b.subCategory);
@@ -1018,8 +1020,9 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                         itemCount: sortedLines.length,
                         itemBuilder: (context, idx) {
                           final l = sortedLines[idx];
-                          if (l.subCategory.isEmpty)
+                          if (l.subCategory.isEmpty) {
                             return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Row(
@@ -1192,7 +1195,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
               borderRadius: BorderRadius.circular(28),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Container(
+            child: SizedBox(
               width: 950,
               height: MediaQuery.of(context).size.height * 0.85,
               child: Column(
@@ -1713,7 +1716,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                   proposedBudget: proposedVal,
                                   approvedAmount: annualVal,
                                   currentBalance: isEditing
-                                      ? (line!.currentBalance +
+                                      ? (line.currentBalance +
                                             (annualVal - line.approvedAmount))
                                       : annualVal,
                                   isAgriMooe: isAgriMooe,

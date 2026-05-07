@@ -1,7 +1,7 @@
+import 'package:cityagriadmin/models/budget_line.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/activity_templates.dart';
 import '../../core/constants.dart';
@@ -11,8 +11,8 @@ import '../../models/activity.dart';
 import '../../models/pr_log.dart';
 import '../../services/activity_form_provider.dart';
 import '../../services/firebase_service.dart';
-import '../../widgets/grid_form_fields.dart';
 import '../../widgets/enhanced_buttons_dialogs.dart';
+import '../../widgets/grid_form_fields.dart';
 
 // ── Modern design constants ─────────────────────────────────────────────
 const modernGreen = Color(0xFF1B5E20);
@@ -40,6 +40,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   int currentStep = 0;
 
   late ActivityFormProvider formProvider;
+  List<BudgetLine> budgetLines = [];
 
   final List<String> steps = ['Classification', 'Budgeting', 'Procurement'];
   final List<IconData> stepIcons = [
@@ -53,14 +54,74 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     super.initState();
     // Use read for initialization tasks
     final initialProvider = context.read<ActivityFormProvider>();
-    
+
     // Sync initial state if needed
     if (widget.initialResponsiblePersons != null &&
         widget.initialResponsiblePersons!.isNotEmpty) {
-      initialProvider.setResponsiblePerson(widget.initialResponsiblePersons!.first);
+      initialProvider.setResponsiblePerson(
+        widget.initialResponsiblePersons!.first,
+      );
     }
 
     initialProvider.loadStaffAndSuppliers(widget.fbService);
+    _loadBudgetLines();
+  }
+
+  Future<void> _loadBudgetLines() async {
+    try {
+      final lines = await widget.fbService.streamBudgetLines().first;
+      setState(() {
+        budgetLines = lines;
+      });
+    } catch (e) {
+      debugPrint('Error loading budget lines: $e');
+    }
+  }
+
+  /// Get all fund sources that support the given object of expenditure
+  List<String> _getFundSourcesForExpenditure(String objectOfExpenditure) {
+    final sources = budgetLines
+        .where((line) => line.objectOfExpenditure == objectOfExpenditure)
+        .map((line) => line.fundSource)
+        .toSet()
+        .toList();
+    return sources;
+  }
+
+  /// Add rows for all fund sources supporting a given object of expenditure
+  void _addRowsForExpenditure(
+    FundSourceEntry currentEntry,
+    String objectOfExpenditure,
+  ) {
+    final fundSources = _getFundSourcesForExpenditure(objectOfExpenditure);
+
+    if (fundSources.isEmpty) {
+      // If no specific budget lines found, use all available fund sources
+      fundSources.addAll(AppConstants.fundingSources);
+    }
+
+    // Add entries for fund sources not already in the list
+    for (final fundSource in fundSources) {
+      final alreadyExists = fundSourceEntries.any(
+        (entry) =>
+            entry.fundingSource == fundSource &&
+            entry.objectOfExpenditure == objectOfExpenditure,
+      );
+
+      if (!alreadyExists) {
+        final newEntry = FundSourceEntry(
+          initialSource: fundSource,
+          initialOE: objectOfExpenditure,
+        );
+        newEntry.amountCtl.addListener(updateTotalBudget);
+        fundSourceEntries.add(newEntry);
+      }
+    }
+
+    if (mounted) {
+      setState(() {});
+      updateTotalBudget();
+    }
   }
 
   @override
@@ -81,24 +142,31 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   // Aliases for easier access to provider members
   TextEditingController get activityNameCtl => formProvider.activityNameCtl;
   TextEditingController get unitHeadCtl => formProvider.unitHeadCtl;
-  TextEditingController get performanceIndicatorCtl => formProvider.performanceIndicatorCtl;
+  TextEditingController get performanceIndicatorCtl =>
+      formProvider.performanceIndicatorCtl;
   TextEditingController get locationCtl => formProvider.locationCtl;
   TextEditingController get targetNoCtl => formProvider.targetNoCtl;
   TextEditingController get budgetCtl => formProvider.budgetCtl;
   TextEditingController get ppmpCtl => formProvider.ppmpCtl;
   TextEditingController get prAmountCtl => formProvider.prAmountCtl;
-  TextEditingController get targetParticipantsCtl => formProvider.targetParticipantsCtl;
+  TextEditingController get targetParticipantsCtl =>
+      formProvider.targetParticipantsCtl;
   TextEditingController get remarksCtl => formProvider.remarksCtl;
   TextEditingController get accountCodeCtl => formProvider.accountCodeCtl;
   TextEditingController get inputtedAmountCtl => formProvider.inputtedAmountCtl;
   TextEditingController get ppmpAmountCtl => formProvider.ppmpAmountCtl;
   TextEditingController get customSectorCtl => formProvider.customSectorCtl;
-  TextEditingController get customSubSectorCtl => formProvider.customSubSectorCtl;
-  TextEditingController get customResponsiblePersonCtl => formProvider.customResponsiblePersonCtl;
-  TextEditingController get customFundingSourceCtl => formProvider.customFundingSourceCtl;
+  TextEditingController get customSubSectorCtl =>
+      formProvider.customSubSectorCtl;
+  TextEditingController get customResponsiblePersonCtl =>
+      formProvider.customResponsiblePersonCtl;
+  TextEditingController get customFundingSourceCtl =>
+      formProvider.customFundingSourceCtl;
   TextEditingController get customStatusCtl => formProvider.customStatusCtl;
-  TextEditingController get customStatusDateCtl => formProvider.customStatusDateCtl;
-  TextEditingController get customObjectOfExpenditureCtl => formProvider.customObjectOfExpenditureCtl;
+  TextEditingController get customStatusDateCtl =>
+      formProvider.customStatusDateCtl;
+  TextEditingController get customObjectOfExpenditureCtl =>
+      formProvider.customObjectOfExpenditureCtl;
 
   String get sector => formProvider.sector;
   set sector(String v) => formProvider.setSector(v);
@@ -117,8 +185,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     formProvider.updateAllFinancials();
     if (mounted) setState(() {});
   }
-
-
 
   void _loadTemplate(ActivityTemplate template) {
     formProvider.loadTemplate(template);
@@ -529,7 +595,8 @@ class AddActivityDialogState extends State<AddActivityDialog> {
           fieldLabel: 'Custom Responsible Person',
           child: GridTextField(
             controller: customResponsiblePersonCtl,
-            tooltip: 'Enter the name of the person responsible for this activity.',
+            tooltip:
+                'Enter the name of the person responsible for this activity.',
           ),
         ),
       GridRow(
@@ -825,8 +892,6 @@ class AddActivityDialogState extends State<AddActivityDialog> {
       ),
     ],
   );
-
-
 
   Widget buildFundSourcesSection() {
     return Column(
@@ -1135,7 +1200,13 @@ class AddActivityDialogState extends State<AddActivityDialog> {
           sector,
           fundingSource: e.fundingSource,
         ),
-        onChanged: (v) => setState(() => e.objectOfExpenditure = v),
+        onChanged: (v) {
+          setState(() => e.objectOfExpenditure = v);
+          // Auto-add rows for all fund sources supporting this expenditure
+          if (v != null) {
+            _addRowsForExpenditure(e, v);
+          }
+        },
       );
 
   Widget buildFooter() => Container(
@@ -1227,13 +1298,16 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         activityName: activityNameCtl.text,
         performanceIndicator: performanceIndicatorCtl.text,
         targetNo: int.tryParse(targetNoCtl.text) ?? 0,
-        fundingSource: fundSourceEntries.first.fundingSource == 'Other' 
-            ? fundSourceEntries.first.customFundingSourceCtl.text 
+        fundingSource: fundSourceEntries.first.fundingSource == 'Other'
+            ? fundSourceEntries.first.customFundingSourceCtl.text
             : fundSourceEntries.first.fundingSource,
-        objectOfExpenditure: fundSourceEntries.first.objectOfExpenditure == 'Other' 
-            ? fundSourceEntries.first.customObjectOfExpenditureCtl.text 
+        objectOfExpenditure:
+            fundSourceEntries.first.objectOfExpenditure == 'Other'
+            ? fundSourceEntries.first.customObjectOfExpenditureCtl.text
             : fundSourceEntries.first.objectOfExpenditure,
-        responsiblePerson: responsiblePerson == 'Other' ? customResponsiblePersonCtl.text : responsiblePerson,
+        responsiblePerson: responsiblePerson == 'Other'
+            ? customResponsiblePersonCtl.text
+            : responsiblePerson,
         status: activityStatus,
         targetDate: dateRange,
         location: locationCtl.text,
@@ -1246,9 +1320,13 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         fundSources: fundSourceEntries
             .map(
               (e) => FundSourceItem(
-                fundingSource: e.fundingSource == 'Other' ? e.customFundingSourceCtl.text : e.fundingSource,
+                fundingSource: e.fundingSource == 'Other'
+                    ? e.customFundingSourceCtl.text
+                    : e.fundingSource,
                 amount: CurrencyInputFormatter.parse(e.amountCtl.text),
-                objectOfExpenditure: e.objectOfExpenditure == 'Other' ? e.customObjectOfExpenditureCtl.text : e.objectOfExpenditure,
+                objectOfExpenditure: e.objectOfExpenditure == 'Other'
+                    ? e.customObjectOfExpenditureCtl.text
+                    : e.objectOfExpenditure,
               ),
             )
             .toList(),

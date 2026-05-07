@@ -814,7 +814,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                   width: 42,
                   alignment: Alignment.center,
                   child: Text(
-                    '${idx + 1}',
+                    'B${idx + 1}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

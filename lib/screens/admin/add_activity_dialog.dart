@@ -124,6 +124,55 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     }
   }
 
+  String _normalizeObjectOfExpenditure(String? value) {
+    if (value == null) return '';
+    final v = value.trim();
+    // Training label normalization (pluralization / wording)
+    if (v == 'Training Expenses') return 'Trainings and Seminar Expenses';
+    if (v == 'Trainings and Seminar Expenses') return 'Trainings and Seminar Expenses';
+    return v;
+  }
+
+  String _denormalizeObjectOfExpenditureForDisplay(String? value) {
+    if (value == null) return '';
+    final v = value.trim();
+    // Prefer the singular label in the UI.
+    if (v == 'Trainings and Seminar Expenses') return 'Training Expenses';
+    return v;
+  }
+
+  /// Returns only the Object-of-Expenditure options that actually exist in
+  /// `budgetLines` for the selected fund source.
+  ///
+  /// This ensures the dropdown expands correctly (e.g. selecting Training
+  /// Expenses triggers adding all fund sources that have budget lines for it).
+  List<String> _getObjectOfExpenditureOptionsForFundSource({
+    required String fundSource,
+    required String sector,
+  }) {
+    final normalizedFundSource = fundSource.trim();
+
+    // Gather from actual budget lines.
+    final options = budgetLines
+        .where((l) => l.fundSource == normalizedFundSource)
+        .map((l) => _normalizeObjectOfExpenditure(l.objectOfExpenditure))
+        .where((v) => v.isNotEmpty)
+        .toSet()
+        .toList();
+
+    options.sort();
+
+    // If budgetLines are empty/not loaded yet, fallback to constants.
+    if (options.isEmpty) {
+      return AppConstants.getFilteredObjectsOfExpenditure(
+        sector,
+        fundingSource: fundSource,
+      ).map(_normalizeObjectOfExpenditure).toList();
+    }
+
+    return options;
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -909,7 +958,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                     constraints: const BoxConstraints(minHeight: 48),
                     alignment: Alignment.center,
                     child: Text(
-                      '${idx + 1}',
+                      'B${idx + 1}',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -1196,9 +1245,9 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   Widget buildObjOfExpenditureDropdownForFundSource(FundSourceEntry e) =>
       GridDropdown<String>(
         value: e.objectOfExpenditure,
-        options: AppConstants.getFilteredObjectsOfExpenditure(
-          sector,
-          fundingSource: e.fundingSource,
+        options: _getObjectOfExpenditureOptionsForFundSource(
+          fundSource: e.fundingSource,
+          sector: sector,
         ),
         onChanged: (v) {
           setState(() => e.objectOfExpenditure = v);

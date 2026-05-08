@@ -192,8 +192,8 @@ class _EnhancedTextFormFieldState extends State<EnhancedTextFormField> {
   }
 }
 
-/// Enhanced dropdown field
-class EnhancedDropdownField<T> extends StatefulWidget {
+/// Enhanced dropdown field that supports searching by default
+class EnhancedDropdownField<T> extends StatelessWidget {
   final String label;
   final T? value;
   final List<DropdownMenuItem<T>> items;
@@ -203,6 +203,7 @@ class EnhancedDropdownField<T> extends StatefulWidget {
   final String? Function(T?)? validator;
   final Widget? prefixIcon;
   final String? tooltip;
+  final bool enableSearch;
 
   const EnhancedDropdownField({
     super.key,
@@ -215,120 +216,35 @@ class EnhancedDropdownField<T> extends StatefulWidget {
     this.validator,
     this.prefixIcon,
     this.tooltip,
+    this.enableSearch = true,
   });
 
   @override
-  State<EnhancedDropdownField<T>> createState() =>
-      _EnhancedDropdownFieldState<T>();
-}
-
-class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
-  late FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppDesignSystem.spacing8),
-          child: Row(
-            children: [
-              Text(
-                widget.label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : const Color(0xFF111827),
-                ),
-              ),
-              if (widget.required)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: AppDesignSystem.spacing4,
-                  ),
-                  child: Text(
-                    '*',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: const Color(0xFFDC2626),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        _buildDropdownField(theme, isDark),
-      ],
+    // For searchability, we now use EnhancedSearchableDropdownField
+    // converting DropdownMenuItem to DropdownMenuEntry
+    return EnhancedSearchableDropdownField<T>(
+      label: label,
+      value: value,
+      entries: items.map((item) {
+        return DropdownMenuEntry<T>(
+          value: item.value as T,
+          label: _getLabel(item.child),
+          enabled: item.enabled,
+        );
+      }).toList(),
+      onSelected: onChanged,
+      hint: hint,
+      required: required,
+      prefixIcon: prefixIcon,
+      enableSearch: enableSearch,
+      tooltip: tooltip,
     );
   }
 
-  Widget _buildDropdownField(ThemeData theme, bool isDark) {
-    final dropdown = DropdownButtonFormField<T>(
-      initialValue: widget.value,
-      items: widget.items,
-      onChanged: widget.onChanged,
-      validator: widget.validator,
-      focusNode: _focusNode,
-      menuMaxHeight: 250,
-      decoration: InputDecoration(
-        hintText: widget.hint,
-        prefixIcon: widget.prefixIcon != null
-            ? Padding(
-                padding: const EdgeInsets.all(AppDesignSystem.spacing12),
-                child: widget.prefixIcon,
-              )
-            : null,
-        filled: true,
-        fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF3F4F6),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-          borderSide: BorderSide(
-            color: isDark
-                ? Colors.white.withOpacity(0.1)
-                : const Color(0xFFE5E7EB),
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
-          borderSide: BorderSide(
-            color: isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32),
-            width: 2.0,
-          ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppDesignSystem.spacing16,
-          vertical: AppDesignSystem.spacing14,
-        ),
-      ),
-    );
-
-    if (widget.tooltip != null) {
-      return Tooltip(
-        message: widget.tooltip!,
-        child: dropdown,
-      );
-    }
-    return dropdown;
+  String _getLabel(Widget child) {
+    if (child is Text) return child.data ?? '';
+    return child.toString();
   }
 }
 
@@ -364,6 +280,40 @@ class EnhancedSearchableDropdownField<T> extends StatefulWidget {
     this.controller,
     this.tooltip,
   });
+
+  /// Static helper to create from a list of strings
+  static Widget fromStrings({
+    Key? key,
+    required String label,
+    required List<String> items,
+    String? value,
+    void Function(String?)? onSelected,
+    String? hint,
+    bool required = false,
+    String? errorText,
+    Widget? prefixIcon,
+    bool enableSearch = true,
+    double? width,
+    String? tooltip,
+  }) {
+    return EnhancedSearchableDropdownField<String>(
+      key: key,
+      label: label,
+      value: value,
+      entries: items.map((item) => DropdownMenuEntry<String>(
+        value: item,
+        label: item,
+      )).toList(),
+      onSelected: onSelected,
+      hint: hint,
+      required: required,
+      errorText: errorText,
+      prefixIcon: prefixIcon,
+      enableSearch: enableSearch,
+      width: width,
+      tooltip: tooltip,
+    );
+  }
 
   @override
   State<EnhancedSearchableDropdownField<T>> createState() =>

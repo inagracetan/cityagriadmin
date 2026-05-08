@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -700,15 +700,46 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
     final firstLine = lines.first;
     final isAgriMooe = lines.any((l) => l.isAgriMooe);
 
-    final totalProposed = lines.fold(0.0, (sum, l) => sum + l.proposedBudget);
-    final totalLimit = lines.fold(0.0, (sum, l) => sum + l.budgetLimit);
-    final totalAppropriation = lines.fold(
-      0.0,
-      (sum, l) => sum + l.appropriation,
+    // Deduplicate logic: If a category has a "Main" entry (where subCategory == objectOfExpenditure)
+    // and it has an override amount, we use that. Otherwise we sum the sub-categories.
+    // However, the simplest way to "dont total the inputted" is to skip the Main entry 
+    // if other sub-categories exist, OR use the Main entry exclusively if it represents the override.
+    
+    // For this specific grouping (lines), we determine if there's a Main entry
+    final mainEntry = lines.firstWhere(
+      (l) => l.subCategory == l.objectOfExpenditure, 
+      orElse: () => lines.first // fallback, shouldn't happen with correct grouping
     );
-    final totalApproved = lines.fold(0.0, (sum, l) => sum + l.approvedAmount);
-    final totalPRs = lines.fold(0.0, (sum, l) => sum + l.totalActualPRs);
-    final totalBalance = lines.fold(0.0, (sum, l) => sum + l.currentBalance);
+    final hasMainOverride = mainEntry.subCategory == mainEntry.objectOfExpenditure && mainEntry.proposedBudget > 0;
+    final otherLines = lines.where((l) => l.subCategory != l.objectOfExpenditure).toList();
+
+    double totalProposed;
+    double totalLimit;
+    double totalAppropriation;
+    double totalApproved;
+    double totalPRs;
+    double totalBalance;
+
+    if (hasMainOverride) {
+      // If a "Main" override exists (Proposed > 0), it represents the total for the category.
+      totalProposed = mainEntry.proposedBudget;
+      totalLimit = mainEntry.budgetLimit;
+      totalAppropriation = mainEntry.appropriation;
+      totalApproved = mainEntry.approvedAmount;
+      totalPRs = mainEntry.totalActualPRs;
+      totalBalance = mainEntry.currentBalance;
+    } else {
+      // Otherwise, sum the sub-categories, but EXCLUDE the Main placeholder entry 
+      // if other sub-categories exist to avoid double counting.
+      final actualSubLines = otherLines.isNotEmpty ? otherLines : [mainEntry];
+      
+      totalProposed = actualSubLines.fold(0.0, (sum, l) => sum + l.proposedBudget);
+      totalLimit = actualSubLines.fold(0.0, (sum, l) => sum + l.budgetLimit);
+      totalAppropriation = actualSubLines.fold(0.0, (sum, l) => sum + l.appropriation);
+      totalApproved = actualSubLines.fold(0.0, (sum, l) => sum + l.approvedAmount);
+      totalPRs = actualSubLines.fold(0.0, (sum, l) => sum + l.totalActualPRs);
+      totalBalance = actualSubLines.fold(0.0, (sum, l) => sum + l.currentBalance);
+    }
 
     final isLow = totalBalance < (totalApproved * 0.1);
     final colorScheme = Theme.of(context).colorScheme;
@@ -728,111 +759,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          if (lines.length == 1) {
-            _showBudgetDialog(context, lines.first);
-          } else {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) {
-                final sortedLines = List<BudgetLine>.from(lines)
-                  ..sort((a, b) {
-                    final subList =
-                        AppConstants.budgetSubCategories[firstLine
-                            .objectOfExpenditure] ??
-                        [];
-                    final indexA = subList.indexOf(a.subCategory);
-                    final indexB = subList.indexOf(b.subCategory);
-                    if (indexA != -1 && indexB != -1) {
-                      return indexA.compareTo(indexB);
-                    }
-                    if (indexA != -1) return -1;
-                    if (indexB != -1) return 1;
-                    return a.subCategory.compareTo(b.subCategory);
-                  });
-
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-                        child: Text(
-                          'Select Sub-Category to Edit',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: sortedLines
-                                .map(
-                                  (l) => ListTile(
-                                    leading: CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: Colors.blueGrey.shade50,
-                                      child: Icon(
-                                        Icons.edit_note,
-                                        size: 20,
-                                        color: Colors.blueGrey.shade700,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      l.subCategory.isEmpty
-                                          ? l.objectOfExpenditure
-                                          : l.subCategory,
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      'Balance: ${formatCurrency.format(l.currentBalance)}',
-                                      style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 12,
-                                        color: Colors.blueGrey,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _showBudgetDialog(context, l);
-                                    },
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                );
-              },
-            );
-          }
-        },
+        onTap: () => _showBudgetDialog(context, groupLines: lines),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -1030,7 +957,10 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    l.subCategory,
+                                    _formatSubCategoryLabel(
+                                      firstLine.objectOfExpenditure,
+                                      l.subCategory,
+                                    ),
                                     style: GoogleFonts.inter(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -1153,28 +1083,207 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
   }
 
   void _showAddBudgetDialog(BuildContext context) {
-    _showBudgetDialog(context, null);
+    _showBudgetDialog(context);
   }
 
-  void _showBudgetDialog(BuildContext context, BudgetLine? line) {
-    final isEditing = line != null;
+  List<DropdownMenuEntry<String>> _buildObjectOfExpenditureEntries() {
+    const grouped = <MapEntry<String, List<String>>>[
+      MapEntry('A) TRAVELLING EXPENSES', ['Travelling Expenses']),
+      MapEntry('B) TRAINING EXPENSES', ['Training Expenses']),
+      MapEntry('C) SUPPLIES & MATERIALS', [
+        'Office Supplies Expenses',
+        'Agricultural Supplies Expenses',
+        'Laboratory Supplies Expenses',
+        'Fuel, Oil & Lubricants (Plus Backhoe use)',
+        'Other Supplies and Materials Expenses',
+      ]),
+      MapEntry('D) COMMUNICATION EXPENSES', ['Communication Expenses']),
+      MapEntry('E) REPAIRS AND MAINTENANCE', ['Repairs and Maintenance']),
+      MapEntry('F) OTHER MOOE', ['Other Maintenance and Operating Expenses']),
+      MapEntry('C. CAPITAL OUTLAY', ['Capital Outlay']),
+    ];
+
+    final entries = <DropdownMenuEntry<String>>[];
+    final used = <String>{};
+    int sectionIndex = 0;
+
+    for (final section in grouped) {
+      entries.add(
+        DropdownMenuEntry<String>(
+          value: '__header_$sectionIndex',
+          label: section.key,
+          enabled: false,
+        ),
+      );
+
+      for (int i = 0; i < section.value.length; i++) {
+        final item = section.value[i];
+        if (!AppConstants.objectsOfExpenditure.contains(item)) continue;
+        used.add(item);
+        entries.add(
+          DropdownMenuEntry<String>(
+            value: item,
+            label: '${i + 1}) $item',
+          ),
+        );
+      }
+
+      sectionIndex++;
+    }
+
+    final remaining = AppConstants.objectsOfExpenditure
+        .where((e) => !used.contains(e) && e != 'Other')
+        .toList()
+      ..sort();
+
+    if (remaining.isNotEmpty) {
+      entries.add(
+        const DropdownMenuEntry<String>(
+          value: '__header_other',
+          label: 'OTHER OBJECTS',
+          enabled: false,
+        ),
+      );
+      for (final item in remaining) {
+        entries.add(DropdownMenuEntry<String>(value: item, label: item));
+      }
+    }
+
+    if (AppConstants.objectsOfExpenditure.contains('Other')) {
+      entries.add(const DropdownMenuEntry<String>(value: 'Other', label: 'Other'));
+    }
+
+    return entries;
+  }
+
+  String _formatSubCategoryLabel(String objectOfExpenditure, String subCategory) {
+    final options = AppConstants.budgetSubCategories[objectOfExpenditure] ?? [];
+    if (options.isEmpty) return subCategory;
+
+    if (objectOfExpenditure == 'Other Maintenance and Operating Expenses') {
+      const topLevel = [
+        'Personnel Development',
+        'Agriculture & Fisheries Congress',
+        'Meetings',
+        'Project Development',
+        'Monitoring and Evaluation',
+        'CAFC Capability Building',
+      ];
+      const meetingChildren = [
+        'Rural Improvement Club Meetings',
+        '4-H Club Meetings',
+        'CAFC Meetings',
+        'Fisherfolks Meetings',
+        'Organic Farmers Meetings',
+        'Vegetable Farmers Meetings',
+        'Corn Farmers Meetings',
+        'Rice Farmers Meetings',
+        'Strengthening of Farmers Meetings',
+      ];
+
+      final topIndex = topLevel.indexOf(subCategory);
+      if (topIndex != -1) return '${topIndex + 1}. $subCategory';
+
+      final childIndex = meetingChildren.indexOf(subCategory);
+      if (childIndex != -1) return '   ${childIndex + 1}) $subCategory';
+    }
+
+    if (objectOfExpenditure == 'Capital Outlay') {
+      final idx = options.indexOf(subCategory);
+      if (idx != -1) return '${idx + 1}. $subCategory';
+    }
+
+    final idx = options.indexOf(subCategory);
+    if (idx != -1) return '${idx + 1}) $subCategory';
+    return subCategory;
+  }
+
+  List<DropdownMenuEntry<String>> _buildSubCategoryEntries(
+    String? objectOfExpenditure,
+    List<String> subOptions,
+  ) {
+    if (objectOfExpenditure == null) {
+      return const <DropdownMenuEntry<String>>[];
+    }
+
+// Ensure the dropdown always includes the MAIN option as well.
+    // Example: for objectOfExpenditure = "Training Expenses" and subOptions =
+    // ["Rice Program", ...], the final list becomes:
+    // ["Training Expenses", "Rice Program", ...]
+    final Set<String> unique = {objectOfExpenditure, ...subOptions};
+    final allOptions = unique.toList()
+      ..sort((a, b) {
+        // Keep MAIN at the top.
+        if (a == objectOfExpenditure) return -1;
+        if (b == objectOfExpenditure) return 1;
+        // Then follow the original subOptions ordering when possible.
+        final idxA = subOptions.indexOf(a);
+        final idxB = subOptions.indexOf(b);
+        if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
+        if (idxA != -1) return -1;
+        if (idxB != -1) return 1;
+        return a.compareTo(b);
+      });
+
+    return allOptions
+        .map(
+          (sub) => DropdownMenuEntry<String>(
+            value: sub,
+            label: sub == objectOfExpenditure
+                ? '(MAIN) $sub'
+                : _formatSubCategoryLabel(objectOfExpenditure, sub),
+          ),
+        )
+        .toList();
+  }
+
+  void _showBudgetDialog(
+    BuildContext context, {
+    BudgetLine? line,
+    List<BudgetLine>? groupLines,
+  }) {
+    final isEditing =
+        line != null || (groupLines != null && groupLines.isNotEmpty);
+    final firstLine = line ?? groupLines?.first;
+
     final fundSourceCtl = TextEditingController(
       text:
-          line?.fundSource ??
+          firstLine?.fundSource ??
           'General Fund ${SystemConfig.targetBudgetYearStr}',
     );
-    String? selectedOE = line?.objectOfExpenditure;
-    bool isAgriMooe = line?.isAgriMooe ?? false;
+    String? selectedOE = firstLine?.objectOfExpenditure;
+    bool isAgriMooe = firstLine?.isAgriMooe ?? false;
 
     final List<_BudgetSubRow> subRows = [];
     if (isEditing) {
-      subRows.add(
-        _BudgetSubRow(
-          id: line.id,
-          subCategory: line.subCategory,
-          accountCode: line.accountCode,
-          proposedBudget: line.proposedBudget,
-          annualBudget: line.approvedAmount,
+      final linesToMap =
+          List<BudgetLine>.from(groupLines ?? (line != null ? [line] : []));
+
+      if (selectedOE != null) {
+        final subList = AppConstants.budgetSubCategories[selectedOE] ?? [];
+        linesToMap.sort((a, b) {
+          if (a.subCategory == selectedOE) return -1;
+          if (b.subCategory == selectedOE) return 1;
+
+          final indexA = subList.indexOf(a.subCategory);
+          final indexB = subList.indexOf(b.subCategory);
+          if (indexA != -1 && indexB != -1) return indexA.compareTo(indexB);
+          if (indexA != -1) return -1;
+          if (indexB != -1) return 1;
+          return a.subCategory.compareTo(b.subCategory);
+        });
+      }
+
+      subRows.addAll(
+        linesToMap.map(
+          (l) => _BudgetSubRow(
+            id: l.id,
+            subCategory: l.subCategory,
+            accountCode: l.accountCode,
+            proposedBudget: l.proposedBudget,
+            annualBudget: l.approvedAmount,
+            originalLine: l,
+          ),
         ),
       );
     } else {
@@ -1387,6 +1496,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                       'Search or select expenditure category...',
                                   enableSearch: true,
                                   enableFilter: true,
+                                  menuHeight: 300,
                                   menuStyle: MenuStyle(
                                     backgroundColor: WidgetStateProperty.all(
                                       Colors.white,
@@ -1416,21 +1526,57 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                   ),
                                   dropdownMenuEntries: AppConstants
                                       .objectsOfExpenditure
-                                      .map(
-                                        (oe) => DropdownMenuEntry(
-                                          value: oe,
-                                          label: oe,
-                                        ),
-                                      )
-                                      .toList(),
+                                      .isNotEmpty
+                                      ? _buildObjectOfExpenditureEntries()
+                                      : const <DropdownMenuEntry<String>>[],
                                   onSelected: (val) {
                                     setState(() {
                                       selectedOE = val;
+                                      if (!isEditing) {
+                                        final autoSubOptions =
+                                            AppConstants.budgetSubCategories[val] ??
+                                            const <String>[];
+
+                                        // Auto-populate rows when an expense type is selected.
+                                        if (autoSubOptions.isNotEmpty) {
+                                          for (final existing in subRows) {
+                                            existing.dispose();
+                                          }
+                                          subRows.clear();
+
+                                          // Add the OE itself as the first row
+                                          subRows.add(
+                                            _BudgetSubRow(
+                                              id:
+                                                  'row_${DateTime.now().millisecondsSinceEpoch}_main',
+                                              subCategory: val ?? '',
+                                            ),
+                                          );
+
+                                          // Add the predefined sub-categories
+                                          subRows.addAll(
+                                            autoSubOptions.map(
+                                              (sub) => _BudgetSubRow(
+                                                id:
+                                                    'row_${DateTime.now().millisecondsSinceEpoch}_${sub.hashCode}',
+                                                subCategory: sub,
+                                              ),
+                                            ),
+                                          );
+                                        } else if (subRows.isEmpty) {
+                                          subRows.add(
+                                            _BudgetSubRow(
+                                              id:
+                                                  'row_${DateTime.now().millisecondsSinceEpoch}',
+                                            ),
+                                          );
+                                        }
+                                      }
                                     });
                                   },
                                 ),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
                           Divider(color: Colors.grey.shade200),
                           const SizedBox(height: 32),
                           Row(
@@ -1562,6 +1708,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                                       width:
                                                           constraints.maxWidth,
                                                       enableSearch: true,
+                                                      menuHeight: 250,
                                                       inputDecorationTheme:
                                                           const InputDecorationTheme(
                                                             border: InputBorder
@@ -1570,20 +1717,31 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                                                 EdgeInsets.zero,
                                                           ),
                                                       dropdownMenuEntries:
-                                                          subOptions
-                                                              .map(
-                                                                (s) =>
-                                                                    DropdownMenuEntry(
-                                                                      value: s,
-                                                                      label: s,
-                                                                    ),
-                                                              )
-                                                              .toList(),
-                                                      onSelected: (val) =>
-                                                          row
-                                                                  .subCategoryCtl
+                                                          _buildSubCategoryEntries(
+                                                            selectedOE,
+                                                            subOptions,
+                                                          ),
+onSelected: (val) {
+                                                          final selected =
+                                                              val ?? '';
+                                                          row.subCategoryCtl
                                                                   .text =
-                                                              val ?? '',
+                                                              selected;
+
+                                                          // Auto-set account code based on selected main/sub.
+                                                          if (selectedOE != null &&
+                                                              selected.isNotEmpty) {
+                                                            row.accountCodeCtl
+                                                                    .text =
+                                                                _BudgetSubRow
+                                                                    ._autoAccountCodeForSelection(
+                                                                  selectedObjectOfExpenditure:
+                                                                      selectedOE!,
+                                                                  selectedSubCategory:
+                                                                      selected,
+                                                                );
+                                                          }
+                                                        },
                                                     ),
                                               ),
                                       ),
@@ -1602,6 +1760,30 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                         child: _tableAmountField(
                                           row.proposedCtl,
                                           '0.00',
+                                          onChanged: (val) {
+                                            // Keep Proposed and Annual independent.
+                                            // (Previously Proposed auto-synced Annual when equal/Annual was empty.)
+                                            // If you want Annual to change, edit the Annual field directly.
+
+                                            // If this is a sub-category, update the Main category total
+                                            final mainRow = subRows.firstWhere(
+                                              (r) => r.subCategoryCtl.text == selectedOE,
+                                              orElse: () => subRows.first,
+                                            );
+                                            
+                                            if (row != mainRow) {
+                                              double totalProposed = 0;
+                                              double totalAnnual = 0;
+                                              for (var r in subRows) {
+                                                if (r != mainRow) {
+                                                  totalProposed += CurrencyInputFormatter.parse(r.proposedCtl.text);
+                                                  totalAnnual += CurrencyInputFormatter.parse(r.annualCtl.text);
+                                                }
+                                              }
+                                              mainRow.proposedCtl.text = CurrencyInputFormatter.formatDouble(totalProposed);
+                                              mainRow.annualCtl.text = CurrencyInputFormatter.formatDouble(totalAnnual);
+                                            }
+                                          },
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -1610,13 +1792,52 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                         child: _tableAmountField(
                                           row.annualCtl,
                                           '0.00',
+                                          onChanged: (val) {
+                                            // If this is a sub-category, update the Main category total
+                                            final mainRow = subRows.firstWhere(
+                                              (r) => r.subCategoryCtl.text == selectedOE,
+                                              orElse: () => subRows.first,
+                                            );
+                                            
+                                            if (row != mainRow) {
+                                              double totalAnnual = 0;
+                                              for (var r in subRows) {
+                                                if (r != mainRow) {
+                                                  totalAnnual += CurrencyInputFormatter.parse(r.annualCtl.text);
+                                                }
+                                              }
+                                              mainRow.annualCtl.text = CurrencyInputFormatter.formatDouble(totalAnnual);
+                                            }
+                                          },
                                         ),
                                       ),
                                       if (!isEditing)
                                         IconButton(
                                           onPressed: subRows.length > 1
                                               ? () => setState(
-                                                  () => subRows.removeAt(index),
+                                                  () {
+                                                    final removedRow = subRows.removeAt(index);
+                                                    
+                                                    // Recalculate main total after removal
+                                                    final mainRow = subRows.firstWhere(
+                                                      (r) => r.subCategoryCtl.text == selectedOE,
+                                                      orElse: () => subRows.first,
+                                                    );
+                                                    
+                                                    if (removedRow != mainRow) {
+                                                      double totalProposed = 0;
+                                                      double totalAnnual = 0;
+                                                      for (var r in subRows) {
+                                                        if (r != mainRow) {
+                                                          totalProposed += CurrencyInputFormatter.parse(r.proposedCtl.text);
+                                                          totalAnnual += CurrencyInputFormatter.parse(r.annualCtl.text);
+                                                        }
+                                                      }
+                                                      mainRow.proposedCtl.text = CurrencyInputFormatter.formatDouble(totalProposed);
+                                                      mainRow.annualCtl.text = CurrencyInputFormatter.formatDouble(totalAnnual);
+                                                    }
+                                                    removedRow.dispose();
+                                                  },
                                                 )
                                               : null,
                                           icon: const Icon(
@@ -1700,8 +1921,22 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                   row.annualCtl.text,
                                 );
 
+                                // Hard stop: Proposed (Office) must not equal Annual (Approved) on the same budget line.
+                                // Use a small tolerance to avoid float/formatting edge cases.
+                                const double eps = 0.01;
+                                if ((proposedVal - annualVal).abs() < eps) {
+                                  final lineLabel =
+                                      row.subCategoryCtl.text.isNotEmpty
+                                          ? row.subCategoryCtl.text
+                                          : selectedOE ?? 'Budget Line';
+                                  throw Exception(
+                                    'Invalid budget line: Proposed and Annual amounts must not be equal. '
+                                    'Line: $lineLabel, Proposed: $proposedVal, Annual: $annualVal',
+                                  );
+                                }
+
                                 final budgetLine = BudgetLine(
-                                  id: isEditing
+                                  id: isEditing && row.originalLine != null
                                       ? row.id
                                       : fsService.db
                                             .collection(
@@ -1715,10 +1950,14 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
                                   subCategory: row.subCategoryCtl.text,
                                   proposedBudget: proposedVal,
                                   approvedAmount: annualVal,
-                                  currentBalance: isEditing
-                                      ? (line.currentBalance +
-                                            (annualVal - line.approvedAmount))
-                                      : annualVal,
+                                  appropriation: annualVal, // Sync approved to appropriation for balance tracking
+                                  currentBalance:
+                                      (isEditing && row.originalLine != null)
+                                          ? (row.originalLine!.currentBalance +
+                                                (annualVal -
+                                                    row.originalLine!
+                                                        .approvedAmount))
+                                          : annualVal,
                                   isAgriMooe: isAgriMooe,
                                   isCMO:
                                       selectedOE!.contains('CMO') ||
@@ -1827,12 +2066,19 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
           ),
   );
 
-  Widget _tableAmountField(TextEditingController controller, String hint) =>
+  Widget _tableAmountField(
+    TextEditingController controller,
+    String hint, {
+    bool readOnly = false,
+    ValueChanged<String>? onChanged,
+  }) =>
       TextField(
         controller: controller,
         textAlign: TextAlign.right,
         inputFormatters: [CurrencyInputFormatter()],
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        readOnly: readOnly,
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
@@ -2118,10 +2364,48 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen>
 
 class _BudgetSubRow {
   final String id;
+  final BudgetLine? originalLine;
   final TextEditingController subCategoryCtl = TextEditingController();
   final TextEditingController accountCodeCtl = TextEditingController();
   final TextEditingController proposedCtl = TextEditingController();
   final TextEditingController annualCtl = TextEditingController();
+
+  // Simple COA mapping for auto-populating account codes based on
+  // the selected main/sub item (objectOfExpenditure/subCategory).
+  static const Map<String, String> _coaByObjectOfExpenditure = {
+    'Travelling Expenses': '5-02-01-010',
+    'Training Expenses': '5-02-02-010',
+    'Office Supplies Expenses': '5-02-03-010',
+    'Agricultural Supplies Expenses': '5-02-03-100',
+    'Laboratory Supplies Expenses': '5-02-99-990',
+    'Fuel, Oil & Lubricants (Plus Backhoe use)': '5-02-03-090',
+    'Other Supplies and Materials Expenses': '5-02-03-990',
+    'Communication Expenses': '5-02-05-020',
+    'Repairs and Maintenance - Building and Other Structures': '5-02-13-030',
+    'Repairs and Maintenance - Machinery and Equipment': '5-02-13-050',
+    'Repairs and Maintenance - Transportation Equipment': '5-02-13-060',
+    'Other Maintenance and Operating Expenses': '5-02-99-991',
+  };
+
+  static String _autoAccountCodeForSelection({
+    required String selectedObjectOfExpenditure,
+    required String selectedSubCategory,
+  }) {
+    // For MAIN row, selectedSubCategory == selectedObjectOfExpenditure.
+    final main = selectedObjectOfExpenditure;
+    final sub = selectedSubCategory;
+
+    // Prefer exact sub-category mapping first.
+    if (_coaByObjectOfExpenditure.containsKey(sub)) {
+      return _coaByObjectOfExpenditure[sub]!;
+    }
+    // Fallback to main mapping.
+    if (_coaByObjectOfExpenditure.containsKey(main)) {
+      return _coaByObjectOfExpenditure[main]!;
+    }
+
+    return '';
+  }
 
   _BudgetSubRow({
     String? id,
@@ -2129,11 +2413,12 @@ class _BudgetSubRow {
     String accountCode = '',
     double proposedBudget = 0,
     double annualBudget = 0,
+    this.originalLine,
   }) : id = id ?? 'row_${DateTime.now().microsecondsSinceEpoch}' {
     subCategoryCtl.text = subCategory;
     accountCodeCtl.text = accountCode;
-    proposedCtl.text = proposedBudget.toString();
-    annualCtl.text = annualBudget.toString();
+    proposedCtl.text = CurrencyInputFormatter.formatDouble(proposedBudget);
+    annualCtl.text = CurrencyInputFormatter.formatDouble(annualBudget);
   }
 
   void dispose() {

@@ -221,43 +221,46 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> with AutomaticKeepAli
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+    return DropdownMenu<String>(
+      initialSelection: value,
+      enableSearch: true,
+      enableFilter: true,
+      requestFocusOnTap: true,
+      menuHeight: 300,
+      width: 200,
+      textStyle: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF1E293B),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          DropdownButton<String>(
-            value: value,
-            underline: const SizedBox(),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1E293B),
-            ),
-            items: items.map((String item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(item.length > 20 ? '${item.substring(0, 17)}...' : item),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
-        ],
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade600,
+        ),
       ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF1F5F9),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+      ),
+      dropdownMenuEntries: items.map((String item) {
+        return DropdownMenuEntry<String>(
+          value: item,
+          label: item,
+        );
+      }).toList(),
+      onSelected: onChanged,
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/activity.dart';
 import '../models/pr_log.dart';
+import '../models/budget_line.dart';
 import '../core/currency_formatter.dart';
 import '../core/activity_templates.dart';
 import 'firebase_service.dart';
@@ -118,6 +119,8 @@ class ActivityFormProvider extends ChangeNotifier {
 
   List<String> availableStaff = AppConstants.staffList;
   List<String> availableSuppliers = [];
+  BudgetLine? selectedBudgetLine;
+  List<double> monthlyDistribution = List.filled(12, 0.0);
 
 
   void setSector(String v) {
@@ -156,6 +159,24 @@ class ActivityFormProvider extends ChangeNotifier {
   void setResponsiblePerson(String v) {
     responsiblePerson = v;
     if (responsiblePerson != 'Other') customResponsiblePersonCtl.clear();
+    notifyListeners();
+  }
+
+  void setSelectedBudgetLine(BudgetLine? bl) {
+    selectedBudgetLine = bl;
+    if (bl != null) {
+      accountCodeCtl.text = bl.accountCode;
+      appropCtl.text = CurrencyInputFormatter.formatDouble(bl.appropriation);
+      // Auto-set fund source if possible
+      if (bl.fundSource.isNotEmpty) {
+        // If it's a known fund source, set it in the first entry
+        if (fundSourceEntries.isNotEmpty) {
+          fundSourceEntries.first.fundingSource = bl.fundSource;
+          fundSourceEntries.first.objectOfExpenditure = bl.objectOfExpenditure;
+        }
+      }
+      updateAllFinancials();
+    }
     notifyListeners();
   }
 
@@ -466,20 +487,20 @@ class ActivityFormProvider extends ChangeNotifier {
       prBalanceCtl.text = prBalanceStr;
     }
 
-    // ── Hard Stop Logic ──────────────────────────────────────────────
-    // If Requested PR > Remaining PR Balance, Then set Status = "No Budget"
-    // Note: remainingPRBalance here is prBalance before adding the latest PR, 
-    // but totalPRs already includes all logs. 
-    // So if prBalance < 0, it means we've exceeded the allocation.
-    if (prBalance < -0.01) { // small epsilon for double precision
-      if (selectedStatus != 'No Budget') {
-        selectedStatus = 'No Budget';
+    // 7. Calculate Monthly WFP Distribution
+    final months = AppConstants.months;
+    final startIdx = months.indexOf(selectedMonth);
+    final endIdx = selectedToMonth != null ? months.indexOf(selectedToMonth!) : startIdx;
+    
+    final newDistribution = List<double>.filled(12, 0.0);
+    if (startIdx != -1 && endIdx >= startIdx) {
+      final selectedCount = (endIdx - startIdx + 1);
+      final amountPerMonth = budgetAllocation / selectedCount;
+      for (int i = startIdx; i <= endIdx; i++) {
+        newDistribution[i] = amountPerMonth;
       }
-    } else if (selectedStatus == 'No Budget') {
-      // Revert to a default status if balance is restored, or leave it to user?
-      // Typically, we revert to 'PR Preparation' or 'Planned'
-      selectedStatus = AppConstants.statusPRPreparation;
     }
+    monthlyDistribution = newDistribution;
 
     notifyListeners();
   }
@@ -583,10 +604,34 @@ class ActivityFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void loadTemplate(ActivityTemplate template) {
+  void loadTemplate(ActivityTemplate template, {List<BudgetLine>? budgetLines}) {
     activityNameCtl.text = template.name;
     sector = template.sector;
     subSector = template.subSector;
+
+    // Try to find a matching budget line
+    if (budgetLines != null && budgetLines.isNotEmpty) {
+      final match = budgetLines.where((bl) {
+        final sameSector = bl.sector == template.sector;
+        final sameSub = bl.subCategory == template.subSector;
+        final sameOE = template.objectOfExpenditure != null && 
+                       bl.objectOfExpenditure == template.objectOfExpenditure;
+        return sameSector && (template.subSector == null || sameSub) && sameOE;
+      }).toList();
+
+      if (match.isNotEmpty) {
+        setSelectedBudgetLine(match.first);
+      } else {
+        // Fallback search: just sector and OE
+        final fallbackMatch = budgetLines.where((bl) {
+          return bl.sector == template.sector && 
+                 bl.objectOfExpenditure == (template.objectOfExpenditure ?? 'Other-MOE Expenses');
+        }).toList();
+        if (fallbackMatch.isNotEmpty) {
+          setSelectedBudgetLine(fallbackMatch.first);
+        }
+      }
+    }
 
     // Reset fund sources and add a default one for the template items
     for (var fs in fundSourceEntries) {
@@ -596,7 +641,7 @@ class ActivityFormProvider extends ChangeNotifier {
 
     final fs = FundSourceEntry();
     fs.fundingSource = 'Agri MOOE';
-    fs.objectOfExpenditure = 'Trainings and Seminar Expenses';
+    fs.objectOfExpenditure = template.objectOfExpenditure ?? 'Other-MOE Expenses';
     fs.amountCtl.addListener(updateAllFinancials);
 
     for (var item in template.items) {
@@ -608,6 +653,7 @@ class ActivityFormProvider extends ChangeNotifier {
         q3Qty: item.q3,
         q4Qty: item.q4,
         price: item.price,
+        accountCode: accountCodeCtl.text.isNotEmpty ? accountCodeCtl.text : null,
       );
 
       final totalQty = item.q1 + item.q2 + item.q3 + item.q4;
@@ -746,6 +792,7 @@ class ActivityFormProvider extends ChangeNotifier {
     statusAppropCtl.text = activity.statusApprop;
     statusAppropDateCtl.text = activity.statusAppropDate ?? '';
     accountCodeCtl.text = activity.accountCode ?? '';
+    monthlyDistribution = activity.monthlyDistribution ?? List.filled(12, 0.0);
 
     // Populate fund sources and breakdowns
     for (var fs in fundSourceEntries) {
@@ -943,6 +990,7 @@ class ActivityFormProvider extends ChangeNotifier {
       accountCode: accountCodeCtl.text,
       prLogs: prLogs,
       inputtedAmount: CurrencyInputFormatter.parse(inputtedAmountCtl.text),
+      monthlyDistribution: monthlyDistribution,
     );
   }
 

@@ -5,6 +5,7 @@ import '../../widgets/agri_ui.dart';
 import '../../core/app_colors.dart';
 import '../../core/constants.dart';
 import '../../widgets/skeleton_loading.dart';
+import '../../widgets/enhanced_form_fields.dart';
 
 class RegisterScreen extends StatefulWidget {
   final VoidCallback onLoginTap;
@@ -176,18 +177,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedRole,
-                        decoration: InputDecoration(
-                          labelText: 'Account Type',
-                          prefixIcon: const Icon(Icons.badge_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'staff', child: Text('Office Staff')),
-                          DropdownMenuItem(value: 'admin', child: Text('System Administrator')),
+                      EnhancedSearchableDropdownField<String>(
+                        label: 'Account Type',
+                        value: _selectedRole,
+                        entries: const [
+                          DropdownMenuEntry(value: 'staff', label: 'Office Staff'),
+                          DropdownMenuEntry(value: 'admin', label: 'System Administrator'),
                         ],
-                        onChanged: (val) => setState(() => _selectedRole = val!),
+                        onSelected: (val) => setState(() => _selectedRole = val!),
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        width: double.infinity,
                       ),
                       
                       if (_selectedRole == 'admin') ...[

@@ -421,10 +421,10 @@ class ImportService {
       return 'Integrated Agricultural Laboratory Appropriation';
     }
     if (v.contains('travelling')) return 'Travelling Expenses';
-    if (v.contains('training')) return 'Trainings and Seminar Expenses';
-    if (v.contains('meetings')) return 'Meetings Expenses';
+    if (v.contains('repair')) return 'Repairs and Maintenance';
+    if (v.contains('meetings')) return 'Other Maintenance and Operating Expenses';
     if (v.contains('office supplies')) return 'Office Supplies Expenses';
-    if (v.contains('fuel') || v.contains('oil')) return 'Fuel/Oil Expenses';
+    if (v.contains('fuel') || v.contains('oil')) return 'Fuel, Oil & Lubricants (Plus Backhoe use)';
     if (v.contains('communication')) return 'Communication Expenses';
     if (v.contains('repair') || v.contains('maintenance')) {
       return 'Repair/Maintenance Expenses';

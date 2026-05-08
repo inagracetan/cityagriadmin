@@ -19,6 +19,7 @@ class BudgetLine {
   final double q4Ppmp;
   final bool isCMO; // Whether this is the CMO Budget
   final bool isAgriMooe; // Whether this is under Agri MOOE
+  final String sector; // Sector classification
   final String subCategory; // Sub-classification for hierarchical tracking
 
   double get totalActualPRs => prAmount; // Convenience getter for UI labels
@@ -60,6 +61,7 @@ class BudgetLine {
     this.q4Ppmp = 0.0,
     this.isCMO = false,
     this.isAgriMooe = false,
+    this.sector = '',
   });
 
   Map<String, dynamic> toFirestore() {
@@ -82,6 +84,7 @@ class BudgetLine {
       'q4_ppmp': q4Ppmp,
       'is_cmo': isCMO,
       'is_agri_mooe': isAgriMooe,
+      'sector': sector,
       'sub_category': subCategory,
     };
   }
@@ -112,6 +115,7 @@ class BudgetLine {
       q4Ppmp: (data['q4_ppmp'] ?? 0).toDouble(),
       isCMO: data['is_cmo'] ?? false,
       isAgriMooe: data['is_agri_mooe'] ?? false,
+      sector: safeString(data['sector']),
       subCategory: safeString(data['sub_category']),
     );
   }
@@ -136,6 +140,7 @@ class BudgetLine {
     double? q4Ppmp,
     bool? isCMO,
     bool? isAgriMooe,
+    String? sector,
     String? subCategory,
   }) {
     return BudgetLine(
@@ -158,6 +163,7 @@ class BudgetLine {
       q4Ppmp: q4Ppmp ?? this.q4Ppmp,
       isCMO: isCMO ?? this.isCMO,
       isAgriMooe: isAgriMooe ?? this.isAgriMooe,
+      sector: sector ?? this.sector,
       subCategory: subCategory ?? this.subCategory,
     );
   }

@@ -43,13 +43,17 @@ class BudgetValidationService {
   static double getAccountCodePPMPTotal(String accountCode, List<Activity> allActivities) {
     double total = 0;
     for (var activity in allActivities) {
-      if (activity.accountCode == accountCode) {
-        total += activity.ppmpAmount;
-      }
-      // Also check breakdown items if they have their own account codes
-      for (var item in activity.breakdown) {
-        if (item.accountCode == accountCode) {
-          total += item.amount;
+      // If activity has a breakdown, only sum the matching breakdown items
+      if (activity.breakdown.isNotEmpty) {
+        for (var item in activity.breakdown) {
+          if (item.accountCode == accountCode) {
+            total += item.amount;
+          }
+        }
+      } else {
+        // If no breakdown, use the top-level account code
+        if (activity.accountCode == accountCode) {
+          total += activity.ppmpAmount;
         }
       }
     }
@@ -65,7 +69,7 @@ class BudgetValidationService {
     
     if (budgetLine.id.isEmpty) return false; // Or should we flag it?
     
-    return ppmpTotal > budgetLine.proposedExpenditure;
+    return ppmpTotal > budgetLine.appropriation;
   }
 
   /// Summary of status/alerts for an activity
@@ -103,10 +107,34 @@ class BudgetValidationService {
     double totalObligated = 0;
     double totalDisbursed = 0;
     
+    // Group by Object of Expenditure to handle Main vs Sub deduplication
+    final Map<String, List<BudgetLine>> grouped = {};
     for (var bl in allBudgetLines) {
-      totalAppropriation += bl.appropriation;
-      totalObligated += bl.prAmount;
-      totalDisbursed += bl.poAmount;
+      grouped.putIfAbsent(bl.objectOfExpenditure, () => []).add(bl);
+    }
+
+    for (var categoryLines in grouped.values) {
+      final mainEntry = categoryLines.firstWhere(
+        (l) => l.subCategory == l.objectOfExpenditure,
+        orElse: () => categoryLines.first,
+      );
+      final hasMainOverride = mainEntry.subCategory == mainEntry.objectOfExpenditure && mainEntry.proposedBudget > 0;
+      final otherLines = categoryLines.where((l) => l.subCategory != l.objectOfExpenditure).toList();
+
+      if (hasMainOverride) {
+        // Use the Main entry as the "inputted as is" total for the category
+        totalAppropriation += mainEntry.appropriation;
+        totalObligated += mainEntry.prAmount;
+        totalDisbursed += mainEntry.poAmount;
+      } else {
+        // Otherwise, sum the sub-categories, excluding the Main placeholder if others exist
+        final actualSubLines = otherLines.isNotEmpty ? otherLines : [mainEntry];
+        for (var bl in actualSubLines) {
+          totalAppropriation += bl.appropriation;
+          totalObligated += bl.prAmount;
+          totalDisbursed += bl.poAmount;
+        }
+      }
     }
     
     double utilizationRate = totalAppropriation > 0 ? (totalObligated / totalAppropriation) * 100 : 0;

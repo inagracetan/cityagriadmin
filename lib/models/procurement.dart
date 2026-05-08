@@ -3,9 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Procurement {
   final String id;
   final String programId;
+  final String? activityId;
   final String prNumber;
   final double prAmount;
-  final double prBalance; // Calculated: PPMP Amount - PR Amount
+  final double prBalance;
   final String poNumber;
   final double poAmount;
   final String? poDate;
@@ -18,10 +19,12 @@ class Procurement {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String createdBy;
+  final String? remarks;
 
   Procurement({
     required this.id,
     required this.programId,
+    this.activityId,
     required this.prNumber,
     required this.prAmount,
     required this.prBalance,
@@ -37,11 +40,13 @@ class Procurement {
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
+    this.remarks,
   });
 
   Map<String, dynamic> toFirestore() {
     return {
       'program_id': programId,
+      'activity_id': activityId,
       'pr_number': prNumber,
       'pr_amount': prAmount,
       'pr_balance': prBalance,
@@ -57,6 +62,7 @@ class Procurement {
       'created_at': Timestamp.fromDate(createdAt),
       'updated_at': Timestamp.fromDate(updatedAt),
       'created_by': createdBy,
+      'remarks': remarks,
     };
   }
 
@@ -64,6 +70,7 @@ class Procurement {
     return Procurement(
       id: id,
       programId: data['program_id'] ?? '',
+      activityId: data['activity_id'],
       prNumber: data['pr_number'] ?? '',
       prAmount: (data['pr_amount'] ?? 0).toDouble(),
       prBalance: (data['pr_balance'] ?? 0).toDouble(),
@@ -79,17 +86,51 @@ class Procurement {
       createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: data['created_by'] ?? '',
+      remarks: data['remarks'],
     );
   }
 
-  // Validation helper
-  static String? validatePO(double amount, String? number, String? date, String? status) {
-    if (amount > 0) {
-      if (number == null || number.isEmpty) return 'PO Number is required for amount > 0';
-      if (date == null || date.isEmpty) return 'PO Date is required for amount > 0';
-      if (status == null || status.isEmpty) return 'Status is required for amount > 0';
-    }
-    return null;
+  Procurement copyWith({
+    String? id,
+    String? programId,
+    String? activityId,
+    String? prNumber,
+    double? prAmount,
+    double? prBalance,
+    String? poNumber,
+    double? poAmount,
+    String? poDate,
+    String? supplier,
+    String? status,
+    String? statusDate,
+    double? ppmpAmount,
+    String? objectOfExpenditure,
+    String? fundSource,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? createdBy,
+    String? remarks,
+  }) {
+    return Procurement(
+      id: id ?? this.id,
+      programId: programId ?? this.programId,
+      activityId: activityId ?? this.activityId,
+      prNumber: prNumber ?? this.prNumber,
+      prAmount: prAmount ?? this.prAmount,
+      prBalance: prBalance ?? this.prBalance,
+      poNumber: poNumber ?? this.poNumber,
+      poAmount: poAmount ?? this.poAmount,
+      poDate: poDate ?? this.poDate,
+      supplier: supplier ?? this.supplier,
+      status: status ?? this.status,
+      statusDate: statusDate ?? this.statusDate,
+      ppmpAmount: ppmpAmount ?? this.ppmpAmount,
+      objectOfExpenditure: objectOfExpenditure ?? this.objectOfExpenditure,
+      fundSource: fundSource ?? this.fundSource,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdBy: createdBy ?? this.createdBy,
+      remarks: remarks ?? this.remarks,
+    );
   }
 }
-

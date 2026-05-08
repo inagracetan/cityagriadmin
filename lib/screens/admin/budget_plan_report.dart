@@ -42,32 +42,32 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
 
     final trainingAll = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
+      oe: 'Training Expenses',
     );
     final trainRice = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
-      sub: 'Rice',
+      oe: 'Training Expenses',
+      sub: 'Rice Program',
     );
     final trainCorn = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
-      sub: 'Corn',
+      oe: 'Training Expenses',
+      sub: 'Corn Program',
     );
     final trainHVCD = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
-      sub: 'HVCDP',
+      oe: 'Training Expenses',
+      sub: 'HVCD Program',
     );
     final trainOrganic = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
+      oe: 'Training Expenses',
       sub: 'Organic Program',
     );
     final trainFish = _filter(
       widget.activities,
-      oe: 'Trainings and Seminar Expenses',
-      sec: 'Inland Fisheries Section',
+      oe: 'Training Expenses',
+      sub: 'Inland Fisheries Program',
     );
 
     final officeSupp = _filter(
@@ -82,7 +82,7 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
       widget.activities,
       oe: 'Laboratory Supplies Expenses',
     );
-    final fuel = _filter(widget.activities, oe: 'Fuel/Oil Expenses');
+    final fuel = _filter(widget.activities, oe: 'Fuel, Oil & Lubricants (Plus Backhoe use)');
     final otherSupp = _filter(
       widget.activities,
       oe: 'Other Supplies and Materials Expenses',
@@ -98,18 +98,308 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
     final commsAll = _filter(widget.activities, oe: 'Communication Expenses');
     final repairsAll = _filter(
       widget.activities,
-      oe: 'Repair/Maintenance Expenses',
+      oe: 'Repairs and Maintenance',
     );
 
     final personnel = _filter(
       widget.activities,
-      oe: 'Personnel Development Expenses',
+      oe: 'Other Maintenance and Operating Expenses',
+      sub: 'Personnel Development',
     );
-    final meetingsAll = _filter(widget.activities, oe: 'Meetings Expenses');
-    final otherMoeAll = _filter(widget.activities, oe: 'Other-MOE Expenses');
+    final meetingsAll = _filter(
+      widget.activities,
+      oe: 'Other Maintenance and Operating Expenses',
+      sub: 'Meetings',
+    );
+    final otherMoeAll = _filter(
+      widget.activities,
+      oe: 'Other Maintenance and Operating Expenses',
+    );
     final moeSectionAll = [...personnel, ...meetingsAll, ...otherMoeAll];
 
     final capOutlay = _filter(widget.activities, fs: 'Capital Outlay');
+
+    final rows = [
+      // a) Travelling Expenses
+      _RowDef(
+        '5-02-01-010',
+        'a) Travelling Expenses',
+        travExpenses,
+        isHeader: true,
+      ),
+
+      // b) Training Expenses
+      _RowDef(
+        '5-02-02-010',
+        'b) Training Expenses',
+        trainingAll,
+        isHeader: true,
+      ),
+      _RowDef('', '    1) Rice Program', trainRice, isDetail: true),
+      _RowDef('', '    2) Corn Program', trainCorn, isDetail: true),
+      _RowDef('', '    3) HVCD Program', trainHVCD, isDetail: true),
+      _RowDef(
+        '',
+        '    4) Organic Program',
+        trainOrganic,
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    5) Inland Fisheries Program',
+        trainFish,
+        isDetail: true,
+      ),
+
+      // c) Supplies & Materials
+      _RowDef(
+        '5-02-03',
+        'c) Supplies & Materials',
+        suppAll,
+        isHeader: true,
+      ),
+
+      _RowDef(
+        '5-02-03-010',
+        '    1) Office Supplies Expenses',
+        officeSupp,
+      ),
+
+      _RowDef(
+        '5-02-03-100',
+        '    2) Agricultural Supplies Expenses',
+        agriSupp,
+      ),
+      _RowDef(
+        '',
+        '         1) City Nursery Supplies',
+        _filter(agriSupp, namePattern: 'Nursery'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         2) Organic Fertilizer',
+        _filter(agriSupp, namePattern: 'Fertilizer'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         3) Rodenticide',
+        _filter(agriSupp, namePattern: 'Rodenticide'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         4) Insecticide',
+        _filter(agriSupp, namePattern: 'Insecticide'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         5) Fungicide',
+        _filter(agriSupp, namePattern: 'Fungicide'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         6) High Valued Commercial Crop Techno Demo Supplies',
+        _filter(agriSupp, namePattern: 'Techno Demo'),
+        isDetail: true,
+      ),
+
+      _RowDef(
+        '5-02-99-990',
+        '    3) Laboratory Supplies Expenses',
+        labSupp,
+      ),
+      _RowDef(
+        '',
+        '         1) City Soils Testing Laboratory',
+        _filter(labSupp, namePattern: 'Soils'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         2) Plant Tissue Culture Laboratory',
+        _filter(labSupp, namePattern: 'Tissue Culture'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         3) Bio-Con Laboratory',
+        _filter(labSupp, namePattern: 'Bio-Con'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         4) NFTS Concoction Production Project',
+        _filter(labSupp, namePattern: 'NFTS'),
+        isDetail: true,
+      ),
+
+      _RowDef(
+        '5-02-03-090',
+        '    4) Fuel, Oil & Lubricants (Plus Backhoe use)',
+        fuel,
+      ),
+
+      _RowDef(
+        '',
+        '    5) Other Supplies and Materials Expenses',
+        otherSupp,
+      ),
+      _RowDef(
+        '',
+        '         1) 20 Pcs Folding Tables',
+        _filter(otherSupp, namePattern: 'Folding Tables'),
+        isDetail: true,
+      ),
+
+      // d) Communication Expenses
+      _RowDef(
+        '5-02-05-020',
+        'd) Communication Expenses',
+        commsAll,
+        isHeader: true,
+      ),
+      _RowDef(
+        '',
+        '    1) Postage & Courier Services',
+        _filter(commsAll, namePattern: 'Postage'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    2) Telephone Expenses',
+        _filter(commsAll, namePattern: 'Telephone'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    3) Internet Subscription Expenses',
+        _filter(commsAll, namePattern: 'Internet'),
+        isDetail: true,
+      ),
+
+      // e) Repairs and Maintenance
+      _RowDef(
+        '5-02-13',
+        'e) Repairs and Maintenance',
+        repairsAll,
+        isHeader: true,
+      ),
+      _RowDef(
+        '5-02-13-030',
+        '    1) Repairs and Maintenance - Building and Other Structures',
+        _filter(repairsAll, namePattern: 'Building'),
+      ),
+      _RowDef(
+        '5-02-13-050',
+        '    2) Repairs and Maintenance - Machinery and Equipment',
+        _filter(repairsAll, namePattern: 'Machinery'),
+      ),
+      _RowDef(
+        '5-02-13-060',
+        '    3) Repairs and Maintenance - Transportation Equipment',
+        _filter(repairsAll, namePattern: 'Transportation'),
+      ),
+
+      // f) Other Maintenance and Operating Expenses
+      _RowDef(
+        '5-02-99-990',
+        'f) Other Maintenance and Operating Expenses',
+        moeSectionAll,
+        isHeader: true,
+      ),
+      _RowDef(
+        '',
+        '    1. Personnel Development',
+        personnel,
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    2. Agriculture & Fisheries Congress',
+        _filter(otherMoeAll, namePattern: 'Congress'),
+        isDetail: true,
+      ),
+      _RowDef('', '    3. Meetings', meetingsAll, isDetail: true),
+      _RowDef(
+        '',
+        '         Rural Improvement Club Meetings',
+        _filter(meetingsAll, namePattern: 'Rural Improvement'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         4-H Club Meetings',
+        _filter(meetingsAll, namePattern: '4-H'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         CAFC Meetings',
+        _filter(meetingsAll, namePattern: 'CAFC'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Fisherfolks Meetings',
+        _filter(meetingsAll, namePattern: 'Fisherfolk'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Organic Farmers Meetings',
+        _filter(meetingsAll, namePattern: 'Organic Farmer'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Vegetable Farmers Meetings',
+        _filter(meetingsAll, namePattern: 'Vegetable'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Corn Farmers Meetings',
+        _filter(meetingsAll, namePattern: 'Corn Farmer'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Rice Farmers Meetings',
+        _filter(meetingsAll, namePattern: 'Rice Farmer'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '         Strengthening of Farmers Meetings',
+        _filter(meetingsAll, namePattern: 'Strengthening'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    4. Project Development',
+        _filter(otherMoeAll, namePattern: 'Project Development'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    5. Monitoring and Evaluation',
+        _filter(otherMoeAll, namePattern: 'Monitoring'),
+        isDetail: true,
+      ),
+      _RowDef(
+        '',
+        '    6. CAFC Capability Building',
+        _filter(otherMoeAll, namePattern: 'CAFC Capability'),
+        isDetail: true,
+      ),
+
+      // Capital Outlay
+      _RowDef('', 'Capital Outlay', capOutlay, isHeader: true),
+    ];
 
     // Detailed grouping logic with Account Codes
     return Scrollbar(
@@ -123,292 +413,115 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
           children: [
             _buildHeader(),
             const SizedBox(height: 24),
-            _buildBudgetTable(context, formatCurrency, [
-              // a) Travelling Expenses
-              _RowDef(
-                '5-02-01-010',
-                'a) Travelling Expenses',
-                travExpenses,
-                isHeader: true,
-              ),
-
-              // b) Training Expenses
-              _RowDef(
-                '5-02-02-010',
-                'b) Training Expenses',
-                trainingAll,
-                isHeader: true,
-              ),
-              _RowDef('', '    1) Rice Program', trainRice, isDetail: true),
-              _RowDef('', '    2) Corn Program', trainCorn, isDetail: true),
-              _RowDef('', '    3) HVCD Program', trainHVCD, isDetail: true),
-              _RowDef(
-                '',
-                '    4) Organic Program',
-                trainOrganic,
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    5) Inland Fisheries Program',
-                trainFish,
-                isDetail: true,
-              ),
-
-              // c) Supplies & Materials
-              _RowDef(
-                '5-02-03',
-                'c) Supplies & Materials',
-                suppAll,
-                isHeader: true,
-              ),
-
-              _RowDef(
-                '5-02-03-010',
-                '    1) Office Supplies Expenses',
-                officeSupp,
-              ),
-
-              _RowDef(
-                '5-02-03-100',
-                '    2) Agricultural Supplies Expenses',
-                agriSupp,
-              ),
-              _RowDef(
-                '',
-                '         1) City Nursery Supplies',
-                _filter(agriSupp, namePattern: 'Nursery'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         2) Organic Fertilizer',
-                _filter(agriSupp, namePattern: 'Fertilizer'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         3) Rodenticide',
-                _filter(agriSupp, namePattern: 'Rodenticide'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         4) Insecticide',
-                _filter(agriSupp, namePattern: 'Insecticide'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         5) Fungicide',
-                _filter(agriSupp, namePattern: 'Fungicide'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         6) High Valued Commercial Crop Techno Demo Supplies',
-                _filter(agriSupp, namePattern: 'Techno Demo'),
-                isDetail: true,
-              ),
-
-              _RowDef(
-                '5-02-99-990',
-                '    3) Laboratory Supplies Expenses',
-                labSupp,
-              ),
-              _RowDef(
-                '',
-                '         1) City Soils Testing Laboratory',
-                _filter(labSupp, namePattern: 'Soils'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         2) Plant Tissue Culture Laboratory',
-                _filter(labSupp, namePattern: 'Tissue Culture'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         3) Bio-Con Laboratory',
-                _filter(labSupp, namePattern: 'Bio-Con'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         4) NFTS Concoction Production Project',
-                _filter(labSupp, namePattern: 'NFTS'),
-                isDetail: true,
-              ),
-
-              _RowDef(
-                '5-02-03-090',
-                '    4) Fuel, Oil & Lubricants (Plus Backhoe use)',
-                fuel,
-              ),
-
-              _RowDef(
-                '',
-                '    5) Other Supplies and Materials Expenses',
-                otherSupp,
-              ),
-              _RowDef(
-                '',
-                '         1) 20 Pcs Folding Tables',
-                _filter(otherSupp, namePattern: 'Folding Tables'),
-                isDetail: true,
-              ),
-
-              // d) Communication Expenses
-              _RowDef(
-                '5-02-05-020',
-                'd) Communication Expenses',
-                commsAll,
-                isHeader: true,
-              ),
-              _RowDef(
-                '',
-                '    1) Postage & Courier Services',
-                _filter(commsAll, namePattern: 'Postage'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    2) Telephone Expenses',
-                _filter(commsAll, namePattern: 'Telephone'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    3) Internet Subscription Expenses',
-                _filter(commsAll, namePattern: 'Internet'),
-                isDetail: true,
-              ),
-
-              // e) Repairs and Maintenance
-              _RowDef(
-                '5-02-13',
-                'e) Repairs and Maintenance',
-                repairsAll,
-                isHeader: true,
-              ),
-              _RowDef(
-                '5-02-13-030',
-                '    1) Repairs and Maintenance - Building and Other Structures',
-                _filter(repairsAll, namePattern: 'Building'),
-              ),
-              _RowDef(
-                '5-02-13-050',
-                '    2) Repairs and Maintenance - Machinery and Equipment',
-                _filter(repairsAll, namePattern: 'Machinery'),
-              ),
-              _RowDef(
-                '5-02-13-060',
-                '    3) Repairs and Maintenance - Transportation Equipment',
-                _filter(repairsAll, namePattern: 'Transportation'),
-              ),
-
-              // f) Other Maintenance and Operating Expenses
-              _RowDef(
-                '5-02-99-990',
-                'f) Other Maintenance and Operating Expenses',
-                moeSectionAll,
-                isHeader: true,
-              ),
-              _RowDef(
-                '',
-                '    1. Personnel Development',
-                personnel,
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    2. Agriculture & Fisheries Congress',
-                _filter(otherMoeAll, namePattern: 'Congress'),
-                isDetail: true,
-              ),
-              _RowDef('', '    3. Meetings', meetingsAll, isDetail: true),
-              _RowDef(
-                '',
-                '         Rural Improvement Club Meetings',
-                _filter(meetingsAll, namePattern: 'Rural Improvement'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         4-H Club Meetings',
-                _filter(meetingsAll, namePattern: '4-H'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         CAFC Meetings',
-                _filter(meetingsAll, namePattern: 'CAFC'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Fisherfolks Meetings',
-                _filter(meetingsAll, namePattern: 'Fisherfolk'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Organic Farmers Meetings',
-                _filter(meetingsAll, namePattern: 'Organic Farmer'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Vegetable Farmers Meetings',
-                _filter(meetingsAll, namePattern: 'Vegetable'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Corn Farmers Meetings',
-                _filter(meetingsAll, namePattern: 'Corn Farmer'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Rice Farmers Meetings',
-                _filter(meetingsAll, namePattern: 'Rice Farmer'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '         Strengthening of Farmers Meetings',
-                _filter(meetingsAll, namePattern: 'Strengthening'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    4. Project Development',
-                _filter(otherMoeAll, namePattern: 'Project Development'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    5. Monitoring and Evaluation',
-                _filter(otherMoeAll, namePattern: 'Monitoring'),
-                isDetail: true,
-              ),
-              _RowDef(
-                '',
-                '    6. CAFC Capability Building',
-                _filter(otherMoeAll, namePattern: 'CAFC Capability'),
-                isDetail: true,
-              ),
-
-              // Capital Outlay
-              _RowDef('', 'Capital Outlay', capOutlay, isHeader: true),
-            ]),
+            _buildBudgetTable(context, formatCurrency, rows),
+            const SizedBox(height: 32),
+            _buildMonthlyWFPTable(context, formatCurrency, rows),
             const SizedBox(height: 32),
             _buildSummaryFooter(widget.activities, formatCurrency),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMonthlyWFPTable(
+    BuildContext context,
+    NumberFormat fmt,
+    List<_RowDef> rows,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'MONTHLY WFP DISTRIBUTION',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: widget.isDark ? Colors.white : Slate.shade900,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
+            border: Border.all(
+              color: widget.isDark ? Colors.white10 : Slate.shade300,
+            ),
+          ),
+          child: Scrollbar(
+            controller: ScrollController(),
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(
+                  widget.isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.shade200,
+                ),
+                horizontalMargin: 12,
+                columnSpacing: 16,
+                border: TableBorder.all(
+                  color: widget.isDark ? Colors.white10 : Colors.black54,
+                  width: 1,
+                ),
+                columns: [
+                  _headerCell('OBJECT OF EXPENDITURE'),
+                  ...AppConstants.months.map((m) => _headerCell(m.substring(0, 3).toUpperCase())),
+                  _headerCell('TOTAL'),
+                ],
+                rows: rows.where((r) => r.isHeader || !r.isDetail).map((row) {
+                  final distribution = List<double>.filled(12, 0.0);
+                  for (var act in row.items) {
+                    if (act.monthlyDistribution != null) {
+                      for (int i = 0; i < 12; i++) {
+                        distribution[i] += act.monthlyDistribution![i];
+                      }
+                    }
+                  }
+                  final total = distribution.reduce((a, b) => a + b);
+
+                  return DataRow(
+                    color: WidgetStateProperty.all(
+                      row.isHeader
+                          ? (widget.isDark
+                                ? Colors.white.withOpacity(0.02)
+                                : Colors.grey.shade100)
+                          : Colors.transparent,
+                    ),
+                    cells: [
+                      DataCell(
+                        Text(
+                          row.label,
+                          style: GoogleFonts.inter(
+                            fontWeight: row.isHeader ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
+                            color: widget.isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                      ...distribution.map((val) => DataCell(
+                        Container(
+                          alignment: Alignment.centerRight,
+                          child: _amountText(fmt, val, true, hideZero: true),
+                        ),
+                      )),
+                      DataCell(
+                        Container(
+                          alignment: Alignment.centerRight,
+                          child: _amountText(fmt, total, false, hideZero: true),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -642,7 +755,7 @@ class _BudgetPlanReportState extends State<BudgetPlanReport> {
                       ),
                       child: _amountText(
                         fmt,
-                        !row.isDetail && !isHeader ? totalProposed : 0,
+                        !isHeader ? totalProposed : 0,
                         false,
                         color: Colors.red.shade700,
                         hideZero: true,

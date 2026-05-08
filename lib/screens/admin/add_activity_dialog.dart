@@ -141,20 +141,17 @@ class AddActivityDialogState extends State<AddActivityDialog> {
     return v;
   }
 
-  /// Returns only the Object-of-Expenditure options that actually exist in
-  /// `budgetLines` for the selected fund source.
+  /// Returns Object-of-Expenditure options from actual budget lines.
   ///
-  /// This ensures the dropdown expands correctly (e.g. selecting Training
-  /// Expenses triggers adding all fund sources that have budget lines for it).
+  /// The selection should be driven by available expense budgets, not only by
+  /// the currently selected fund source. This enables selecting an expense and
+  /// auto-expanding rows for all funding sources that carry that expense.
   List<String> _getObjectOfExpenditureOptionsForFundSource({
     required String fundSource,
     required String sector,
   }) {
-    final normalizedFundSource = fundSource.trim();
-
-    // Gather from actual budget lines.
+    // Gather from all actual budget lines so any budgeted expense can be picked.
     final options = budgetLines
-        .where((l) => l.fundSource == normalizedFundSource)
         .map((l) => _normalizeObjectOfExpenditure(l.objectOfExpenditure))
         .where((v) => v.isNotEmpty)
         .toSet()
@@ -236,8 +233,16 @@ class AddActivityDialogState extends State<AddActivityDialog> {
   }
 
   void _loadTemplate(ActivityTemplate template) {
-    formProvider.loadTemplate(template);
+    formProvider.loadTemplate(template, budgetLines: budgetLines);
     if (mounted) setState(() {});
+  }
+
+  List<String> _getMonthsInRange(String start, String end) {
+    final months = AppConstants.months;
+    final startIdx = months.indexOf(start);
+    final endIdx = months.indexOf(end);
+    if (startIdx == -1 || endIdx == -1 || startIdx > endIdx) return [];
+    return months.sublist(startIdx, endIdx + 1);
   }
 
   bool get canPop => !isEdited;
@@ -600,6 +605,8 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         child: GridAccountCodePicker(
           controller: accountCodeCtl,
           hint: 'Search account code...',
+          budgetLines: budgetLines,
+          onSelected: (bl) => formProvider.setSelectedBudgetLine(bl),
           tooltip:
               'Official COA account code for this expense (e.g. 5-02-02-010 for Training).',
         ),
@@ -657,14 +664,24 @@ class AddActivityDialogState extends State<AddActivityDialog> {
         ),
         fieldLabel: 'Implementation Months',
         child: GridMonthGrid(
-          selectedMonths: selectedMonths,
-          onToggle: (m) => setState(() {
-            if (selectedMonths.contains(m)) {
-              if (selectedMonths.length > 1) selectedMonths.remove(m);
+          selectedMonths: {formProvider.selectedMonth, if (formProvider.selectedToMonth != null) ..._getMonthsInRange(formProvider.selectedMonth, formProvider.selectedToMonth!)},
+          onToggle: (m) {
+            // Simplistic range logic for WFP: 
+            // If selecting a month before current start, move start.
+            // If selecting after, move end.
+            final months = AppConstants.months;
+            final currentIdx = months.indexOf(formProvider.selectedMonth);
+            final targetIdx = months.indexOf(m);
+            
+            if (targetIdx < currentIdx) {
+              formProvider.setMonth(m);
+            } else if (targetIdx > currentIdx) {
+              formProvider.setToMonth(m);
             } else {
-              selectedMonths.add(m);
+              // Reset to single month
+              formProvider.setToMonth(null);
             }
-          }),
+          },
         ),
       ),
       GridDualRow(
@@ -893,6 +910,21 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                     log.poAmount = v;
                     updateTotalBudget();
                   },
+                ),
+              ),
+              const SizedBox(height: 16),
+              GridDualRow(
+                label: '',
+                fieldLabel1: 'Supplier',
+                child1: GridDropdown<String>(
+                  value: log.supplier.isEmpty ? null : log.supplier,
+                  options: AppConstants.commonSuppliers,
+                  onChanged: (v) => setState(() => log.supplier = v ?? ''),
+                ),
+                fieldLabel2: 'Remarks',
+                child2: GridTextField(
+                  initialValue: log.remarks,
+                  onChanged: (v) => log.remarks = v,
                 ),
               ),
             ],
@@ -1176,6 +1208,7 @@ class AddActivityDialogState extends State<AddActivityDialog> {
                     controller: be.accountCodeCtl,
                     isCompact: true,
                     hint: 'code',
+                    budgetLines: budgetLines,
                     tooltip:
                         'Select the appropriate accounting classification code.',
                   ),
@@ -1316,16 +1349,37 @@ class AddActivityDialogState extends State<AddActivityDialog> {
             log.prAmount <= 0 ||
             log.status.isEmpty ||
             log.statusDate == null ||
-            log.statusDate!.isEmpty) {
+            log.statusDate!.isEmpty ||
+            log.supplier.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Please complete all fields for PR #${i + 1} (Number, Amount, Status, and Date)',
+                'Please complete all fields for PR #${i + 1} (Number, Amount, Status, Date, and Supplier)',
               ),
             ),
           );
           return;
         }
+      }
+
+      // NEW: Validate all PRs against Budget Ledger Appropriations
+      try {
+        for (final log in prLogs) {
+          // Note: Activity PRs use the activity's fundSource and objectOfExpenditure
+          await widget.fbService.validateAgainstAppropriation(
+            fundSourceEntries.first.fundingSource,
+            fundSourceEntries.first.objectOfExpenditure,
+            log.prAmount,
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade800,
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+          ),
+        );
+        return;
       }
     }
     setState(() => saving = true);

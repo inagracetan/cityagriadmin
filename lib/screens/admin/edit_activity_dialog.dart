@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../widgets/skeleton_loading.dart';
 import '../../models/activity.dart';
+import '../../models/budget_line.dart';
 import '../../models/pr_log.dart';
 import '../../services/activity_form_provider.dart';
 import '../../services/auth_service.dart';
@@ -44,6 +45,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
   late ActivityFormProvider formProvider;
   List<String> availableStaff = AppConstants.staffList;
   List<String> availableSuppliers = [];
+  List<BudgetLine> budgetLines = [];
   bool saving = false;
   int rowIndex = 0;
 
@@ -173,10 +175,12 @@ class EditActivityDialogState extends State<EditActivityDialog> {
           suppSet.addAll(supp.split(',').map((s) => s.trim()));
         }
       }
+      final blines = await widget.fbService.streamBudgetLines().first;
       if (mounted) {
         setState(() {
           availableStaff = staff.where((s) => s != 'Other').toList();
           availableSuppliers = suppSet.toList()..sort();
+          budgetLines = blines;
         });
       }
     } catch (_) {}
@@ -315,11 +319,14 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                                 tooltip: 'The official name of this activity.',
                               ),
                             ),
-                            GridRow(
+                             GridRow(
                               label: 'A6',
                               fieldLabel: 'Account Code',
-                              child: GridTextField(
+                              child: GridAccountCodePicker(
                                 controller: formProvider.accountCodeCtl,
+                                hint: 'Search account code...',
+                                budgetLines: budgetLines,
+                                onSelected: (bl) => formProvider.setSelectedBudgetLine(bl),
                                 tooltip: 'Primary accounting code for the whole activity.',
                               ),
                             ),
@@ -1050,6 +1057,7 @@ class EditActivityDialogState extends State<EditActivityDialog> {
                         controller: be.accountCodeCtl,
                         isCompact: true,
                         hint: 'Account Code',
+                        budgetLines: budgetLines,
                         tooltip: 'Specific accounting code for this item.',
                       ),
                     ),

@@ -296,30 +296,37 @@ class _PPMPDashboardState extends State<PPMPDashboard> with AutomaticKeepAliveCl
           ),
         ],
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedYear,
-          items: AppConstants.years.map((y) {
-            return DropdownMenuItem(
-              value: y,
-              child: Text(
-                y,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+      child: DropdownMenu<String>(
+        initialSelection: _selectedYear,
+        dropdownMenuEntries: AppConstants.years.map((y) {
+          return DropdownMenuEntry<String>(
+            value: y,
+            label: y,
+            labelWidget: Text(
+              y,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
               ),
-            );
-          }).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                _selectedYear = val;
-              });
-            }
-          },
-          icon: Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+            ),
+          );
+        }).toList(),
+        onSelected: (val) {
+          if (val != null) {
+            setState(() {
+              _selectedYear = val;
+            });
+          }
+        },
+        enableSearch: true,
+        enableFilter: true,
+        menuHeight: 300,
+        width: 120,
+        trailingIcon: Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
         ),
       ),
     );

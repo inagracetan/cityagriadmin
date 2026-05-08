@@ -409,7 +409,7 @@ class FirebaseService {
 
   Future<String> addProcurement(Procurement procurement) async {
     // 1. Validate against Appropriation (Budget Ceiling)
-    await _validateAgainstAppropriation(
+    await validateAgainstAppropriation(
       procurement.fundSource,
       procurement.objectOfExpenditure,
       procurement.prAmount,
@@ -436,6 +436,9 @@ class FirebaseService {
       relatedId: docRef.id,
     ));
 
+    // Sync budget lines to ensure ledger consistency
+    await syncBudgetLinesWithActivities();
+
     return docRef.id;
   }
 
@@ -452,6 +455,9 @@ class FirebaseService {
     if (procurement.prAmount != oldAmount) {
       await _adjustProgramBalance(procurement.programId, oldAmount - procurement.prAmount);
     }
+
+    // Sync budget lines to ensure ledger consistency
+    await syncBudgetLinesWithActivities();
   }
 
   Future<void> deleteProcurement(Procurement procurement) async {
@@ -464,6 +470,9 @@ class FirebaseService {
 
     // Restore Program balance
     await _adjustProgramBalance(procurement.programId, procurement.prAmount);
+
+    // Sync budget lines to ensure ledger consistency
+    await syncBudgetLinesWithActivities();
   }
 
   Future<void> _adjustProgramBalance(String programId, double adjustment) async {
@@ -477,7 +486,7 @@ class FirebaseService {
     });
   }
 
-  Future<void> _validateAgainstAppropriation(String fs, String oe, double amount) async {
+  Future<void> validateAgainstAppropriation(String fs, String? oe, double amount) async {
     final query = await db
         .collection(AppConstants.colBudgetLines) // Using budget_lines as appropriations
         .where('fund_source', isEqualTo: fs)
@@ -593,28 +602,70 @@ class FirebaseService {
       final activitiesSnapshot = await db.collection(AppConstants.colActivities).get();
       final activities = activitiesSnapshot.docs.map((doc) => Activity.fromFirestore(doc.data(), doc.id)).toList();
 
+      // NEW: Fetch all standalone procurements across all programs
+      final procurementsSnapshot = await db.collectionGroup(AppConstants.colProcurements).get();
+      final procurements = procurementsSnapshot.docs.map((doc) => Procurement.fromFirestore(doc.data(), doc.id)).toList();
+
       final budgetLinesSnapshot = await db.collection(AppConstants.colBudgetLines).get();
       final budgetLines = budgetLinesSnapshot.docs.map((doc) => BudgetLine.fromFirestore(doc.data(), doc.id)).toList();
 
       final batch = db.batch();
       int operationCount = 0;
 
-      // 2. Process each budget line
-      for (var bl in budgetLines) {
-        double totalPPMP = 0;
-        double totalPR = 0;
-        double totalPO = 0;
+      // 2. Aggregate values from Activities
+      Map<String, double> ppmpByAccount = {};
+      Map<String, double> prByAccount = {};
+      Map<String, double> poByAccount = {};
 
-        for (var activity in activities) {
-          // Link by accountCode
-          if (activity.accountCode == bl.accountCode && activity.accountCode != null && activity.accountCode!.isNotEmpty) {
-            totalPPMP += activity.ppmpAmount;
-            totalPR += activity.effectivePRAmount;
-            totalPO += activity.effectivePOAmount;
+      for (var activity in activities) {
+        // If activity has a breakdown, distribute amounts by individual item account codes
+        if (activity.breakdown.isNotEmpty) {
+          double totalBreakdown = activity.totalBreakdownAmount;
+          for (var item in activity.breakdown) {
+            final ac = item.accountCode;
+            if (ac == null || ac.isEmpty) continue;
+            
+            ppmpByAccount[ac] = (ppmpByAccount[ac] ?? 0) + item.amount;
+            
+            // Distribute PR/PO amounts proportionally to breakdown item amounts
+            if (totalBreakdown > 0) {
+              double ratio = item.amount / totalBreakdown;
+              prByAccount[ac] = (prByAccount[ac] ?? 0) + (activity.effectivePRAmount * ratio);
+              poByAccount[ac] = (poByAccount[ac] ?? 0) + (activity.effectivePOAmount * ratio);
+            }
+          }
+        } else {
+          // Fallback to top-level activity account code
+          final ac = activity.accountCode;
+          if (ac != null && ac.isNotEmpty) {
+            ppmpByAccount[ac] = (ppmpByAccount[ac] ?? 0) + activity.ppmpAmount;
+            prByAccount[ac] = (prByAccount[ac] ?? 0) + activity.effectivePRAmount;
+            poByAccount[ac] = (poByAccount[ac] ?? 0) + activity.effectivePOAmount;
           }
         }
+      }
 
-        // Only update if values changed to save on writes
+      // 3. Aggregate values from standalone Procurements (linked by FS + OE)
+      Map<String, double> prByFsOe = {};
+      Map<String, double> poByFsOe = {};
+      for (var proc in procurements) {
+        final key = '${proc.fundSource}_${proc.objectOfExpenditure}';
+        prByFsOe[key] = (prByFsOe[key] ?? 0) + proc.prAmount;
+        poByFsOe[key] = (poByFsOe[key] ?? 0) + proc.poAmount;
+      }
+
+      // 4. Update each budget line
+      for (var bl in budgetLines) {
+        double totalPPMP = ppmpByAccount[bl.accountCode] ?? 0;
+        double totalPR = prByAccount[bl.accountCode] ?? 0;
+        double totalPO = poByAccount[bl.accountCode] ?? 0;
+
+        // Add standalone procurements based on FS + OE matching
+        final key = '${bl.fundSource}_${bl.objectOfExpenditure}';
+        totalPR += prByFsOe[key] ?? 0;
+        totalPO += poByFsOe[key] ?? 0;
+
+        // Only update if values changed significantly
         if ((bl.ppmpAmount - totalPPMP).abs() > 0.01 || 
             (bl.prAmount - totalPR).abs() > 0.01 || 
             (bl.poAmount - totalPO).abs() > 0.01) {
@@ -630,7 +681,7 @@ class FirebaseService {
 
           if (operationCount >= 450) {
             await batch.commit();
-            // In a real app we'd need to continue, but for this size it's likely fine.
+            operationCount = 0;
           }
         }
       }

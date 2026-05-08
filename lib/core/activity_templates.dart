@@ -4,12 +4,14 @@ class ActivityTemplate {
   final String name;
   final String sector;
   final String? subSector;
+  final String? objectOfExpenditure;
   final List<TemplateItem> items;
 
   ActivityTemplate({
     required this.name,
     required this.sector,
     this.subSector,
+    this.objectOfExpenditure,
     required this.items,
   });
 }
@@ -40,6 +42,7 @@ class ActivityTemplates {
       name: 'Upland Hybrid Rice Techno Demo Establishment',
       sector: AppConstants.sectorCrop,
       subSector: 'Rice',
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Hybrid Rice Seeds (15kg/bag)', unit: 'bag', q1: 1, price: 5000.00),
         TemplateItem(name: 'Organic Fertilizer Vermicast (Class A)', unit: 'bags', q1: 15, price: 350.00),
@@ -57,6 +60,7 @@ class ActivityTemplates {
       name: 'FFS on Corn Production and Management',
       sector: AppConstants.sectorCrop,
       subSector: 'Corn',
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Lime Fertilizer', unit: 'bags', q1: 20, price: 150.00),
         TemplateItem(name: 'Organic Fertilizer (Vermicast)', unit: 'bags', q1: 20, price: 400.00),
@@ -72,6 +76,7 @@ class ActivityTemplates {
       name: 'FFS on Coffee & Vegetable Production',
       sector: AppConstants.sectorCrop,
       subSector: 'HVCDP',
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Meals', unit: 'cover', q2: 70, price: 200.00),
         TemplateItem(name: 'Snacks', unit: 'cover', q2: 140, price: 80.00),
@@ -87,6 +92,7 @@ class ActivityTemplates {
       name: 'Organic Agriculture Technology Demonstration',
       sector: AppConstants.sectorCrop,
       subSector: 'Organic Program',
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Organic Fertilizer Vermicast', unit: 'bags', q1: 50, price: 350.00),
         TemplateItem(name: 'Organic Seeds', unit: 'packs', q1: 100, price: 100.00),
@@ -99,6 +105,7 @@ class ActivityTemplates {
     ActivityTemplate(
       name: 'Tilapia Processing and Value Adding Training',
       sector: AppConstants.sectorFisheries,
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Meals', unit: 'cover', q2: 50, price: 250.00),
         TemplateItem(name: 'Snacks', unit: 'cover', q2: 100, price: 80.00),
@@ -109,6 +116,7 @@ class ActivityTemplates {
     ActivityTemplate(
       name: 'Workshop on Sustainable Development Goals',
       sector: AppConstants.sectorAdmin,
+      objectOfExpenditure: 'Training Expenses',
       items: [
         TemplateItem(name: 'Meals (3 days)', unit: 'cover', q3: 300, price: 250.00),
         TemplateItem(name: 'Snacks', unit: 'cover', q3: 600, price: 80.00),

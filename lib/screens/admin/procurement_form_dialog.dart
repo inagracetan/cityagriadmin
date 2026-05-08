@@ -3,12 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../models/procurement.dart';
 import '../../models/program.dart';
+import '../../models/activity.dart';
 import '../../widgets/skeleton_loading.dart';
 import '../../models/budget_line.dart';
 import '../../services/firebase_service.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/constants.dart';
+import '../../core/currency_formatter.dart';
+import '../../widgets/enhanced_form_fields.dart';
 
 class ProcurementFormDialog extends StatefulWidget {
   final Procurement? procurement; // If null, it's an "Add" operation
@@ -36,14 +39,20 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
   late TextEditingController _poDateController;
   
   String? _selectedProgramId;
+  String? _selectedActivityId; // Added
   String? _selectedStatus;
   String? _selectedFundSource;
   String? _selectedObjectOfExpenditure;
   bool _isSubmitting = false;
 
   List<BudgetLine> _budgetLines = [];
+  List<Program> _programs = []; 
+  List<Activity> _activities = [];
+  List<Activity> _filteredActivities = [];
 
   final List<String> _statuses = AppConstants.prStatuses;
+  final List<String> _suppliers = AppConstants.commonSuppliers; // Added
+  final TextEditingController _remarksController = TextEditingController(); // Added
 
   @override
   void initState() {
@@ -57,24 +66,54 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
     _poDateController = TextEditingController(text: p?.poDate ?? '');
     
     _selectedProgramId = p?.programId ?? widget.initialProgram?.id;
+    _selectedActivityId = p?.activityId; // Assuming field exists or will be added
     _selectedStatus = p?.status ?? AppConstants.statusPRStage;
     _selectedFundSource = p?.fundSource;
     _selectedObjectOfExpenditure = p?.objectOfExpenditure;
+    _remarksController.text = p?.remarks ?? '';
 
-    _loadBudgetLines();
+    _loadData(); // Changed
   }
 
-  Future<void> _loadBudgetLines() async {
+  Future<void> _loadData() async {
     final lines = await widget.fbService.streamBudgetLines().first;
+    final progs = await widget.fbService.streamPrograms().first;
+    final acts = await widget.fbService.streamActivities().first;
+    
     if (mounted) {
       setState(() {
         _budgetLines = lines;
+        _programs = progs;
+        _activities = acts;
+        _filterActivities();
+
         // If not editing, and there's only one fund source, select it
-        if (! (widget.procurement != null)) {
-           final sources = lines.map((l) => l.fundSource).toSet().toList();
-           if (sources.length == 1) _selectedFundSource = sources.first;
+        if (!(widget.procurement != null)) {
+          final sources = lines.map((l) => l.fundSource).toSet().toList();
+          if (sources.length == 1) _selectedFundSource = sources.first;
         }
       });
+    }
+  }
+
+  void _filterActivities() {
+    if (_selectedProgramId == null || _programs.isEmpty) {
+      _filteredActivities = [];
+    } else {
+      final selectedProg = _programs.firstWhere(
+        (p) => p.id == _selectedProgramId,
+        orElse: () => _programs.first,
+      );
+      final progName = selectedProg.name.toLowerCase();
+
+      // Filter activities by matching sector or subsector to program name
+      _filteredActivities = _activities.where((a) {
+        final sectorMatch = progName.contains(a.sector.toLowerCase());
+        final subSectorMatch = a.subSector != null && 
+                             a.subSector!.isNotEmpty && 
+                             progName.contains(a.subSector!.toLowerCase());
+        return sectorMatch || subSectorMatch;
+      }).toList();
     }
   }
 
@@ -107,40 +146,49 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      final prAmount = double.parse(_prAmountController.text);
-      final poAmount = double.tryParse(_poAmountController.text) ?? 0.0;
-      
+      final prAmount = CurrencyInputFormatter.parse(_prAmountController.text);
+      final poAmount = CurrencyInputFormatter.parse(_poAmountController.text);
+
       final procurement = Procurement(
         id: widget.procurement?.id ?? '',
         programId: _selectedProgramId!,
+        activityId: _selectedActivityId, // Link to activity
         prNumber: _prNumberController.text,
         prAmount: prAmount,
-        prBalance: 0.0, 
+        prBalance: 0.0,
         poNumber: _poNumberController.text,
         poAmount: poAmount,
         poDate: _poDateController.text.isEmpty ? null : _poDateController.text,
         supplier: _supplierController.text,
+        remarks: _remarksController.text, // Added
         status: _selectedStatus!,
         statusDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        ppmpAmount: 0.0, 
+        ppmpAmount: 0.0,
         objectOfExpenditure: _selectedObjectOfExpenditure!,
         fundSource: _selectedFundSource!,
         createdAt: widget.procurement?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
-        createdBy: 'Admin', 
+        createdBy: 'Admin',
       );
 
       if (widget.procurement == null) {
         await widget.fbService.addProcurement(procurement);
       } else {
-        await widget.fbService.updateProcurement(procurement, widget.procurement!.prAmount);
+        await widget.fbService.updateProcurement(
+          procurement,
+          widget.procurement!.prAmount,
+        );
       }
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
@@ -205,27 +253,41 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Program Selection
+                      // Program & Activity Selection
                       if (widget.initialProgram != null)
                         Container(
+                          margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Slate.shade50,
+                            color: const Color(0xFF1B5E20).withOpacity(0.05),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF1B5E20).withOpacity(0.1)),
                           ),
                           child: Row(
                             children: [
                               const Icon(Icons.account_tree_outlined, color: Color(0xFF1B5E20)),
                               const SizedBox(width: 12),
-                              Text(
-                                'Program: ${widget.initialProgram!.name}',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1B5E20),
+                              Expanded(
+                                child: Text(
+                                  'Program: ${widget.initialProgram!.name}',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1B5E20),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
+
+                      _buildDropdown(
+                        label: 'Link to Project/Activity',
+                        value: _selectedActivityId,
+                        items: _filteredActivities.map((a) => a.id).toList(),
+                        itemLabels: _filteredActivities.map((a) => a.activityName).toList(),
+                        onChanged: (v) => setState(() => _selectedActivityId = v),
+                        icon: Icons.assignment_outlined,
+                      ),
 
                       const SizedBox(height: 20),
 
@@ -298,12 +360,27 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
                         ],
                       ),
 
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdown(
+                              label: 'Supplier',
+                              value: _supplierController.text.isEmpty ? null : _supplierController.text,
+                              items: _suppliers,
+                              onChanged: (v) => setState(() => _supplierController.text = v ?? ''),
+                              icon: Icons.business_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 16),
 
                       _buildTextField(
-                        controller: _supplierController,
-                        label: 'Supplier',
-                        icon: Icons.business_rounded,
+                        controller: _remarksController,
+                        label: 'Remarks',
+                        icon: Icons.chat_bubble_outline_rounded,
+                        maxLines: 2,
                       ),
 
                       const SizedBox(height: 24),
@@ -423,6 +500,7 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     VoidCallback? onTap,
+    int maxLines = 1,
   }) {
     return TextFormField(
       controller: controller,
@@ -430,6 +508,8 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
       validator: validator,
       onTap: onTap,
       readOnly: onTap != null,
+      maxLines: maxLines,
+      inputFormatters: keyboardType == TextInputType.number ? [CurrencyInputFormatter()] : null,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20, color: Slate.shade400),
@@ -443,18 +523,25 @@ class _ProcurementFormDialogState extends State<ProcurementFormDialog> {
     required String label,
     required String? value,
     required List<String> items,
+    List<String>? itemLabels,
     required void Function(String?) onChanged,
+    IconData? icon,
   }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      items: items.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
+    // Map item labels if provided, otherwise use items
+    final List<DropdownMenuEntry<String>> entries = List.generate(items.length, (index) {
+      return DropdownMenuEntry<String>(
+        value: items[index],
+        label: itemLabels != null ? itemLabels[index] : items[index],
+      );
+    });
+
+    return EnhancedSearchableDropdownField<String>(
+      label: label,
+      value: value,
+      entries: entries,
+      onSelected: onChanged,
+      prefixIcon: icon != null ? Icon(icon, size: 20, color: Slate.shade400) : null,
+      width: double.infinity,
     );
   }
 }

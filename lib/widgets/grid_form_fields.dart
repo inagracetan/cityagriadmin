@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 export 'grid_section_header.dart';
+import 'package:intl/intl.dart';
 import '../core/design_system.dart';
 import '../core/responsive_utils.dart';
 import '../core/currency_formatter.dart';
 import '../core/date_formatter.dart';
+import '../models/budget_line.dart';
 
 /// A set of components designed for high-density, "Excel-style" grid forms.
 /// These components provide a premium feel with interactive feedback.
@@ -1559,6 +1561,8 @@ class GridAccountCodePicker extends StatelessWidget {
   final bool isCompact;
   final String hint;
   final String? tooltip;
+  final List<BudgetLine>? budgetLines;
+  final ValueChanged<BudgetLine?>? onSelected;
 
   const GridAccountCodePicker({
     super.key,
@@ -1566,15 +1570,44 @@ class GridAccountCodePicker extends StatelessWidget {
     required this.hint,
     this.isCompact = false,
     this.tooltip,
+    this.budgetLines,
+    this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    final options = GridFormTheme.accountCodes.entries.toList();
+    // If budgetLines are provided, use them. Otherwise fallback to hardcoded map.
+    final List<DropdownMenuEntry<String>> entries;
+    
+    if (budgetLines != null && budgetLines!.isNotEmpty) {
+      entries = budgetLines!.map((bl) {
+        return DropdownMenuEntry<String>(
+          value: bl.id, // Use unique ID to handle potentially non-unique account codes
+          label: '${bl.accountCode} - ${bl.objectOfExpenditure}${bl.subCategory.isNotEmpty ? ' (${bl.subCategory})' : ''}',
+          trailingIcon: Text(
+            '₱${NumberFormat('#,###').format(bl.appropriation)}',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: GridFormTheme.accentGreen,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      }).toList();
+    } else {
+      final options = GridFormTheme.accountCodes.entries.toList();
+      entries = options.map((entry) {
+        return DropdownMenuEntry<String>(
+          value: entry.key,
+          label: '${entry.key} - ${entry.value}',
+        );
+      }).toList();
+    }
 
     final dropdown = DropdownMenu<String>(
-      initialSelection: controller.text.isEmpty ? null : controller.text,
-      controller: controller,
+      initialSelection: (budgetLines != null && budgetLines!.isNotEmpty && controller.text.isNotEmpty)
+          ? budgetLines!.where((l) => l.accountCode == controller.text).firstOrNull?.id
+          : (controller.text.isEmpty ? null : controller.text),
       enableSearch: true,
       enableFilter: true,
       menuHeight: 300,
@@ -1609,14 +1642,19 @@ class GridAccountCodePicker extends StatelessWidget {
           ),
         ),
       ),
-      dropdownMenuEntries: options.map((entry) {
-        return DropdownMenuEntry<String>(
-          value: entry.key,
-          label: '${entry.key} - ${entry.value}',
-        );
-      }).toList(),
+      dropdownMenuEntries: entries,
       onSelected: (val) {
-        if (val != null) controller.text = val;
+        if (val != null) {
+          if (budgetLines != null && budgetLines!.isNotEmpty) {
+            final bl = budgetLines!.firstWhere((l) => l.id == val);
+            controller.text = bl.accountCode;
+            if (onSelected != null) {
+              onSelected!(bl);
+            }
+          } else {
+            controller.text = val;
+          }
+        }
       },
     );
 

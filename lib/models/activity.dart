@@ -358,7 +358,7 @@ class Activity {
   // ── Core Formulas (Procurement Cycle) ──────────────────────────────
   /// PPMP Balance (Planning Balance): How much budget hasn't been assigned to a plan yet.
   /// Calculation: Annual Appropriation - Total Items Planned in PPMP
-  double get ppmpBalanceCalculated => approvedBudget - ppmpAmount;
+  double get ppmpBalanceCalculated => (appropriation > 0 ? appropriation : approvedBudget) - ppmpAmount;
 
   /// PR Balance (Obligation Balance): "Spending power" left for this specific activity.
   /// Calculation: PPMP Allocation - Purchase Request (PR) Amount

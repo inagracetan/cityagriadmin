@@ -8,6 +8,7 @@ import '../../core/responsive_utils.dart';
 import '../../core/app_colors.dart';
 import '../../core/design_system.dart';
 import '../../services/firebase_service.dart';
+import '../../widgets/enhanced_form_fields.dart';
 import '../../services/auth_service.dart';
 import '../../services/export_service.dart';
 import '../../services/navigation_provider.dart';
@@ -725,11 +726,11 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> wit
           children: [
             Text('Update ${_selectedActivityIds.length} activities to:'),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: selectedStatus,
-              items: statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (val) => selectedStatus = val,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
+            EnhancedSearchableDropdownField.fromStrings(
+              label: 'Status',
+              items: statuses,
+              value: selectedStatus,
+              onSelected: (val) => selectedStatus = val,
             ),
           ],
         ),

@@ -9,6 +9,7 @@ class PRLog {
   String poNumber;
   double poAmount;
   String? statusDate;
+  String supplier;
   String remarks;
   DateTime timestamp;
   String? updatedBy;
@@ -22,6 +23,7 @@ class PRLog {
     this.poNumber = '',
     this.poAmount = 0.0,
     this.statusDate,
+    this.supplier = '',
     this.remarks = '',
     required this.timestamp,
     this.updatedBy,
@@ -36,6 +38,7 @@ class PRLog {
       'po_number': poNumber,
       'po_amount': poAmount,
       'status_date': statusDate,
+      'supplier': supplier,
       'remarks': remarks,
       'timestamp': Timestamp.fromDate(timestamp),
       'updated_by': updatedBy,
@@ -52,6 +55,7 @@ class PRLog {
       poNumber: data['po_number'] ?? '',
       poAmount: (data['po_amount'] ?? 0).toDouble(),
       statusDate: data['status_date'],
+      supplier: data['supplier'] ?? '',
       remarks: data['remarks'] ?? '',
       timestamp: data['timestamp'] != null 
           ? (data['timestamp'] as Timestamp).toDate() 

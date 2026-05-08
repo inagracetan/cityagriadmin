@@ -5,6 +5,7 @@ import '../models/expenditure.dart';
 import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../widgets/skeleton_loading.dart';
+import '../widgets/enhanced_form_fields.dart';
 
 
 
@@ -195,13 +196,11 @@ class _ExpenditureTrackerScreenState extends State<ExpenditureTrackerScreen>
                 },
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: selectedStatus,
-                decoration: const InputDecoration(labelText: 'Status'),
-                items: AppConstants.prStatuses
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (v) => setState(() => selectedStatus = v!),
+              EnhancedSearchableDropdownField.fromStrings(
+                label: 'Status',
+                value: selectedStatus,
+                items: AppConstants.prStatuses,
+                onSelected: (v) => setState(() => selectedStatus = v!),
               ),
             ],
           ),

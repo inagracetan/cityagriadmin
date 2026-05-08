@@ -100,25 +100,16 @@ class AppConstants {
     'Fuel, Oil & Lubricants (Plus Backhoe use)',
     'Other Supplies and Materials Expenses',
     'Communication Expenses',
-    'Repairs and Maintenance - Building and Other Structures',
-    'Repairs and Maintenance - Machinery and Equipment',
-    'Repairs and Maintenance - Transportation Equipment',
+    'Repairs and Maintenance',
     'Other Maintenance and Operating Expenses',
-
-    '3 Sets Desktop Office Computer with Printer',
-    '6 units Laptop (AMD Ryzen 7)',
-    'Furniture & Fixture',
-    'Fabrication of Office Cubicle',
-    'Purchase of Diesel Silent Type Generator Set',
-    '1 Unit Risographing Machine',
-    '200 Pcs Monoblock Chairs',
-    '20 Pcs Folding Tables',
+    'Capital Outlay',
 
     'Other',
   ];
 
   // Grouped Sub-Categories
   static const Map<String, List<String>> budgetSubCategories = {
+    'Travelling Expenses': [],
     'Training Expenses': [
       'Rice Program',
       'Corn Program',
@@ -126,6 +117,7 @@ class AppConstants {
       'Organic Program',
       'Inland Fisheries Program',
     ],
+    'Office Supplies Expenses': [],
     'Agricultural Supplies Expenses': [
       'City Nursery Supplies',
       'Organic Fertilizer',
@@ -140,7 +132,10 @@ class AppConstants {
       'Bio-Con Laboratory',
       'NFTS Concoction Production Project',
     ],
-    'Other Supplies and Materials Expenses': ['20 Pcs Folding Tables'],
+    'Fuel, Oil & Lubricants (Plus Backhoe use)': [],
+    'Other Supplies and Materials Expenses': [
+      '20 Pcs Folding Tables',
+    ],
     'Communication Expenses': [
       'Postage & Courier Services',
       'Telephone Expenses',
@@ -154,6 +149,7 @@ class AppConstants {
     'Other Maintenance and Operating Expenses': [
       'Personnel Development',
       'Agriculture & Fisheries Congress',
+      'Meetings',
       'Rural Improvement Club Meetings',
       '4-H Club Meetings',
       'CAFC Meetings',
@@ -166,6 +162,16 @@ class AppConstants {
       'Project Development',
       'Monitoring and Evaluation',
       'CAFC Capability Building',
+    ],
+    'Capital Outlay': [
+      '3 Sets Desktop Office Computer with Printer',
+      '6 units Laptop (AMD Ryzen 7)',
+      'Furniture & Fixture',
+      'Fabrication of Office Cubicle',
+      'Purchase of Diesel Silent Type Generator Set, includes Flat Form, Installation & Shed Construction of Power House & Supply & installation of 1 generator Set',
+      '1 Unit Risographing Machine',
+      '200 Pcs Monoblock Chairs',
+      '20 Pcs Folding Tables',
     ],
   };
 
